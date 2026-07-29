@@ -218,8 +218,14 @@
       const file=inp.files?.[0];if(!file)return;
       try{
         const raw=JSON.parse(await file.text());
-        const products=Array.isArray(raw)?raw:Array.isArray(raw?.products)?raw.products:null;
-        if(!products)throw new Error("В файле не найден массив товаров");
+        const products = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.products)
+            ? raw.products
+            : Array.isArray(raw?.items)
+              ? raw.items
+              : null;
+        if(!products)throw new Error("Не найден массив products/items или корневой массив");
         const normalized=products.map(normalizeImport).filter(x=>x.name);
         if(!normalized.length)throw new Error("В файле нет подходящих товаров");
         const seen=new Set();
