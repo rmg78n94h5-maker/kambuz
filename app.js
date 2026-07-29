@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "0.9.1";
+  const APP_VERSION = "1.0.0";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -235,6 +235,8 @@
   function itemLabel(i){return [i.brand,i.name].filter(Boolean).join(" ").replace(/\s+/g," ").trim()||"Без названия"}
   function packLabel(i){const v=i.volume??i.weight;return v?`${fmt(v)} ${esc(i.package_unit||i.unit||"")}`:""}
   function normalizedUnit(v){return String(v||"").toLowerCase().trim().replace(/\.$/,"")}
+  function packageCount(i,qty=i.qty){const factor=packageToBase(i);return factor?Number(qty||0)/factor:null}
+  function dualQtyHtml(i,qty=i.qty,compact=false){const factor=packageToBase(i),base=Number(qty||0);if(!factor)return `${fmt(base)} ${esc(i.unit)}`;const pieces=base/factor;return compact?`${fmt(pieces)} уп. · ${fmt(base)} ${esc(i.unit)}`:`<span class="dual-main">${fmt(pieces)} <small>уп.</small></span><span class="dual-sub">${fmt(base)} ${esc(i.unit)}</span>`}
   function packageToBase(i){
     const base=normalizedUnit(i.unit),pack=normalizedUnit(i.package_unit),amount=Number(i.volume??i.weight??0);
     if(!amount||amount<=0)return null;
@@ -347,7 +349,8 @@
   function itemRow(i){
     const low=Number(i.qty)<=Number(i.min_qty||0);
     const pending=pendingForItem(i.id);
-    return `<button class="item" data-item="${i.id}"><div class="item-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div><div class="item-main"><div class="item-title">${esc(itemLabel(i))}</div><div class="item-meta">${esc(i.subcategory||i.category)}${packLabel(i)?` · ${packLabel(i)}`:""}</div></div><div class="qty-wrap"><div class="qty ${pending?"pending-qty":low?"low":""}">${fmt(i.qty)} ${esc(i.unit)}${pending?'<span class="pending-clock" aria-label="Ожидает синхронизации">◷</span>':""}</div><div class="item-meta ${pending?"pending-text":""}">${pending?`ожидает · ${pending}`:`мин. ${fmt(i.min_qty||0)}`}</div></div></button>`;
+    const qtyText=packageToBase(i)?dualQtyHtml(i,i.qty,true):`${fmt(i.qty)} ${esc(i.unit)}`;
+    return `<button class="item" data-item="${i.id}"><div class="item-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div><div class="item-main"><div class="item-title">${esc(itemLabel(i))}</div><div class="item-meta">${esc(i.subcategory||i.category)}${packLabel(i)?` · ${packLabel(i)}`:""}</div></div><div class="qty-wrap"><div class="qty ${pending?"pending-qty":low?"low":""}">${qtyText}${pending?'<span class="pending-clock" aria-label="Ожидает синхронизации">◷</span>':""}</div><div class="item-meta ${pending?"pending-text":""}">${pending?`ожидает · ${pending}`:`мин. ${fmt(i.min_qty||0)}`}</div></div></button>`;
   }
 
   function history(){
@@ -454,13 +457,22 @@
     const usedToday=itemOps.filter(o=>o.type==="consumption"&&localDateKey(o.created_at)===today).reduce((sum,o)=>sum+Number(o.quantity||0),0);
     const lastReceipt=itemOps.find(o=>o.type==="receipt");
     const lastUse=itemOps.find(o=>o.type==="consumption");
-    const history=itemOps.slice(0,8).map(o=>`<div class="mini-history"><span><b>${labelType(o.type)}</b><small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}</small></span><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i.unit)}</strong></div>`).join("")||'<div class="empty small">По товару ещё нет операций</div>';
-    const pending=pendingForItem(i.id);
-    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty ${pending?"pending-qty":""}">${fmt(i.qty)} <span>${esc(i.unit)}</span>${pending?'<span class="pending-clock big">◷</span>':""}</div>${pending?`<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>`:""}<div class="detail-grid"><div><small>Расход сегодня</small><b>${fmt(usedToday)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div>
+    const history=itemOps.slice(0,8).map(o=>{const amount=packageToBase(i)?dualQtyHtml(i,o.quantity,true):`${fmt(o.quantity)} ${esc(o.unit||i.unit)}`;return `<div class="mini-history"><span><b>${labelType(o.type)}</b><small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}</small></span><strong>${sign(o.type)}${amount}</strong></div>`}).join("")||'<div class="empty small">По товару ещё нет операций</div>';
+    const pending=pendingForItem(i.id),factor=packageToBase(i);
+    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty ${factor?"dual-qty":""} ${pending?"pending-qty":""}">${factor?dualQtyHtml(i):`${fmt(i.qty)} <span>${esc(i.unit)}</span>`}${pending?'<span class="pending-clock big">◷</span>':""}</div>${factor?`<button class="secondary full package-repair" data-repair-pack>Текущий остаток введён упаковками</button>`:""}${pending?`<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>`:""}<div class="detail-grid"><div><small>Расход сегодня</small><b>${fmt(usedToday)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div>
       <div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="edit" data-edit>Изменить</button><button class="adjustment" data-op="adjustment">Исправить остаток</button></div>
       <div class="section-title compact-title"><h2>Последние операции</h2></div><div class="mini-history-list">${history}</div>`);
     el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>{el.remove();singleOperation(i,b.dataset.op)});
     el.querySelector("[data-edit]").onclick=()=>{el.remove();itemForm(i)};
+    const repair=el.querySelector("[data-repair-pack]");if(repair)repair.onclick=()=>repairCurrentAsPackages(i,el);
+  }
+
+  function repairCurrentAsPackages(i,parent){
+    const factor=packageToBase(i);if(!factor)return;
+    const current=Number(i.qty||0),converted=current*factor;
+    const el=modal("Пересчитать остаток",`<div class="detail-card"><p>Сейчас записано: <b>${fmt(current)} ${esc(i.unit)}</b></p><p>Если число ${fmt(current)} на самом деле означает упаковки по ${packLabel(i)}, новый остаток будет:</p><div class="big-qty dual-qty">${dualQtyHtml(i,converted)}</div></div><div class="modal-actions"><button class="secondary" data-cancel>Отмена</button><button class="primary" data-confirm>Да, это упаковки</button></div>`);
+    el.querySelector("[data-cancel]").onclick=()=>el.remove();
+    el.querySelector("[data-confirm]").onclick=async()=>{try{await persistOperation(i,"adjustment",Math.abs(converted-current),current,converted,null,"Пересчёт остатка: значение было введено как количество упаковок");el.remove();parent?.remove();await reload();toast(`Остаток пересчитан: ${fmt(current)} уп. = ${fmt(converted)} ${i.unit}`)}catch(e){console.error(e);toast("Не удалось пересчитать остаток")}};
   }
 
   function openBasket(type){
@@ -494,11 +506,11 @@
     const canUsePieces=Boolean(factor&&["кг","л"].includes(normalizedUnit(i.unit)));
     const operationWord=isAdjustment?"останется":type==="receipt"?"поступит":"спишется";
     const el=modal(isAdjustment?"Исправить остаток":labelType(type),`<form class="form smart-operation"><div class="field"><label>Товар</label><input disabled value="${esc(itemLabel(i))}"></div>
-      <div class="field"><label>${isAdjustment?`Фактический остаток в ${esc(i.unit)}`:`Количество в ${esc(i.unit)}`}</label><input name="quantity" data-base-qty type="number" inputmode="decimal" min="0" step="0.001" value="${isAdjustment?esc(i.qty):""}" ${canUsePieces?"":"required"}></div>
-      ${canUsePieces?`<div class="smart-or"><span>или</span></div><div class="field"><label>${isAdjustment?"Фактический остаток в упаковках / штуках":"Количество упаковок / штук"}</label><input name="pieces" data-piece-qty type="number" inputmode="decimal" min="0" step="0.001" placeholder="Например, 2"><small>Фасовка одной штуки: ${packLabel(i)}</small></div><div class="conversion-preview" data-conversion-preview>Введи вес/объём или количество штук</div>`:""}
+      <div class="field"><label>${isAdjustment?`Фактический остаток в ${esc(i.unit)}`:`Количество в ${esc(i.unit)}`}</label><input name="quantity" data-base-qty type="number" inputmode="decimal" min="0" step="0.001" value="${isAdjustment&&!canUsePieces?esc(i.qty):""}" ${canUsePieces?"":"required"}></div>
+      ${canUsePieces?`<div class="smart-or"><span>или</span></div><div class="field"><label>${isAdjustment?"Фактический остаток в упаковках / штуках":"Количество упаковок / штук"}</label><input name="pieces" data-piece-qty type="number" inputmode="decimal" min="0" step="0.001" value="${isAdjustment?fmt(packageCount(i)):""}" placeholder="Например, 2"><small>Фасовка одной штуки: ${packLabel(i)}</small></div><div class="conversion-preview" data-conversion-preview>Введи вес/объём или количество штук</div>`:""}
       ${type==="writeoff"?`<div class="field"><label>Причина</label><select name="reason">${WRITE_OFF_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></div>`:""}${isAdjustment?"":`<div class="field"><label>Комментарий</label><input name="comment"></div>`}<button class="primary" type="submit">Сохранить количество</button></form>`);
     const baseInput=el.querySelector('[data-base-qty]'),pieceInput=el.querySelector('[data-piece-qty]'),preview=el.querySelector('[data-conversion-preview]');
-    if(isAdjustment){setTimeout(()=>{baseInput.focus();baseInput.select()},80)}
+    if(isAdjustment){setTimeout(()=>{const target=pieceInput||baseInput;target.focus();target.select()},80)}
     if(canUsePieces){
       const updatePreview=()=>{
         const pieces=Number(pieceInput.value||0),base=Number(baseInput.value||0);
