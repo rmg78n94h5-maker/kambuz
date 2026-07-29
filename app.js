@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "0.8.0";
+  const APP_VERSION = "0.9.0";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -10,6 +10,7 @@
   let cloudInitPromise = null;
   const state = {
     tab:"home", items:[], ops:[], query:"", category:"Все",
+    stockFilters:loadStockFilters(), stockSort:localStorage.getItem("kambuz_stock_sort")||"name-asc",
     user:localStorage.getItem("kambuz_user") || "Никита",
     sync:hasCloudConfig?(navigator.onLine?"🟡 Подключение…":"🟠 Офлайн") : "Локальный режим",
     basket:{type:"consumption",lines:[]}, syncing:false, subscribed:false, syncError:null, lastSync:localStorage.getItem("kambuz_last_sync")||null
@@ -23,6 +24,33 @@
   const fmt = n => Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:3});
   const normalizeBarcode = v => String(v||"").replace(/\D/g,"");
   const seed = [];
+
+  function defaultStockFilters(){return {groups:[],subgroups:[],stockMode:"all",qtyFrom:"",qtyTo:""}}
+  function loadStockFilters(){try{return {...defaultStockFilters(),...JSON.parse(localStorage.getItem("kambuz_stock_filters")||"{}")}}catch{return defaultStockFilters()}}
+  function saveStockFilters(){localStorage.setItem("kambuz_stock_filters",JSON.stringify(state.stockFilters));localStorage.setItem("kambuz_stock_sort",state.stockSort)}
+  const STOCK_GROUPS = [
+    {id:"meat",label:"Мясо и мясной гастроном",subs:["Птица","Свинина","Говядина","Субпродукты","Колбасы и мясная гастрономия","Мясные полуфабрикаты","Замороженные полуфабрикаты"]},
+    {id:"dairy",label:"Молочный гастроном",subs:["Молоко","Молочная продукция","Сыры","Яйца"]},
+    {id:"fish",label:"Рыбный гастроном",subs:["Рыба","Рыбные консервы","Морепродукты"]},
+    {id:"grocery",label:"Бакалея",subs:["Крупы","Рис","Мука","Сахар","Бобовые и крупы","Макаронные изделия","Сухие завтраки","Сухофрукты","Масла","Соль и специи","Кондитерские изделия","Чай","Кофе"]},
+    {id:"produce",label:"Овощи и фрукты",subs:["Овощи","Овощи и зелень","Фрукты","Яблоки","Цитрусовые","Тропические фрукты","Корнеплоды","Капуста","Томаты","Перец сладкий","Салаты","Свежая зелень","Лук"]},
+    {id:"bread",label:"Хлеб и хлебобулочные изделия",subs:["Хлеб","Хлебобулочные изделия"]},
+    {id:"canned",label:"Консервация",subs:["Овощные консервы","Фруктовые консервы","Рыбные консервы","Мясные консервы","Молочные консервы","Бобовые консервы","Джемы и варенье"]},
+    {id:"drinks",label:"Напитки",subs:["Напитки"]},
+    {id:"chem",label:"Химия",categories:["Химия"]},
+    {id:"household",label:"Хозтовары",categories:["Хозтовары","Посуда","Инвентарь"]}
+  ];
+  function groupForItem(item){
+    const sub=String(item.subcategory||"").toLowerCase(),cat=String(item.category||"").toLowerCase(),name=String(item.name||"").toLowerCase();
+    return STOCK_GROUPS.filter(g=>{
+      if((g.categories||[]).some(x=>cat===x.toLowerCase()))return true;
+      if((g.subs||[]).some(x=>sub.includes(x.toLowerCase())))return true;
+      if(g.id==="fish"&&/(рыб|лосос|семг|сельд|скумбр|минтай|треск)/.test(name))return true;
+      return false;
+    }).map(g=>g.id);
+  }
+  function activeFilterCount(){const f=state.stockFilters;return f.groups.length+f.subgroups.length+(f.stockMode!=="all"?1:0)+(f.qtyFrom!==""?1:0)+(f.qtyTo!==""?1:0)}
+  function sortLabel(){return ({"name-asc":"А → Я","name-desc":"Я → А","qty-asc":"Остаток ↑","qty-desc":"Остаток ↓","zero-first":"Сначала нулевые","low-first":"Ниже минимума"})[state.stockSort]||"А → Я"}
 
   async function load(){
     // Сначала всегда рисуем последнюю локальную копию. Интернет для запуска не нужен.
@@ -275,8 +303,30 @@
   function quick(icon,title,sub,action,cls){return `<button class="action ${cls}" data-action="${action}"><span class="action-icon">${icon}</span><b>${title}</b><small>${sub}</small></button>`}
 
   function filteredStockItems(){
-    const q=state.query.trim().toLowerCase();
-    return state.items.filter(i=>(state.category==="Все"||i.category===state.category)&&`${itemLabel(i)} ${i.barcode||""} ${i.subcategory||""} ${i.notes||""}`.toLowerCase().includes(q));
+    const q=state.query.trim().toLowerCase(),f=state.stockFilters;
+    let items=state.items.filter(i=>{
+      if(state.category!=="Все"&&i.category!==state.category)return false;
+      if(!`${itemLabel(i)} ${i.barcode||""} ${i.subcategory||""} ${i.notes||""}`.toLowerCase().includes(q))return false;
+      const groups=groupForItem(i);
+      if(f.groups.length&&!f.groups.some(g=>groups.includes(g)))return false;
+      if(f.subgroups.length&&!f.subgroups.some(s=>String(i.subcategory||"").toLowerCase()===s.toLowerCase()))return false;
+      const qty=Number(i.qty||0),min=Number(i.min_qty||0);
+      if(f.stockMode==="zero"&&qty!==0)return false;
+      if(f.stockMode==="available"&&qty<=0)return false;
+      if(f.stockMode==="low"&&!(qty<=min))return false;
+      if(f.stockMode==="above-min"&&!(qty>min))return false;
+      if(f.qtyFrom!==""&&qty<Number(f.qtyFrom))return false;
+      if(f.qtyTo!==""&&qty>Number(f.qtyTo))return false;
+      return true;
+    });
+    const cmpName=(a,b)=>itemLabel(a).localeCompare(itemLabel(b),"ru");
+    if(state.stockSort==="name-desc")items.sort((a,b)=>cmpName(b,a));
+    else if(state.stockSort==="qty-asc")items.sort((a,b)=>Number(a.qty)-Number(b.qty)||cmpName(a,b));
+    else if(state.stockSort==="qty-desc")items.sort((a,b)=>Number(b.qty)-Number(a.qty)||cmpName(a,b));
+    else if(state.stockSort==="zero-first")items.sort((a,b)=>(Number(a.qty)!==0)-(Number(b.qty)!==0)||cmpName(a,b));
+    else if(state.stockSort==="low-first")items.sort((a,b)=>((Number(a.qty)>Number(a.min_qty||0))-(Number(b.qty)>Number(b.min_qty||0)))||cmpName(a,b));
+    else items.sort(cmpName);
+    return items;
   }
   function stockListHtml(){
     const filtered=filteredStockItems();
@@ -288,6 +338,8 @@
   function stock(){
     return `<div class="page-head"><div><div class="eyebrow">Каталог</div><h2>Склад</h2></div><button class="secondary compact" data-action="add-item">＋ Товар</button></div>
       <div class="search"><input id="search" placeholder="Название или штрихкод" value="${esc(state.query)}" autocomplete="off"><button class="filter-btn" data-action="scan-search">▣</button></div>
+      <div class="stock-toolbar"><button class="secondary compact ${activeFilterCount()?"active-filter":""}" data-action="stock-filter">⚙ Фильтр${activeFilterCount()?` · ${activeFilterCount()}`:""}</button><button class="secondary compact" data-action="stock-sort">↕ ${sortLabel()}</button></div>
+      ${activeFilterCount()?`<div class="active-filter-bar"><span>Фильтры включены · найдено ${filteredStockItems().length}</span><button data-action="stock-filter-reset">Сбросить</button></div>`:""}
       <div class="chips">${["Все",...CATEGORIES].map(c=>`<button class="chip ${state.category===c?"active":""}" data-category="${c}">${c}</button>`).join("")}</div>
       <div id="stock-list" class="card list-card">${stockListHtml()}</div>`;
   }
@@ -334,7 +386,27 @@
     else if(a==="scan"||a==="scan-search") scanBarcode(a==="scan-search"?"search":"quick");
     else if(a==="analytics") analytics();
     else if(a==="summary-report") summaryReport();
+    else if(a==="stock-filter") stockFilterModal();
+    else if(a==="stock-sort") stockSortModal();
+    else if(a==="stock-filter-reset"){state.stockFilters=defaultStockFilters();saveStockFilters();render()}
     else if(a==="sync-panel") syncPanel();
+  }
+
+  function stockFilterModal(){
+    const f=state.stockFilters;
+    const groups=STOCK_GROUPS.map(g=>`<div class="stock-filter-group"><label class="check-row"><input type="checkbox" data-filter-group="${g.id}" ${f.groups.includes(g.id)?"checked":""}><b>${esc(g.label)}</b></label><button type="button" class="sub-toggle" data-sub-toggle="${g.id}">Подгруппы ▾</button><div class="subgroup-list" data-sub-list="${g.id}" hidden>${(g.subs||[]).map(s=>`<label class="check-row small"><input type="checkbox" data-filter-sub="${esc(s)}" ${f.subgroups.includes(s)?"checked":""}>${esc(s)}</label>`).join("")||'<small>Для этой группы подгрупп нет</small>'}</div></div>`).join("");
+    const el=modal("Фильтр склада",`<div class="filter-section"><h3>Группы товаров</h3><p class="filter-help">Можно выбрать несколько групп и отдельных подгрупп.</p><div class="stock-filter-groups">${groups}</div></div><div class="filter-section"><h3>Остаток</h3><div class="stock-modes">${[["all","Все"],["zero","Только нулевые"],["available","Есть в наличии"],["low","Ниже минимума"],["above-min","Выше минимума"]].map(([v,l])=>`<label class="radio-chip"><input type="radio" name="stockMode" value="${v}" ${f.stockMode===v?"checked":""}><span>${l}</span></label>`).join("")}</div><div class="row"><div class="field"><label>Количество от</label><input id="qty-from" inputmode="decimal" value="${esc(f.qtyFrom)}" placeholder="0"></div><div class="field"><label>Количество до</label><input id="qty-to" inputmode="decimal" value="${esc(f.qtyTo)}" placeholder="Без ограничения"></div></div></div><div class="modal-actions"><button class="secondary" id="filter-clear">Сбросить</button><button class="primary" id="filter-apply">Показать товары</button></div>`,true);
+    el.querySelectorAll("[data-sub-toggle]").forEach(b=>b.onclick=()=>{const box=el.querySelector(`[data-sub-list="${b.dataset.subToggle}"]`);box.hidden=!box.hidden;b.textContent=box.hidden?"Подгруппы ▾":"Подгруппы ▴"});
+    el.querySelector("#filter-clear").onclick=()=>{state.stockFilters=defaultStockFilters();saveStockFilters();el.remove();render()};
+    el.querySelector("#filter-apply").onclick=()=>{
+      state.stockFilters={groups:[...el.querySelectorAll("[data-filter-group]:checked")].map(x=>x.dataset.filterGroup),subgroups:[...el.querySelectorAll("[data-filter-sub]:checked")].map(x=>x.dataset.filterSub),stockMode:el.querySelector('input[name="stockMode"]:checked')?.value||"all",qtyFrom:el.querySelector("#qty-from").value.trim().replace(",","."),qtyTo:el.querySelector("#qty-to").value.trim().replace(",",".")};
+      saveStockFilters();el.remove();render();
+    };
+  }
+  function stockSortModal(){
+    const options=[["name-asc","По алфавиту: А → Я"],["name-desc","По алфавиту: Я → А"],["qty-asc","По количеству: меньше → больше"],["qty-desc","По количеству: больше → меньше"],["zero-first","Сначала нулевые"],["low-first","Сначала ниже минимума"]];
+    const el=modal("Сортировка",`<div class="sort-options">${options.map(([v,l])=>`<button class="sort-option ${state.stockSort===v?"selected":""}" data-sort-value="${v}"><span>${l}</span><b>${state.stockSort===v?"✓":""}</b></button>`).join("")}</div>`);
+    el.querySelectorAll("[data-sort-value]").forEach(b=>b.onclick=()=>{state.stockSort=b.dataset.sortValue;saveStockFilters();el.remove();render()});
   }
 
   function syncPanel(){
