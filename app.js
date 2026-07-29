@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "0.6.0";
+  const APP_VERSION = "0.6.1";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -246,13 +246,22 @@
   function stat(v,l){return `<div class="card stat"><strong>${esc(v)}</strong><span>${esc(l)}</span></div>`}
   function quick(icon,title,sub,action,cls){return `<button class="action ${cls}" data-action="${action}"><span class="action-icon">${icon}</span><b>${title}</b><small>${sub}</small></button>`}
 
+  function filteredStockItems(){
+    const q=state.query.trim().toLowerCase();
+    return state.items.filter(i=>(state.category==="Все"||i.category===state.category)&&`${itemLabel(i)} ${i.barcode||""} ${i.subcategory||""} ${i.notes||""}`.toLowerCase().includes(q));
+  }
+  function stockListHtml(){
+    const filtered=filteredStockItems();
+    return filtered.map(itemRow).join("")||'<div class="empty">Ничего не найдено</div>';
+  }
+  function bindStockItems(scope=document){
+    scope.querySelectorAll("[data-item]").forEach(b=>b.onclick=()=>openItem(b.dataset.item));
+  }
   function stock(){
-    const q=state.query.toLowerCase();
-    const filtered=state.items.filter(i=>(state.category==="Все"||i.category===state.category)&&`${itemLabel(i)} ${i.barcode||""} ${i.subcategory||""} ${i.notes||""}`.toLowerCase().includes(q));
     return `<div class="page-head"><div><div class="eyebrow">Каталог</div><h2>Склад</h2></div><button class="secondary compact" data-action="add-item">＋ Товар</button></div>
-      <div class="search"><input id="search" placeholder="Название или штрихкод" value="${esc(state.query)}"><button class="filter-btn" data-action="scan-search">▣</button></div>
+      <div class="search"><input id="search" placeholder="Название или штрихкод" value="${esc(state.query)}" autocomplete="off"><button class="filter-btn" data-action="scan-search">▣</button></div>
       <div class="chips">${["Все",...CATEGORIES].map(c=>`<button class="chip ${state.category===c?"active":""}" data-category="${c}">${c}</button>`).join("")}</div>
-      <div class="card list-card">${filtered.map(itemRow).join("")||'<div class="empty">Ничего не найдено</div>'}</div>`;
+      <div id="stock-list" class="card list-card">${stockListHtml()}</div>`;
   }
   function itemRow(i){
     const low=Number(i.qty)<=Number(i.min_qty||0);
@@ -276,8 +285,15 @@
     document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;render()});
     document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>handle(b.dataset.action));
     document.querySelectorAll("[data-category]").forEach(b=>b.onclick=()=>{state.category=b.dataset.category;render()});
-    document.querySelectorAll("[data-item]").forEach(b=>b.onclick=()=>openItem(b.dataset.item));
-    const s=$("#search");if(s)s.oninput=e=>{state.query=e.target.value;render()};
+    bindStockItems(document);
+    const s=$("#search");if(s)s.oninput=e=>{
+      state.query=e.target.value;
+      const list=$("#stock-list");
+      if(list){
+        list.innerHTML=stockListHtml();
+        bindStockItems(list);
+      }
+    };
   }
   function handle(a){
     if(a==="add-item") itemForm();
@@ -478,7 +494,7 @@
   }
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=0.6.0", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=0.6.1", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();
