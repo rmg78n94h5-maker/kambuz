@@ -1,54 +1,60 @@
 (() => {
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
-  const UNITS = ["шт.","бут.","упак.","рулон","кг","г","л","мл","компл."];
+  const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
   const cfg = window.KAMBUZ_CONFIG || {};
   const cloudEnabled = Boolean(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase);
   const sb = cloudEnabled ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
-  const state = { tab:"home", items:[], ops:[], query:"", category:"Все", user:localStorage.getItem("kambuz_user") || "Никита", sync:cloudEnabled?"Подключение…":"Демо-режим" };
+  const state = {
+    tab:"home", items:[], ops:[], query:"", category:"Все",
+    user:localStorage.getItem("kambuz_user") || "Никита",
+    sync:cloudEnabled?"Подключение…":"Локальный режим",
+    basket:{type:"consumption",lines:[]}
+  };
   const $ = s => document.querySelector(s);
   const esc = s => String(s ?? "").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
   const uid = () => crypto.randomUUID?.() || String(Date.now()+Math.random());
   const now = () => new Date().toISOString();
-
-  const seed = [
-    {id:uid(),name:"Fairy Lemon 900 мл",category:"Химия",unit:"бут.",qty:6,min_qty:3,location:"Хозкладовая",barcode:"",notes:""},
-    {id:uid(),name:"Губки кухонные, 5 шт.",category:"Хозтовары",unit:"упак.",qty:12,min_qty:5,location:"Хозкладовая",barcode:"",notes:""},
-    {id:uid(),name:"Мусорные пакеты 120 л",category:"Хозтовары",unit:"рулон",qty:4,min_qty:3,location:"Хозкладовая",barcode:"",notes:""},
-    {id:uid(),name:"Domestos 1 л",category:"Химия",unit:"бут.",qty:2,min_qty:3,location:"Хозкладовая",barcode:"",notes:""}
-  ];
+  const fmt = n => Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:3});
+  const normalizeBarcode = v => String(v||"").replace(/\D/g,"");
+  const seed = [];
 
   async function load(){
     if(cloudEnabled){
       try{
         const [{data:items,error:e1},{data:ops,error:e2}] = await Promise.all([
           sb.from("items").select("*").order("name"),
-          sb.from("operations").select("*").order("created_at",{ascending:false}).limit(500)
+          sb.from("operations").select("*").order("created_at",{ascending:false}).limit(1000)
         ]);
         if(e1||e2) throw e1||e2;
-        state.items = items || []; state.ops = ops || []; state.sync="Облако подключено";
-        subscribe();
+        state.items=items||[]; state.ops=ops||[]; state.sync="Облако подключено"; subscribe();
       }catch(e){ console.error(e); state.sync="Ошибка облака"; loadLocal(); }
     } else loadLocal();
     render();
   }
   function loadLocal(){
-    state.items = JSON.parse(localStorage.getItem("kambuz_items")||"null") || seed;
-    state.ops = JSON.parse(localStorage.getItem("kambuz_ops")||"[]");
+    state.items=JSON.parse(localStorage.getItem("kambuz_items")||"null")||seed;
+    state.ops=JSON.parse(localStorage.getItem("kambuz_ops")||"[]");
     saveLocal();
   }
   function saveLocal(){localStorage.setItem("kambuz_items",JSON.stringify(state.items));localStorage.setItem("kambuz_ops",JSON.stringify(state.ops));}
   function subscribe(){
-    sb.channel("kambuz-live").on("postgres_changes",{event:"*",schema:"public",table:"items"},loadCloudSilent)
-      .on("postgres_changes",{event:"*",schema:"public",table:"operations"},loadCloudSilent).subscribe();
+    sb.channel("kambuz-live-v2")
+      .on("postgres_changes",{event:"*",schema:"public",table:"items"},loadCloudSilent)
+      .on("postgres_changes",{event:"*",schema:"public",table:"operations"},loadCloudSilent)
+      .subscribe();
   }
   async function loadCloudSilent(){
-    const [{data:items},{data:ops}] = await Promise.all([sb.from("items").select("*").order("name"),sb.from("operations").select("*").order("created_at",{ascending:false}).limit(500)]);
-    if(items) state.items=items;if(ops)state.ops=ops;render();
+    const [{data:items},{data:ops}] = await Promise.all([
+      sb.from("items").select("*").order("name"),
+      sb.from("operations").select("*").order("created_at",{ascending:false}).limit(1000)
+    ]);
+    if(items) state.items=items; if(ops) state.ops=ops; render();
   }
-  function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2300)}
-  function fmt(n){return Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:3})}
+  function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
   function syncClass(){return state.sync.includes("подключено")?"ok":state.sync.includes("Ошибка")?"bad":""}
+  function itemLabel(i){return [i.brand,i.name].filter(Boolean).join(" ").replace(/\s+/g," ").trim()||"Без названия"}
+  function packLabel(i){const v=i.volume??i.weight;return v?`${fmt(v)} ${esc(i.package_unit||i.unit||"")}`:""}
 
   function shell(content){
     return `<div class="app-shell">
@@ -57,49 +63,65 @@
       ${content}
       ${state.tab==="stock"?'<button class="fab" data-action="add-item">＋</button>':''}
     </div>
-    <nav class="bottom-nav">
-      ${navBtn("home","🏠","Главная")}${navBtn("stock","📦","Склад")}${navBtn("history","🧾","История")}${navBtn("export","⬇️","Экспорт")}
-    </nav>`;
+    <nav class="bottom-nav">${navBtn("home","🏠","Главная")}${navBtn("stock","📦","Склад")}${navBtn("history","🧾","История")}${navBtn("more","•••","Ещё")}</nav>`;
   }
   function navBtn(tab,icon,label){return `<button class="nav-btn ${state.tab===tab?"active":""}" data-tab="${tab}"><span>${icon}</span>${label}</button>`}
   function render(){
     const root=$("#app");
-    const view = state.tab==="home"?home():state.tab==="stock"?stock():state.tab==="history"?history():exportsView();
-    root.innerHTML=shell(view);bind();
+    const views={home,stock,history,more};
+    root.innerHTML=shell((views[state.tab]||home)()); bind();
   }
+
   function home(){
     const low=state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0)).length;
     const today=new Date().toISOString().slice(0,10);
     const used=state.ops.filter(o=>o.type==="consumption"&&String(o.created_at).slice(0,10)===today).reduce((s,o)=>s+Number(o.quantity),0);
-    return `<div class="grid stats" style="margin-top:12px">
-      ${stat(state.items.length,"Позиций")}${stat(low,"Заканчивается")}${stat(state.ops.length,"Операций")}${stat(fmt(used),"Расход сегодня")}
+    return `<div class="hero">
+      <div><div class="eyebrow">Быстрый учёт</div><h2>Что делаем сейчас?</h2></div>
+      <button class="scan-round" data-action="scan">▣</button>
     </div>
-    <div class="section-title"><h2>Быстрые действия</h2></div>
+    <div class="main-actions">
+      ${mainAction("consumption","−","Расход","Взял несколько товаров","green")}
+      ${mainAction("receipt","+","Поступление","Принял и разложил","blue")}
+    </div>
+    <div class="grid stats">${stat(state.items.length,"Позиций")}${stat(low,"Заканчивается")}${stat(fmt(used),"Расход сегодня")}${stat(state.ops.length,"Операций")}</div>
+    <div class="section-title"><h2>Рабочие действия</h2></div>
     <div class="grid quick-actions">
-      ${quick("📦","Открыть склад","Найти и изменить остатки","stock","a-green")}
-      ${quick("➕","Добавить товар","Новая позиция в базе","add-item","a-blue")}
-      ${quick("🧾","Инвентаризация","Сверка фактических остатков","inventory","a-amber")}
-      ${quick("⬇️","Выгрузить остатки","PDF или Word","export","a-gray")}
+      ${quick("🧾","Инвентаризация","Сверить остатки","inventory","a-amber")}
+      ${quick("📦","Открыть склад","Поиск и карточки","stock","a-gray")}
+      ${quick("📥","Импорт JSON","Добавить каталог","import-json","a-blue")}
+      ${quick("📊","Аналитика","Расход и прогноз","analytics","a-green")}
     </div>
-    <div class="section-title"><h2>Требуют внимания</h2><button class="link-btn" data-tab="stock">Все товары</button></div>
-    <div class="card">${state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0)).slice(0,6).map(itemRow).join("")||'<div class="empty">Всё в порядке 👌</div>'}</div>`;
+    ${low?`<div class="section-title"><h2>Заканчивается</h2><button class="link-btn" data-tab="stock">Все</button></div><div class="card">${state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0)).slice(0,5).map(itemRow).join("")}</div>`:""}`;
   }
+  function mainAction(action,icon,title,sub,cls){return `<button class="main-action ${cls}" data-action="${action}"><span>${icon}</span><div><b>${title}</b><small>${sub}</small></div><i>›</i></button>`}
   function stat(v,l){return `<div class="card stat"><strong>${esc(v)}</strong><span>${esc(l)}</span></div>`}
-  function quick(icon,title,sub,action,cls){return `<button class="action ${cls}" data-action="${action}"><span style="font-size:24px">${icon}</span><b>${title}</b><small>${sub}</small></button>`}
+  function quick(icon,title,sub,action,cls){return `<button class="action ${cls}" data-action="${action}"><span class="action-icon">${icon}</span><b>${title}</b><small>${sub}</small></button>`}
+
   function stock(){
-    const filtered=state.items.filter(i=>(state.category==="Все"||i.category===state.category)&&`${i.name} ${i.barcode||""} ${i.notes||""}`.toLowerCase().includes(state.query.toLowerCase()));
-    return `<div class="search"><input id="search" placeholder="Поиск по названию…" value="${esc(state.query)}"><button class="filter-btn" data-action="add-item">＋</button></div>
+    const q=state.query.toLowerCase();
+    const filtered=state.items.filter(i=>(state.category==="Все"||i.category===state.category)&&`${itemLabel(i)} ${i.barcode||""} ${i.subcategory||""} ${i.notes||""}`.toLowerCase().includes(q));
+    return `<div class="page-head"><div><div class="eyebrow">Каталог</div><h2>Склад</h2></div><button class="secondary compact" data-action="add-item">＋ Товар</button></div>
+      <div class="search"><input id="search" placeholder="Название или штрихкод" value="${esc(state.query)}"><button class="filter-btn" data-action="scan-search">▣</button></div>
       <div class="chips">${["Все",...CATEGORIES].map(c=>`<button class="chip ${state.category===c?"active":""}" data-category="${c}">${c}</button>`).join("")}</div>
-      <div class="card">${filtered.map(itemRow).join("")||'<div class="empty">Ничего не найдено</div>'}</div>`;
+      <div class="card list-card">${filtered.map(itemRow).join("")||'<div class="empty">Ничего не найдено</div>'}</div>`;
   }
-  function itemRow(i){const low=Number(i.qty)<=Number(i.min_qty||0);return `<button class="item" data-item="${i.id}" style="width:100%;border-left:0;border-right:0;border-top:0;background:none;text-align:left"><div class="item-main"><div class="item-title">${esc(i.name)}</div><div class="item-meta">${esc(i.category)} · ${esc(i.location||"Место не указано")}</div></div><div><div class="qty ${low?"low":""}">${fmt(i.qty)} ${esc(i.unit)}</div><div class="item-meta">мин. ${fmt(i.min_qty||0)}</div></div></button>`}
+  function itemRow(i){
+    const low=Number(i.qty)<=Number(i.min_qty||0);
+    return `<button class="item" data-item="${i.id}"><div class="item-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div><div class="item-main"><div class="item-title">${esc(itemLabel(i))}</div><div class="item-meta">${esc(i.subcategory||i.category)}${packLabel(i)?` · ${packLabel(i)}`:""}</div></div><div><div class="qty ${low?"low":""}">${fmt(i.qty)} ${esc(i.unit)}</div><div class="item-meta">мин. ${fmt(i.min_qty||0)}</div></div></button>`;
+  }
+
   function history(){
-    const rows=state.ops.map(o=>{const i=state.items.find(x=>x.id===o.item_id);return `<div class="history-entry"><div class="history-top"><div><span class="badge b-${o.type}">${labelType(o.type)}</span> <b>${esc(i?.name||o.item_name||"Товар")}</b></div><b>${sign(o.type)}${fmt(o.quantity)} ${esc(i?.unit||o.unit||"")}</b></div><div class="item-meta">${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}${o.reason?` · ${esc(o.reason)}`:""}${o.comment?` · ${esc(o.comment)}`:""}</div></div>`}).join("");
-    return `<div class="section-title"><h2>История операций</h2></div><div class="card">${rows||'<div class="empty">Операций пока нет</div>'}</div>`;
+    const rows=state.ops.map(o=>{const i=state.items.find(x=>x.id===o.item_id);return `<div class="history-entry"><div class="history-top"><div><span class="badge b-${o.type}">${labelType(o.type)}</span> <b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b></div><b>${sign(o.type)}${fmt(o.quantity)} ${esc(i?.unit||o.unit||"")}</b></div><div class="item-meta">${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}${o.reason?` · ${esc(o.reason)}`:""}${o.comment?` · ${esc(o.comment)}`:""}</div></div>`}).join("");
+    return `<div class="page-head"><div><div class="eyebrow">Журнал</div><h2>История операций</h2></div></div><div class="card">${rows||'<div class="empty">Операций пока нет</div>'}</div>`;
   }
-  function exportsView(){return `<div class="section-title"><h2>Выгрузка остатков</h2></div><div class="card"><p>Сформируй текущую ведомость по всем категориям или только по выбранной.</p><div class="form"><div class="field"><label>Категория</label><select id="export-category"><option>Все</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join("")}</select></div><button class="primary" data-action="export-pdf">Скачать PDF / печать</button><button class="secondary" data-action="export-doc">Скачать Word (.doc)</button></div></div>`}
-  function labelType(t){return ({consumption:"Расход",receipt:"Поступление",writeoff:"Списание",adjustment:"Корректировка"})[t]||t}
-  function sign(t){return t==="receipt"?"+":"−"}
+  function more(){return `<div class="page-head"><div><div class="eyebrow">Настройки и отчёты</div><h2>Ещё</h2></div></div>
+    <div class="menu-list">
+      <button data-action="export"><span>⬇️</span><div><b>Экспорт остатков</b><small>PDF и Word</small></div><i>›</i></button>
+      <button data-action="import-json"><span>📥</span><div><b>Импорт каталога</b><small>JSON без дублей</small></div><i>›</i></button>
+      <button data-action="analytics"><span>📊</span><div><b>Аналитика</b><small>Расход за период</small></div><i>›</i></button>
+      <button data-action="profile"><span>👤</span><div><b>Пользователь</b><small>${esc(state.user)}</small></div><i>›</i></button>
+    </div>`}
 
   function bind(){
     document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;render()});
@@ -109,54 +131,122 @@
     const s=$("#search");if(s)s.oninput=e=>{state.query=e.target.value;render()};
   }
   function handle(a){
-    if(a==="add-item") itemForm(); else if(a==="profile") profile(); else if(a==="inventory") inventory(); else if(a==="export"){state.tab="export";render()} else if(a==="export-pdf") exportPdf(); else if(a==="export-doc") exportDoc(); else if(a==="stock"){state.tab="stock";render()}
+    if(a==="add-item") itemForm();
+    else if(a==="profile") profile();
+    else if(a==="inventory") inventory();
+    else if(a==="export") exportModal();
+    else if(a==="stock"){state.tab="stock";render()}
+    else if(a==="consumption"||a==="receipt") openBasket(a);
+    else if(a==="import-json") importJson();
+    else if(a==="scan"||a==="scan-search") scanBarcode(a==="scan-search"?"search":"basket");
+    else if(a==="analytics") analytics();
   }
-  function modal(title,body){
-    const el=document.createElement("div");el.className="modal-backdrop";el.innerHTML=`<div class="modal"><div class="modal-head"><h3>${esc(title)}</h3><button class="close">✕</button></div>${body}</div>`;document.body.appendChild(el);el.querySelector(".close").onclick=()=>el.remove();el.onclick=e=>{if(e.target===el)el.remove()};return el;
+  function modal(title,body,wide=false){
+    const el=document.createElement("div");el.className="modal-backdrop";el.innerHTML=`<div class="modal ${wide?"wide":""}"><div class="modal-head"><h3>${esc(title)}</h3><button class="close">✕</button></div>${body}</div>`;document.body.appendChild(el);el.querySelector(".close").onclick=()=>el.remove();el.onclick=e=>{if(e.target===el)el.remove()};return el;
   }
+
   function itemForm(item){
     const el=modal(item?"Изменить товар":"Новый товар",`<form class="form" id="item-form">
       <div class="field"><label>Название</label><input name="name" required value="${esc(item?.name||"")}"></div>
-      <div class="row"><div class="field"><label>Категория</label><select name="category">${CATEGORIES.map(c=>`<option ${item?.category===c?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label>Единица</label><select name="unit">${UNITS.map(u=>`<option ${item?.unit===u?"selected":""}>${u}</option>`).join("")}</select></div></div>
-      <div class="row"><div class="field"><label>Остаток</label><input name="qty" type="number" step="0.001" min="0" required value="${item?.qty??0}"></div><div class="field"><label>Минимум</label><input name="min_qty" type="number" step="0.001" min="0" value="${item?.min_qty??0}"></div></div>
-      <div class="field"><label>Место хранения</label><input name="location" value="${esc(item?.location||"")}"></div>
-      <div class="field"><label>Штрихкод</label><input name="barcode" inputmode="numeric" value="${esc(item?.barcode||"")}"></div>
-      <div class="field"><label>Примечание / слова для поиска</label><textarea name="notes">${esc(item?.notes||"")}</textarea></div>
-      <button class="primary">Сохранить</button></form>`);
-    el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const data={...item,...f,qty:Number(f.qty),min_qty:Number(f.min_qty),id:item?.id||uid(),updated_at:now()};
-      if(cloudEnabled){const {error}=await sb.from("items").upsert(data);if(error)return toast(error.message);} else {const ix=state.items.findIndex(x=>x.id===data.id);if(ix>=0)state.items[ix]=data;else state.items.push(data);saveLocal();}
-      el.remove();toast("Товар сохранён");await reload();};
+      <div class="row"><div class="field"><label>Бренд</label><input name="brand" value="${esc(item?.brand||"")}"></div><div class="field"><label>Штрихкод</label><input name="barcode" inputmode="numeric" value="${esc(item?.barcode||"")}"></div></div>
+      <div class="row"><div class="field"><label>Категория</label><select name="category">${CATEGORIES.map(c=>`<option ${item?.category===c?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label>Подкатегория</label><input name="subcategory" value="${esc(item?.subcategory||"")}"></div></div>
+      <div class="row"><div class="field"><label>Фасовка</label><input name="volume" type="number" step="0.001" value="${esc(item?.volume??item?.weight??"")}"></div><div class="field"><label>Ед. фасовки</label><input name="package_unit" placeholder="мл, г, шт." value="${esc(item?.package_unit||"")}"></div></div>
+      <div class="row"><div class="field"><label>Учитывать в</label><select name="unit">${UNITS.map(u=>`<option ${item?.unit===u?"selected":""}>${u}</option>`).join("")}</select></div><div class="field"><label>Минимум</label><input name="min_qty" type="number" step="0.001" value="${esc(item?.min_qty??0)}"></div></div>
+      <div class="field"><label>Место хранения</label><input name="location" value="${esc(item?.location||"Основной склад")}"></div>
+      <div class="field"><label>Примечание</label><textarea name="notes">${esc(item?.notes||"")}</textarea></div>
+      <button class="primary" type="submit">Сохранить</button>
+    </form>`);
+    el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const payload={name:f.name.trim(),brand:f.brand.trim()||null,barcode:normalizeBarcode(f.barcode)||null,category:f.category,subcategory:f.subcategory.trim()||null,volume:f.volume?Number(f.volume):null,package_unit:f.package_unit.trim()||null,unit:f.unit,min_qty:Number(f.min_qty||0),location:f.location.trim()||"Основной склад",notes:f.notes.trim()||null,updated_at:now()};
+      if(payload.barcode){const dup=state.items.find(x=>x.barcode===payload.barcode&&x.id!==item?.id);if(dup){toast("Такой штрихкод уже есть");return}}
+      try{if(cloudEnabled){const q=item?sb.from("items").update(payload).eq("id",item.id):sb.from("items").insert({...payload,qty:0});const {error}=await q;if(error)throw error}else{if(item)Object.assign(item,payload);else state.items.push({id:uid(),qty:0,...payload});saveLocal()}el.remove();await reload();toast("Товар сохранён")}catch(err){console.error(err);toast("Ошибка сохранения. Выполни kambuz-migration-v0.2.1.sql")}
+    };
   }
-  function openItem(id){const i=state.items.find(x=>x.id===id);if(!i)return;const el=modal(i.name,`<div class="card" style="box-shadow:none"><div class="item-meta">${esc(i.category)} · ${esc(i.location||"Место не указано")}</div><div style="font-size:34px;font-weight:900;margin:8px 0">${fmt(i.qty)} ${esc(i.unit)}</div><div class="item-meta">Минимальный остаток: ${fmt(i.min_qty||0)} ${esc(i.unit)}</div></div><div class="detail-actions"><button class="consumption" data-op="consumption">Расход</button><button class="receipt" data-op="receipt">Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="edit" data-edit>Изменить</button></div><button class="secondary" style="width:100%;margin-top:10px" data-op="adjustment">Корректировка остатка</button>`);
-    el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>{el.remove();operationForm(i,b.dataset.op)});el.querySelector("[data-edit]").onclick=()=>{el.remove();itemForm(i)};
+
+  function openItem(id){
+    const i=state.items.find(x=>x.id===id);if(!i)return;
+    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty">${fmt(i.qty)} <span>${esc(i.unit)}</span></div><div class="detail-grid"><div><small>Категория</small><b>${esc(i.category)}</b></div><div><small>Подкатегория</small><b>${esc(i.subcategory||"—")}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div>
+      <div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="edit" data-edit>Изменить</button></div>`);
+    el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>{el.remove();singleOperation(i,b.dataset.op)});
+    el.querySelector("[data-edit]").onclick=()=>{el.remove();itemForm(i)};
   }
-  function operationForm(item,type){
-    const isAdj=type==="adjustment", isWrite=type==="writeoff";
-    const el=modal(labelType(type),`<form class="form"><div class="card" style="box-shadow:none"><b>${esc(item.name)}</b><div class="item-meta">Текущий остаток: ${fmt(item.qty)} ${esc(item.unit)}</div></div>
-      <div class="field"><label>${isAdj?"Фактический остаток":"Количество"}</label><input name="quantity" type="number" min="0" step="0.001" required></div>
-      ${isWrite?`<div class="field"><label>Причина</label><select name="reason" required><option value="">Выбрать…</option>${WRITE_OFF_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></div>`:""}
-      <div class="field"><label>Комментарий</label><textarea name="comment" placeholder="Необязательно${isWrite?" (для причины «Другое» — обязательно)":""}"></textarea></div>
-      <button class="primary ${isWrite?"danger":""}">Сохранить</button></form>`);
-    el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));let q=Number(f.quantity);if(isWrite&&f.reason==="Другое"&&!f.comment.trim())return toast("Добавь комментарий");
-      const old=Number(item.qty), next=isAdj?q:type==="receipt"?old+q:Math.max(0,old-q);const delta=isAdj?Math.abs(next-old):q;
-      const op={id:uid(),item_id:item.id,item_name:item.name,type,quantity:delta,reason:f.reason||null,comment:f.comment||null,user_name:state.user,unit:item.unit,created_at:now(),previous_qty:old,new_qty:next};
-      if(cloudEnabled){const {error:e1}=await sb.from("operations").insert(op);if(e1)return toast(e1.message);const {error:e2}=await sb.from("items").update({qty:next,updated_at:now()}).eq("id",item.id);if(e2)return toast(e2.message);} else {state.ops.unshift(op);item.qty=next;saveLocal();}
-      el.remove();toast("Операция сохранена");await reload();};
+
+  function openBasket(type){
+    state.basket={type,lines:[]};
+    const title=type==="consumption"?"Быстрый расход":"Массовое поступление";
+    const el=modal(title,`<div class="basket-tools"><div class="search basket-search"><input id="basket-search" placeholder="Название или штрихкод"><button type="button" id="basket-scan" class="filter-btn">▣</button></div><div id="basket-results" class="search-results"></div></div><div id="basket-lines"></div><div class="basket-footer"><div><small>Позиций</small><b id="basket-count">0</b></div><button class="primary" id="basket-save" disabled>${type==="consumption"?"Списать всё":"Принять всё"}</button></div>`,true);
+    const input=el.querySelector("#basket-search"),results=el.querySelector("#basket-results");
+    const drawResults=()=>{const q=input.value.trim().toLowerCase();if(!q){results.innerHTML="";return}const list=state.items.filter(i=>`${itemLabel(i)} ${i.barcode||""}`.toLowerCase().includes(q)).slice(0,8);results.innerHTML=list.map(i=>`<button data-add="${i.id}"><span>${esc(itemLabel(i))}</span><b>${fmt(i.qty)} ${esc(i.unit)}</b></button>`).join("")||'<div class="empty small">Не найдено</div>';results.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{addBasketLine(b.dataset.add);input.value="";results.innerHTML="";drawBasket(el)})};
+    input.oninput=drawResults;el.querySelector("#basket-scan").onclick=()=>scanBarcodeInto(el,input,drawResults);
+    el.querySelector("#basket-save").onclick=()=>commitBasket(el);
+    setTimeout(()=>input.focus(),100);
   }
-  function profile(){const el=modal("Пользователь",`<form class="form"><div class="field"><label>Имя в журнале</label><input name="user" value="${esc(state.user)}" required></div><div class="item-meta">На втором телефоне укажите имя «Лёха». Все операции будут подписаны.</div><button class="primary">Сохранить</button></form>`);el.querySelector("form").onsubmit=e=>{e.preventDefault();state.user=new FormData(e.target).get("user").trim();localStorage.setItem("kambuz_user",state.user);el.remove();render();toast("Имя сохранено")}}
+  function addBasketLine(id){const found=state.basket.lines.find(x=>x.item_id===id);if(found)found.quantity+=1;else state.basket.lines.push({item_id:id,quantity:1})}
+  function drawBasket(el){
+    const box=el.querySelector("#basket-lines");box.innerHTML=state.basket.lines.length?`<div class="basket-list">${state.basket.lines.map((l,n)=>{const i=state.items.find(x=>x.id===l.item_id);return `<div class="basket-line"><div><b>${esc(itemLabel(i))}</b><small>Остаток: ${fmt(i.qty)} ${esc(i.unit)}</small></div><div class="stepper"><button data-minus="${n}">−</button><input data-qty="${n}" type="number" min="0.001" step="0.001" value="${l.quantity}"><button data-plus="${n}">＋</button></div><button class="remove" data-remove="${n}">✕</button></div>`}).join("")}</div>`:'<div class="empty">Добавь товары через поиск или сканер</div>';
+    box.querySelectorAll("[data-minus]").forEach(b=>b.onclick=()=>{const l=state.basket.lines[+b.dataset.minus];l.quantity=Math.max(.001,Number(l.quantity)-1);drawBasket(el)});
+    box.querySelectorAll("[data-plus]").forEach(b=>b.onclick=()=>{state.basket.lines[+b.dataset.plus].quantity=Number(state.basket.lines[+b.dataset.plus].quantity)+1;drawBasket(el)});
+    box.querySelectorAll("[data-qty]").forEach(inp=>inp.onchange=()=>{state.basket.lines[+inp.dataset.qty].quantity=Math.max(.001,Number(inp.value)||1);drawBasket(el)});
+    box.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{state.basket.lines.splice(+b.dataset.remove,1);drawBasket(el)});
+    el.querySelector("#basket-count").textContent=state.basket.lines.length;el.querySelector("#basket-save").disabled=!state.basket.lines.length;
+  }
+  async function commitBasket(el){
+    const type=state.basket.type;const lines=state.basket.lines;
+    for(const line of lines){const i=state.items.find(x=>x.id===line.item_id);if(type==="consumption"&&Number(line.quantity)>Number(i.qty)){toast(`Недостаточно: ${itemLabel(i)}`);return}}
+    try{for(const line of lines){const i=state.items.find(x=>x.id===line.item_id);const prev=Number(i.qty),delta=Number(line.quantity),next=type==="receipt"?prev+delta:prev-delta;await persistOperation(i,type,delta,prev,next)}el.remove();await reload();toast(type==="receipt"?"Поступление сохранено":"Расход сохранён")}catch(err){console.error(err);toast("Не удалось сохранить операцию")}
+  }
+
+  function singleOperation(i,type){
+    const el=modal(labelType(type),`<form class="form"><div class="field"><label>Товар</label><input disabled value="${esc(itemLabel(i))}"></div><div class="field"><label>${type==="adjustment"?"Фактический остаток":"Количество"}</label><input name="quantity" type="number" min="0" step="0.001" value="1" required></div>${type==="writeoff"?`<div class="field"><label>Причина</label><select name="reason">${WRITE_OFF_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></div>`:""}<div class="field"><label>Комментарий</label><input name="comment"></div><button class="primary" type="submit">Сохранить</button></form>`);
+    el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const q=Number(f.quantity);const prev=Number(i.qty);let next=prev;if(type==="receipt")next=prev+q;else if(type==="adjustment")next=q;else next=prev-q;if(next<0){toast("Недостаточный остаток");return}try{await persistOperation(i,type,type==="adjustment"?Math.abs(next-prev):q,prev,next,f.reason||null,f.comment||null);el.remove();await reload();toast("Операция сохранена")}catch(err){console.error(err);toast("Ошибка операции")}};
+  }
+  async function persistOperation(i,type,quantity,previous_qty,new_qty,reason=null,comment=null){
+    const op={item_id:i.id,item_name:itemLabel(i),type,quantity,reason,comment,user_name:state.user,unit:i.unit,previous_qty,new_qty,created_at:now()};
+    if(cloudEnabled){const {error:e1}=await sb.from("items").update({qty:new_qty,updated_at:now()}).eq("id",i.id);if(e1)throw e1;const {error:e2}=await sb.from("operations").insert(op);if(e2)throw e2}else{i.qty=new_qty;state.ops.unshift({id:uid(),...op});saveLocal()}
+  }
+
   function inventory(){
-    const el=modal("Инвентаризация",`<form class="form"><div class="item-meta">Введи фактические остатки. Изменённые позиции сохранятся как корректировки.</div>${state.items.map(i=>`<div class="row"><div><b>${esc(i.name)}</b><div class="item-meta">В системе: ${fmt(i.qty)} ${esc(i.unit)}</div></div><input name="${i.id}" type="number" min="0" step="0.001" value="${i.qty}" style="border:1px solid var(--line);border-radius:14px;padding:10px"></div>`).join("")}<button class="primary">Завершить инвентаризацию</button></form>`);
-    el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);for(const i of state.items){const n=Number(f.get(i.id));if(n!==Number(i.qty)){const old=Number(i.qty),op={id:uid(),item_id:i.id,item_name:i.name,type:"adjustment",quantity:Math.abs(n-old),reason:"Инвентаризация",comment:"Фактический пересчёт",user_name:state.user,unit:i.unit,created_at:now(),previous_qty:old,new_qty:n};if(cloudEnabled){await sb.from("operations").insert(op);await sb.from("items").update({qty:n,updated_at:now()}).eq("id",i.id);}else{state.ops.unshift(op);i.qty=n;}}}if(!cloudEnabled)saveLocal();el.remove();await reload();toast("Инвентаризация сохранена")}
+    const el=modal("Инвентаризация",`<div class="inventory-list">${state.items.map(i=>`<div class="inventory-row"><div><b>${esc(itemLabel(i))}</b><small>${fmt(i.qty)} ${esc(i.unit)} по базе</small></div><input data-inv="${i.id}" type="number" step="0.001" value="${i.qty}"></div>`).join("")||'<div class="empty">Каталог пуст</div>'}</div><button class="primary full" id="save-inventory">Сохранить расхождения</button>`,true);
+    el.querySelector("#save-inventory").onclick=async()=>{const changes=[...el.querySelectorAll("[data-inv]")].map(inp=>({i:state.items.find(x=>x.id===inp.dataset.inv),next:Number(inp.value)})).filter(x=>x.next!==Number(x.i.qty));try{for(const x of changes)await persistOperation(x.i,"adjustment",Math.abs(x.next-Number(x.i.qty)),Number(x.i.qty),x.next,null,"Инвентаризация");el.remove();await reload();toast(`Сохранено изменений: ${changes.length}`)}catch(e){console.error(e);toast("Ошибка инвентаризации")}};
   }
-  function filteredExport(){const c=$("#export-category")?.value||"Все";return state.items.filter(i=>c==="Все"||i.category===c)}
-  function exportPdf(){
-    const items=filteredExport();const w=window.open("","_blank");const groups=group(items);w.document.write(`<html><head><meta charset="utf-8"><title>Остатки</title><style>body{font-family:Arial;padding:24px}h1{margin-bottom:4px}h2{margin-top:28px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:8px;text-align:left}th{background:#eee}.sign{margin-top:40px}</style></head><body><h1>Ведомость остатков</h1><div>${new Date().toLocaleString("ru-RU")} · ${esc(cfg.PROJECT_NAME||"")}</div>${Object.entries(groups).map(([c,arr])=>`<h2>${esc(c)}</h2><table><tr><th>№</th><th>Наименование</th><th>Остаток</th><th>Ед.</th><th>Место</th><th>Факт</th></tr>${arr.map((i,n)=>`<tr><td>${n+1}</td><td>${esc(i.name)}</td><td>${fmt(i.qty)}</td><td>${esc(i.unit)}</td><td>${esc(i.location||"")}</td><td></td></tr>`).join("")}</table>`).join("")}<div class="sign">Подпись: _______________________</div><script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close();
+
+  function profile(){const el=modal("Пользователь",`<form class="form"><div class="field"><label>Имя в истории</label><input name="user" value="${esc(state.user)}"></div><button class="primary">Сохранить</button></form>`);el.querySelector("form").onsubmit=e=>{e.preventDefault();state.user=new FormData(e.target).get("user").trim()||"Пользователь";localStorage.setItem("kambuz_user",state.user);el.remove();render();toast("Пользователь изменён")}}
+
+  function importJson(){
+    const el=modal("Импорт каталога",`<div class="import-box"><div class="drop-zone"><div class="drop-icon">📥</div><b>Выбери JSON-файл</b><small>Совпадения по штрихкоду обновятся, новые товары добавятся. Остатки не меняются.</small><input id="json-file" type="file" accept="application/json,.json"></div><div id="import-preview"></div></div>`);
+    const inp=el.querySelector("#json-file"),preview=el.querySelector("#import-preview");
+    inp.onchange=async()=>{const file=inp.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data))throw new Error("JSON должен быть массивом");const normalized=data.map(normalizeImport).filter(x=>x.name);const duplicates=normalized.filter(x=>x.barcode&&state.items.some(i=>i.barcode===x.barcode)).length;preview.innerHTML=`<div class="import-summary"><div><b>${normalized.length}</b><small>товаров</small></div><div><b>${duplicates}</b><small>обновятся</small></div><div><b>${normalized.length-duplicates}</b><small>добавятся</small></div></div><button class="primary full" id="confirm-import">Импортировать</button>`;preview.querySelector("#confirm-import").onclick=()=>runImport(normalized,el)}catch(e){preview.innerHTML=`<div class="error-box">Не удалось прочитать файл: ${esc(e.message)}</div>`}}
   }
-  function exportDoc(){
-    const items=filteredExport(),groups=group(items);const html=`<html><head><meta charset="utf-8"></head><body><h1>Ведомость остатков</h1><p>${new Date().toLocaleString("ru-RU")} · ${esc(cfg.PROJECT_NAME||"")}</p>${Object.entries(groups).map(([c,arr])=>`<h2>${esc(c)}</h2><table border="1" cellspacing="0" cellpadding="6"><tr><th>№</th><th>Наименование</th><th>Остаток</th><th>Ед.</th><th>Место</th><th>Факт</th></tr>${arr.map((i,n)=>`<tr><td>${n+1}</td><td>${esc(i.name)}</td><td>${fmt(i.qty)}</td><td>${esc(i.unit)}</td><td>${esc(i.location||"")}</td><td></td></tr>`).join("")}</table>`).join("")}<p>Подпись: _______________________</p></body></html>`;const blob=new Blob(["\ufeff",html],{type:"application/msword"});download(blob,`kambuz-ostatki-${new Date().toISOString().slice(0,10)}.doc`);toast("Файл Word готов")
+  function normalizeImport(x){
+    const cat=x.category==="Бытовая химия"?"Химия":["Бумажная продукция","Гигиена"].includes(x.category)?"Хозтовары":(CATEGORIES.includes(x.category)?x.category:"Хозтовары");
+    const packageUnit=x.volume!=null?"мл":x.weight!=null?"г":(x.package_unit||null);const volume=x.volume??x.weight??null;
+    return {barcode:normalizeBarcode(x.barcode)||null,brand:String(x.brand||"").trim()||null,name:String(x.name||"").trim(),category:cat,subcategory:String(x.subcategory||"").trim()||null,volume:volume!=null?Number(volume):null,package_unit:packageUnit,unit:String(x.stock_unit||guessStockUnit(x,cat)),min_qty:Number(x.min_qty||0),location:String(x.location||"Основной склад"),notes:String(x.notes||"").trim()||null,updated_at:now()};
   }
-  function group(items){return items.reduce((a,i)=>((a[i.category]??=[]).push(i),a),{})}
+  function guessStockUnit(x,cat){if(cat==="Химия")return "бут.";if(String(x.subcategory||"").toLowerCase().includes("бумаг"))return "рулон";return "шт."}
+  async function runImport(rows,el){
+    try{let added=0,updated=0;for(const row of rows){const existing=row.barcode?state.items.find(i=>i.barcode===row.barcode):null;if(cloudEnabled){if(existing){const {error}=await sb.from("items").update(row).eq("id",existing.id);if(error)throw error;updated++}else{const {error}=await sb.from("items").insert({...row,qty:0});if(error)throw error;added++}}else{if(existing){Object.assign(existing,row);updated++}else{state.items.push({id:uid(),qty:0,...row});added++}}}if(!cloudEnabled)saveLocal();el.remove();await reload();toast(`Добавлено ${added}, обновлено ${updated}`)}catch(e){console.error(e);toast("Ошибка импорта. Выполни kambuz-migration-v0.2.1.sql")}
+  }
+
+  async function scanBarcode(mode="basket"){
+    const el=modal("Сканировать штрихкод",`<div class="scanner"><video id="scanner-video" playsinline muted></video><div class="scan-frame"></div><p id="scan-status">Наведи камеру на штрихкод</p><div class="field"><label>Или введи вручную</label><div class="manual-barcode"><input id="manual-code" inputmode="numeric"><button class="primary" id="manual-find">Найти</button></div></div></div>`);
+    const finish=code=>{stopScanner(el);el.remove();const item=state.items.find(i=>i.barcode===normalizeBarcode(code));if(!item){toast("Товар с таким штрихкодом не найден");state.tab="stock";state.query=normalizeBarcode(code);render();return}if(mode==="search"){state.tab="stock";state.query=item.barcode;render()}else{singleOperation(item,"consumption")}};
+    el.querySelector("#manual-find").onclick=()=>finish(el.querySelector("#manual-code").value);
+    try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}});const video=el.querySelector("#scanner-video");video.srcObject=stream;await video.play();el._stream=stream;if("BarcodeDetector" in window){const detector=new BarcodeDetector({formats:["ean_13","ean_8","code_128","upc_a","upc_e"]});let active=true;el._stop=()=>active=false;const tick=async()=>{if(!active||!document.body.contains(el))return;try{const codes=await detector.detect(video);if(codes[0]?.rawValue){finish(codes[0].rawValue);return}}catch{}requestAnimationFrame(tick)};tick()}else el.querySelector("#scan-status").textContent="Автосканер не поддерживается — введи код вручную"}catch(e){el.querySelector("#scan-status").textContent="Камера недоступна — введи код вручную"}
+  }
+  function scanBarcodeInto(parent,input,draw){const temp=modal("Сканировать",`<div class="field"><label>Штрихкод</label><input id="quick-code" inputmode="numeric" autofocus></div><button class="primary full" id="quick-find">Добавить</button>`);temp.querySelector("#quick-find").onclick=()=>{const code=normalizeBarcode(temp.querySelector("#quick-code").value);const item=state.items.find(i=>i.barcode===code);if(item){addBasketLine(item.id);drawBasket(parent);temp.remove()}else toast("Товар не найден")}}
+  function stopScanner(el){el._stop?.();el._stream?.getTracks().forEach(t=>t.stop())}
+
+  function analytics(){
+    const days=30,from=Date.now()-days*86400000;const rows=state.ops.filter(o=>o.type==="consumption"&&new Date(o.created_at).getTime()>=from);const map={};for(const o of rows){const i=state.items.find(x=>x.id===o.item_id);const key=o.item_id||o.item_name;(map[key]??={name:i?itemLabel(i):o.item_name||"Товар",unit:i?.unit||o.unit||"",qty:0}).qty+=Number(o.quantity)}const top=Object.values(map).sort((a,b)=>b.qty-a.qty).slice(0,20);
+    modal("Аналитика за 30 дней",`<div class="analytics-summary"><div><b>${rows.length}</b><small>операций расхода</small></div><div><b>${top.length}</b><small>товаров использовали</small></div></div><div class="analytics-list">${top.map((x,n)=>`<div><span>${n+1}. ${esc(x.name)}</span><b>${fmt(x.qty)} ${esc(x.unit)}</b></div>`).join("")||'<div class="empty">Пока нет расхода за период</div>'}</div>`);
+  }
+
+  function exportModal(){const el=modal("Экспорт остатков",`<div class="form"><div class="field"><label>Категория</label><select id="export-category"><option>Все</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join("")}</select></div><button class="primary" id="export-pdf">PDF / печать</button><button class="secondary" id="export-doc">Word (.doc)</button></div>`);el.querySelector("#export-pdf").onclick=()=>exportPdf(el.querySelector("#export-category").value);el.querySelector("#export-doc").onclick=()=>exportDoc(el.querySelector("#export-category").value)}
+  function exportItems(cat){return state.items.filter(i=>cat==="Все"||i.category===cat)}
+  function exportPdf(cat){const items=exportItems(cat);const w=window.open("","_blank");w.document.write(`<html><head><meta charset="utf-8"><title>Остатки Камбуз</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #aaa;padding:7px}h1{margin-bottom:4px}.muted{color:#666}</style></head><body><h1>Инвентаризационная ведомость</h1><p class="muted">${new Date().toLocaleDateString("ru-RU")} · ${esc(cat)}</p><table><tr><th>№</th><th>Наименование</th><th>По базе</th><th>Ед.</th><th>Факт</th><th>Разница</th></tr>${items.map((i,n)=>`<tr><td>${n+1}</td><td>${esc(itemLabel(i))}</td><td>${fmt(i.qty)}</td><td>${esc(i.unit)}</td><td></td><td></td></tr>`).join("")}</table><p>Подпись: __________________</p><script>print()</script></body></html>`);w.document.close()}
+  function exportDoc(cat){const items=exportItems(cat);const html=`<html><meta charset="utf-8"><body><h1>Инвентаризационная ведомость</h1><p>${new Date().toLocaleDateString("ru-RU")} · ${esc(cat)}</p><table border="1" cellspacing="0" cellpadding="6"><tr><th>№</th><th>Наименование</th><th>Остаток</th><th>Ед.</th><th>Факт</th></tr>${items.map((i,n)=>`<tr><td>${n+1}</td><td>${esc(itemLabel(i))}</td><td>${fmt(i.qty)}</td><td>${esc(i.unit)}</td><td></td></tr>`).join("")}</table><p>Подпись: __________________</p></body></html>`;download(new Blob(["\ufeff",html],{type:"application/msword"}),`kambuz-${new Date().toISOString().slice(0,10)}.doc`)}
   function download(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+  function labelType(t){return ({consumption:"Расход",receipt:"Поступление",writeoff:"Списание",adjustment:"Корректировка"})[t]||t}
+  function sign(t){return t==="receipt"?"+":t==="adjustment"?"±":"−"}
   async function reload(){if(cloudEnabled)await loadCloudSilent();else render()}
   if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js").catch(console.error);
   load();
