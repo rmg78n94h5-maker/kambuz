@@ -39,7 +39,7 @@
   }
   function saveLocal(){localStorage.setItem("kambuz_items",JSON.stringify(state.items));localStorage.setItem("kambuz_ops",JSON.stringify(state.ops));}
   function subscribe(){
-    sb.channel("kambuz-live-v2")
+    sb.channel("kambuz-live-v4")
       .on("postgres_changes",{event:"*",schema:"public",table:"items"},loadCloudSilent)
       .on("postgres_changes",{event:"*",schema:"public",table:"operations"},loadCloudSilent)
       .subscribe();
@@ -138,7 +138,7 @@
     else if(a==="stock"){state.tab="stock";render()}
     else if(a==="consumption"||a==="receipt") openBasket(a);
     else if(a==="import-json") importJson();
-    else if(a==="scan"||a==="scan-search") scanBarcode(a==="scan-search"?"search":"basket");
+    else if(a==="scan"||a==="scan-search") scanBarcode(a==="scan-search"?"search":"quick");
     else if(a==="analytics") analytics();
   }
   function modal(title,body,wide=false){
@@ -146,7 +146,8 @@
   }
 
   function itemForm(item){
-    const el=modal(item?"Изменить товар":"Новый товар",`<form class="form" id="item-form">
+    const isEdit=Boolean(item?.id);
+    const el=modal(isEdit?"Изменить товар":"Новый товар",`<form class="form" id="item-form">
       <div class="field"><label>Название</label><input name="name" required value="${esc(item?.name||"")}"></div>
       <div class="row"><div class="field"><label>Бренд</label><input name="brand" value="${esc(item?.brand||"")}"></div><div class="field"><label>Штрихкод</label><input name="barcode" inputmode="numeric" value="${esc(item?.barcode||"")}"></div></div>
       <div class="row"><div class="field"><label>Категория</label><select name="category">${CATEGORIES.map(c=>`<option ${item?.category===c?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label>Подкатегория</label><input name="subcategory" value="${esc(item?.subcategory||"")}"></div></div>
@@ -157,15 +158,22 @@
       <button class="primary" type="submit">Сохранить</button>
     </form>`);
     el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const payload={name:f.name.trim(),brand:f.brand.trim()||null,barcode:normalizeBarcode(f.barcode)||null,category:f.category,subcategory:f.subcategory.trim()||null,volume:f.volume?Number(f.volume):null,package_unit:f.package_unit.trim()||null,unit:f.unit,min_qty:Number(f.min_qty||0),location:f.location.trim()||"Основной склад",notes:f.notes.trim()||null,updated_at:now()};
-      if(payload.barcode){const dup=state.items.find(x=>x.barcode===payload.barcode&&x.id!==item?.id);if(dup){toast("Такой штрихкод уже есть");return}}
-      try{if(cloudEnabled){const q=item?sb.from("items").update(payload).eq("id",item.id):sb.from("items").insert({...payload,qty:0});const {error}=await q;if(error)throw error}else{if(item)Object.assign(item,payload);else state.items.push({id:uid(),qty:0,...payload});saveLocal()}el.remove();await reload();toast("Товар сохранён")}catch(err){console.error(err);toast("Ошибка сохранения. Выполни kambuz-migration-v0.2.1.sql")}
+      if(payload.barcode){const dup=state.items.find(x=>x.barcode===payload.barcode&&x.id!==(isEdit?item.id:null));if(dup){toast("Такой штрихкод уже есть");return}}
+      try{if(cloudEnabled){const q=isEdit?sb.from("items").update(payload).eq("id",item.id):sb.from("items").insert({...payload,qty:0});const {error}=await q;if(error)throw error}else{if(isEdit)Object.assign(item,payload);else state.items.push({id:uid(),qty:0,...payload});saveLocal()}el.remove();await reload();toast("Товар сохранён")}catch(err){console.error(err);toast("Ошибка сохранения. Выполни kambuz-migration-v0.2.1.sql")}
     };
   }
 
   function openItem(id){
     const i=state.items.find(x=>x.id===id);if(!i)return;
-    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty">${fmt(i.qty)} <span>${esc(i.unit)}</span></div><div class="detail-grid"><div><small>Категория</small><b>${esc(i.category)}</b></div><div><small>Подкатегория</small><b>${esc(i.subcategory||"—")}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div>
-      <div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="edit" data-edit>Изменить</button></div>`);
+    const itemOps=state.ops.filter(o=>o.item_id===i.id).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    const monthAgo=Date.now()-30*86400000;
+    const used30=itemOps.filter(o=>o.type==="consumption"&&new Date(o.created_at).getTime()>=monthAgo).reduce((sum,o)=>sum+Number(o.quantity||0),0);
+    const lastReceipt=itemOps.find(o=>o.type==="receipt");
+    const lastUse=itemOps.find(o=>o.type==="consumption");
+    const history=itemOps.slice(0,8).map(o=>`<div class="mini-history"><span><b>${labelType(o.type)}</b><small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}</small></span><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i.unit)}</strong></div>`).join("")||'<div class="empty small">По товару ещё нет операций</div>';
+    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty">${fmt(i.qty)} <span>${esc(i.unit)}</span></div><div class="detail-grid"><div><small>Расход за 30 дней</small><b>${fmt(used30)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div>
+      <div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="edit" data-edit>Изменить</button></div>
+      <div class="section-title compact-title"><h2>Последние операции</h2></div><div class="mini-history-list">${history}</div>`);
     el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>{el.remove();singleOperation(i,b.dataset.op)});
     el.querySelector("[data-edit]").onclick=()=>{el.remove();itemForm(i)};
   }
@@ -176,7 +184,7 @@
     const el=modal(title,`<div class="basket-tools"><div class="search basket-search"><input id="basket-search" placeholder="Название или штрихкод"><button type="button" id="basket-scan" class="filter-btn">▣</button></div><div id="basket-results" class="search-results"></div></div><div id="basket-lines"></div><div class="basket-footer"><div><small>Позиций</small><b id="basket-count">0</b></div><button class="primary" id="basket-save" disabled>${type==="consumption"?"Списать всё":"Принять всё"}</button></div>`,true);
     const input=el.querySelector("#basket-search"),results=el.querySelector("#basket-results");
     const drawResults=()=>{const q=input.value.trim().toLowerCase();if(!q){results.innerHTML="";return}const list=state.items.filter(i=>`${itemLabel(i)} ${i.barcode||""}`.toLowerCase().includes(q)).slice(0,8);results.innerHTML=list.map(i=>`<button data-add="${i.id}"><span>${esc(itemLabel(i))}</span><b>${fmt(i.qty)} ${esc(i.unit)}</b></button>`).join("")||'<div class="empty small">Не найдено</div>';results.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{addBasketLine(b.dataset.add);input.value="";results.innerHTML="";drawBasket(el)})};
-    input.oninput=drawResults;el.querySelector("#basket-scan").onclick=()=>scanBarcodeInto(el,input,drawResults);
+    input.oninput=drawResults;el.querySelector("#basket-scan").onclick=()=>scanBarcodeToBasket(el);
     el.querySelector("#basket-save").onclick=()=>commitBasket(el);
     setTimeout(()=>input.focus(),100);
   }
@@ -249,13 +257,34 @@
     try{let added=0,updated=0,skipped=0;const processed=new Set();for(const row of rows){const key=row.barcode?`b:${row.barcode}`:`n:${(row.brand||"").toLowerCase()}|${row.name.toLowerCase()}`;if(processed.has(key)){skipped++;continue}processed.add(key);const existing=row.barcode?state.items.find(i=>i.barcode===row.barcode):state.items.find(i=>(i.brand||"").toLowerCase()===(row.brand||"").toLowerCase()&&String(i.name||"").toLowerCase()===row.name.toLowerCase());if(cloudEnabled){if(existing){const {error}=await sb.from("items").update(row).eq("id",existing.id);if(error)throw error;updated++}else{const {error}=await sb.from("items").insert({...row,qty:0});if(error)throw error;added++}}else{if(existing){Object.assign(existing,row);updated++}else{state.items.push({id:uid(),qty:0,...row});added++}}}if(!cloudEnabled)saveLocal();el.remove();await reload();toast(`Добавлено ${added}, обновлено ${updated}${skipped?`, пропущено дублей ${skipped}`:""}`)}catch(e){console.error(e);toast(`Ошибка импорта: ${e.message||"проверь структуру базы"}`)}
   }
 
-  async function scanBarcode(mode="basket"){
+  async function scanBarcode(mode="quick"){
     const el=modal("Сканировать штрихкод",`<div class="scanner"><video id="scanner-video" playsinline muted></video><div class="scan-frame"></div><p id="scan-status">Наведи камеру на штрихкод</p><div class="field"><label>Или введи вручную</label><div class="manual-barcode"><input id="manual-code" inputmode="numeric"><button class="primary" id="manual-find">Найти</button></div></div></div>`);
-    const finish=code=>{stopScanner(el);el.remove();const item=state.items.find(i=>i.barcode===normalizeBarcode(code));if(!item){toast("Товар с таким штрихкодом не найден");state.tab="stock";state.query=normalizeBarcode(code);render();return}if(mode==="search"){state.tab="stock";state.query=item.barcode;render()}else{singleOperation(item,"consumption")}};
+    const finish=code=>{const normalized=normalizeBarcode(code);if(!normalized){toast("Введи штрихкод");return}stopScanner(el);el.remove();const item=state.items.find(i=>i.barcode===normalized);if(!item){unknownBarcode(normalized,mode);return}if(mode==="search"){state.tab="stock";state.query=item.barcode;render()}else quickScannedItem(item)};
     el.querySelector("#manual-find").onclick=()=>finish(el.querySelector("#manual-code").value);
-    try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}});const video=el.querySelector("#scanner-video");video.srcObject=stream;await video.play();el._stream=stream;if("BarcodeDetector" in window){const detector=new BarcodeDetector({formats:["ean_13","ean_8","code_128","upc_a","upc_e"]});let active=true;el._stop=()=>active=false;const tick=async()=>{if(!active||!document.body.contains(el))return;try{const codes=await detector.detect(video);if(codes[0]?.rawValue){finish(codes[0].rawValue);return}}catch{}requestAnimationFrame(tick)};tick()}else el.querySelector("#scan-status").textContent="Автосканер не поддерживается — введи код вручную"}catch(e){el.querySelector("#scan-status").textContent="Камера недоступна — введи код вручную"}
+    await startCameraScanner(el,finish);
   }
-  function scanBarcodeInto(parent,input,draw){const temp=modal("Сканировать",`<div class="field"><label>Штрихкод</label><input id="quick-code" inputmode="numeric" autofocus></div><button class="primary full" id="quick-find">Добавить</button>`);temp.querySelector("#quick-find").onclick=()=>{const code=normalizeBarcode(temp.querySelector("#quick-code").value);const item=state.items.find(i=>i.barcode===code);if(item){addBasketLine(item.id);drawBasket(parent);temp.remove()}else toast("Товар не найден")}}
+  async function scanBarcodeToBasket(parent){
+    const el=modal("Добавить сканированием",`<div class="scanner"><video id="scanner-video" playsinline muted></video><div class="scan-frame"></div><p id="scan-status">Сканируй товары подряд — каждый скан добавит 1</p><div class="scan-basket-count">Добавлено: <b id="scan-added">0</b></div><div class="field"><label>Или введи штрихкод</label><div class="manual-barcode"><input id="manual-code" inputmode="numeric"><button class="primary" id="manual-find">Добавить</button></div></div><button class="secondary full" id="scan-done">Готово</button></div>`);
+    let added=0,lastCode="",lastAt=0;
+    const add=code=>{const normalized=normalizeBarcode(code);if(!normalized)return;const t=Date.now();if(normalized===lastCode&&t-lastAt<1500)return;lastCode=normalized;lastAt=t;const item=state.items.find(i=>i.barcode===normalized);if(!item){toast("Неизвестный штрихкод");return}addBasketLine(item.id);drawBasket(parent);added++;el.querySelector("#scan-added").textContent=added;toast(`${itemLabel(item)} добавлен`)};
+    el.querySelector("#manual-find").onclick=()=>{add(el.querySelector("#manual-code").value);el.querySelector("#manual-code").value=""};
+    el.querySelector("#scan-done").onclick=()=>{stopScanner(el);el.remove()};
+    await startCameraScanner(el,add,true);
+  }
+  async function startCameraScanner(el,onCode,continuous=false){
+    try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}});const video=el.querySelector("#scanner-video");video.srcObject=stream;await video.play();el._stream=stream;if("BarcodeDetector" in window){const detector=new BarcodeDetector({formats:["ean_13","ean_8","code_128","upc_a","upc_e"]});let active=true;el._stop=()=>active=false;const tick=async()=>{if(!active||!document.body.contains(el))return;try{const codes=await detector.detect(video);if(codes[0]?.rawValue){onCode(codes[0].rawValue);if(!continuous)return}}catch{}setTimeout(tick,180)};tick()}else el.querySelector("#scan-status").textContent="Автосканер не поддерживается — введи код вручную"}catch(e){el.querySelector("#scan-status").textContent="Камера недоступна — введи код вручную"}
+  }
+  function quickScannedItem(item){
+    const el=modal("Товар найден",`<div class="scan-found"><div class="item-avatar large">${esc((item.brand||item.name||"?").slice(0,1).toUpperCase())}</div><h3>${esc(itemLabel(item))}</h3><p>${esc(item.subcategory||item.category)}${packLabel(item)?` · ${packLabel(item)}`:""}</p><div class="big-qty">${fmt(item.qty)} <span>${esc(item.unit)}</span></div></div><div class="detail-actions"><button class="consumption" data-quick="consumption">−1 Расход</button><button class="receipt" data-quick="receipt">+1 Поступление</button><button class="edit" data-card>Карточка</button><button class="secondary" data-scan-again>Сканировать ещё</button></div>`);
+    el.querySelectorAll("[data-quick]").forEach(b=>b.onclick=async()=>{const type=b.dataset.quick,prev=Number(item.qty),next=type==="receipt"?prev+1:prev-1;if(next<0){toast("Недостаточный остаток");return}try{await persistOperation(item,type,1,prev,next);el.remove();await reload();toast(type==="receipt"?"Добавлено 1":"Списано 1")}catch(e){toast("Ошибка операции")}});
+    el.querySelector("[data-card]").onclick=()=>{el.remove();openItem(item.id)};
+    el.querySelector("[data-scan-again]").onclick=()=>{el.remove();scanBarcode("quick")};
+  }
+  function unknownBarcode(code,mode){
+    const el=modal("Товар не найден",`<div class="unknown-code"><div>Штрихкод</div><b>${esc(code)}</b><p>Такого товара ещё нет в каталоге.</p></div><button class="primary full" id="create-unknown">Создать товар</button><button class="secondary full" id="cancel-unknown">Отмена</button>`);
+    el.querySelector("#create-unknown").onclick=()=>{el.remove();itemForm({barcode:code,category:"Хозтовары",unit:"шт.",min_qty:0,location:"Основной склад",name:""})};
+    el.querySelector("#cancel-unknown").onclick=()=>el.remove();
+  }
   function stopScanner(el){el._stop?.();el._stream?.getTracks().forEach(t=>t.stop())}
 
   function analytics(){
