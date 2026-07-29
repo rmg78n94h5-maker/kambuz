@@ -1,7 +1,7 @@
-const CACHE = 'kambuz-v0.5.0';
+const CACHE = 'kambuz-v0.5.1';
 const CORE = [
-  './', './index.html', './styles.css?v=0.5.0', './app.js?v=0.5.0',
-  './config.js?v=0.5.0', './manifest.webmanifest',
+  './', './index.html', './styles.css?v=0.5.1', './app.js?v=0.5.1',
+  './config.js?v=0.5.1', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png'
 ];
 

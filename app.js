@@ -156,12 +156,14 @@
   }
   function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
   function syncClass(){return state.sync.includes("Синхронизировано")?"ok":state.sync.includes("Ошибка")?"bad":state.sync.includes("Ожидает")?"wait":"offline"}
+  function syncIcon(){const c=syncClass();return c==="ok"?"✓":c==="wait"?"◷":c==="bad"?"!":"↯"}
+  function syncShort(){const c=syncClass(),n=getQueue().length;return c==="ok"?"Онлайн":c==="wait"?`Ожидает${n?` (${n})`:""}`:c==="bad"?"Ошибка":"Офлайн"}
   function itemLabel(i){return [i.brand,i.name].filter(Boolean).join(" ").replace(/\s+/g," ").trim()||"Без названия"}
   function packLabel(i){const v=i.volume??i.weight;return v?`${fmt(v)} ${esc(i.package_unit||i.unit||"")}`:""}
 
   function shell(content){
     return `<div class="app-shell">
-      <header class="topbar"><div class="brand"><div class="logo">⚓</div><div><h1>Камбуз</h1><div class="subtitle">${esc(cfg.PROJECT_NAME||"Основной камбуз")}</div></div></div><button class="icon-btn" data-action="profile">👤</button></header>
+      <header class="topbar"><div class="brand"><div class="logo">⚓</div><div><h1>Камбуз</h1><div class="subtitle">${esc(cfg.PROJECT_NAME||"Основной камбуз")}</div></div></div><div class="top-actions"><button class="sync-indicator ${syncClass()}" data-action="sync-panel" aria-label="${esc(state.sync)}" title="${esc(state.sync)}"><span class="sync-glyph">${syncIcon()}</span><span class="sync-mini-label">${esc(syncShort())}</span></button><button class="icon-btn" data-action="profile">👤</button></div></header>
       <button class="sync ${syncClass()}" data-action="sync-panel">${esc(state.sync)} · ${esc(state.user)}</button>
       ${content}
       ${state.tab==="stock"?'<button class="fab" data-action="add-item">＋</button>':''}
