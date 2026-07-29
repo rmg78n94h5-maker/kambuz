@@ -44,6 +44,19 @@
   }
   function getQueue(){return safeParse(STORAGE.queue,[])}
   function setQueue(q){localStorage.setItem(STORAGE.queue,JSON.stringify(q));updateSyncLabel()}
+  function pendingForItem(itemId){return getQueue().filter(o=>o.item_id===itemId).length}
+  function applyPendingOverlay(items,queue=getQueue()){
+    const map=new Map((items||[]).map(i=>[i.id,{...i}]));
+    for(const op of queue){
+      const item=map.get(op.item_id);if(!item)continue;
+      const current=Number(item.qty||0);
+      if(op.type==="receipt")item.qty=current+Number(op.quantity||0);
+      else if(op.type==="adjustment")item.qty=Number(op.target_qty??op.new_qty??current);
+      else item.qty=Math.max(0,current-Number(op.quantity||0));
+      item._pending=true;item._pending_count=(item._pending_count||0)+1;
+    }
+    return [...map.values()];
+  }
   function updateSyncLabel(){
     const n=getQueue().length;
     if(!cloudEnabled)state.sync="Локальный режим";
@@ -54,7 +67,7 @@
   }
   function subscribe(){
     if(state.subscribed)return;state.subscribed=true;
-    sb.channel("kambuz-live-v041")
+    sb.channel("kambuz-live-v043")
       .on("postgres_changes",{event:"*",schema:"public",table:"items"},()=>{if(!getQueue().length)loadCloudSilent()})
       .on("postgres_changes",{event:"*",schema:"public",table:"operations"},()=>{if(!getQueue().length)loadCloudSilent()})
       .subscribe();
@@ -66,7 +79,13 @@
       sb.from("operations").select("*").order("created_at",{ascending:false}).limit(1000)
     ]);
     if(e1||e2)throw e1||e2;
-    if(items) state.items=items; if(ops) state.ops=ops;
+    const queue=getQueue();
+    if(items) state.items=applyPendingOverlay(items,queue);
+    if(ops){
+      const pendingOps=queue.map(o=>({...o,pending:true}));
+      const pendingIds=new Set(pendingOps.map(o=>o.id));
+      state.ops=[...pendingOps,...ops.filter(o=>!pendingIds.has(o.id))];
+    }
     saveLocal();render();
   }
   async function syncPending(){
@@ -76,19 +95,24 @@
     try{
       while(queue.length){
         const pending=queue[0];
-        const {data:cloudItem,error:readError}=await sb.from("items").select("*").eq("id",pending.item_id).single();
-        if(readError)throw readError;
-        const previous=Number(cloudItem.qty||0);
-        let next;
-        if(pending.type==="receipt")next=previous+Number(pending.quantity);
-        else if(pending.type==="adjustment")next=Number(pending.target_qty);
-        else next=previous-Number(pending.quantity);
-        if(next<0)throw new Error(`Недостаточный остаток для ${pending.item_name}`);
-        const syncedAt=pending.created_at||now();
-        const {error:e1}=await sb.from("items").update({qty:next,updated_at:now()}).eq("id",pending.item_id);if(e1)throw e1;
-        const cloudOp={item_id:pending.item_id,item_name:pending.item_name,type:pending.type,quantity:pending.quantity,reason:pending.reason,comment:pending.comment,user_name:pending.user_name,unit:pending.unit,previous_qty:previous,new_qty:next,created_at:syncedAt};
-        const {error:e2}=await sb.from("operations").insert(cloudOp);if(e2)throw e2;
-        queue.shift();setQueue(queue);
+        const {data,error}=await sb.rpc("kambuz_apply_operation",{
+          p_operation_id:pending.id,
+          p_item_id:pending.item_id,
+          p_type:pending.type,
+          p_quantity:Number(pending.quantity||0),
+          p_target_qty:pending.type==="adjustment"?Number(pending.target_qty):null,
+          p_item_name:pending.item_name,
+          p_reason:pending.reason,
+          p_comment:pending.comment,
+          p_user_name:pending.user_name,
+          p_unit:pending.unit,
+          p_created_at:pending.created_at
+        });
+        if(error)throw new Error(error.message||"Ошибка синхронизации");
+        queue.shift();
+        localStorage.setItem(STORAGE.queue,JSON.stringify(queue));
+        const localOp=state.ops.find(o=>o.id===pending.id);if(localOp)localOp.pending=false;
+        updateSyncLabel();
       }
       await loadCloudSilent();
       state.sync="Облако подключено";
@@ -151,11 +175,12 @@
   }
   function itemRow(i){
     const low=Number(i.qty)<=Number(i.min_qty||0);
-    return `<button class="item" data-item="${i.id}"><div class="item-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div><div class="item-main"><div class="item-title">${esc(itemLabel(i))}</div><div class="item-meta">${esc(i.subcategory||i.category)}${packLabel(i)?` · ${packLabel(i)}`:""}</div></div><div><div class="qty ${low?"low":""}">${fmt(i.qty)} ${esc(i.unit)}</div><div class="item-meta">мин. ${fmt(i.min_qty||0)}</div></div></button>`;
+    const pending=pendingForItem(i.id);
+    return `<button class="item" data-item="${i.id}"><div class="item-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div><div class="item-main"><div class="item-title">${esc(itemLabel(i))}</div><div class="item-meta">${esc(i.subcategory||i.category)}${packLabel(i)?` · ${packLabel(i)}`:""}</div></div><div class="qty-wrap"><div class="qty ${pending?"pending-qty":low?"low":""}">${fmt(i.qty)} ${esc(i.unit)}${pending?'<span class="pending-clock" aria-label="Ожидает синхронизации">◷</span>':""}</div><div class="item-meta ${pending?"pending-text":""}">${pending?`ожидает · ${pending}`:`мин. ${fmt(i.min_qty||0)}`}</div></div></button>`;
   }
 
   function history(){
-    const rows=state.ops.map(o=>{const i=state.items.find(x=>x.id===o.item_id);return `<div class="history-entry"><div class="history-top"><div><span class="badge b-${o.type}">${labelType(o.type)}</span> <b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b></div><b>${sign(o.type)}${fmt(o.quantity)} ${esc(i?.unit||o.unit||"")}</b></div><div class="item-meta">${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}${o.reason?` · ${esc(o.reason)}`:""}${o.comment?` · ${esc(o.comment)}`:""}</div></div>`}).join("");
+    const rows=state.ops.map(o=>{const i=state.items.find(x=>x.id===o.item_id);return `<div class="history-entry ${o.pending?"history-pending":""}"><div class="history-top"><div><span class="badge b-${o.type}">${labelType(o.type)}</span> <b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b>${o.pending?'<span class="pending-pill">◷ Ожидает</span>':""}</div><b>${sign(o.type)}${fmt(o.quantity)} ${esc(i?.unit||o.unit||"")}</b></div><div class="item-meta">${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}${o.reason?` · ${esc(o.reason)}`:""}${o.comment?` · ${esc(o.comment)}`:""}</div></div>`}).join("");
     return `<div class="page-head"><div><div class="eyebrow">Журнал</div><h2>История операций</h2></div></div><div class="card">${rows||'<div class="empty">Операций пока нет</div>'}</div>`;
   }
   function more(){return `<div class="page-head"><div><div class="eyebrow">Настройки и отчёты</div><h2>Ещё</h2></div></div>
@@ -214,7 +239,8 @@
     const lastReceipt=itemOps.find(o=>o.type==="receipt");
     const lastUse=itemOps.find(o=>o.type==="consumption");
     const history=itemOps.slice(0,8).map(o=>`<div class="mini-history"><span><b>${labelType(o.type)}</b><small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}</small></span><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i.unit)}</strong></div>`).join("")||'<div class="empty small">По товару ещё нет операций</div>';
-    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty">${fmt(i.qty)} <span>${esc(i.unit)}</span></div><div class="detail-grid"><div><small>Расход за 30 дней</small><b>${fmt(used30)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div>
+    const pending=pendingForItem(i.id);
+    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty ${pending?"pending-qty":""}">${fmt(i.qty)} <span>${esc(i.unit)}</span>${pending?'<span class="pending-clock big">◷</span>':""}</div>${pending?`<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>`:""}<div class="detail-grid"><div><small>Расход за 30 дней</small><b>${fmt(used30)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div>
       <div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="edit" data-edit>Изменить</button><button class="adjustment" data-op="adjustment">Исправить остаток</button></div>
       <div class="section-title compact-title"><h2>Последние операции</h2></div><div class="mini-history-list">${history}</div>`);
     el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>{el.remove();singleOperation(i,b.dataset.op)});
@@ -254,9 +280,11 @@
   }
   async function persistOperation(i,type,quantity,previous_qty,new_qty,reason=null,comment=null){
     const op={id:uid(),item_id:i.id,item_name:itemLabel(i),type,quantity,reason,comment,user_name:state.user,unit:i.unit,previous_qty,new_qty,target_qty:type==="adjustment"?new_qty:null,created_at:now(),pending:cloudEnabled};
-    i.qty=new_qty;state.ops.unshift(op);saveLocal();render();
-    if(!cloudEnabled)return {queued:false};
-    const queue=getQueue();queue.push(op);setQueue(queue);
+    i.qty=new_qty;state.ops.unshift(op);
+    if(!cloudEnabled){saveLocal();render();return {queued:false}}
+    const queue=getQueue();queue.push(op);
+    localStorage.setItem(STORAGE.queue,JSON.stringify(queue));
+    saveLocal();render();updateSyncLabel();
     if(!navigator.onLine){toast("Сохранено без интернета — отправлю позже");return {queued:true}}
     try{await syncPending();return {queued:false}}catch(e){console.error(e);updateSyncLabel();toast("Сохранено на телефоне — синхронизирую позже");return {queued:true}}
   }
@@ -352,7 +380,7 @@
     if(cloudEnabled&&navigator.onLine&&!getQueue().length){try{await loadCloudSilent()}catch(e){console.error(e);updateSyncLabel()}}
     else render();
   }
-  window.addEventListener("online",async()=>{state.sync="Синхронизация…";render();try{await syncPending();await loadCloudSilent();subscribe();toast("Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel()}});
+  window.addEventListener("online",async()=>{state.sync="Синхронизация…";render();try{await syncPending();subscribe();toast("Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{updateSyncLabel();toast("Нет интернета — работаем офлайн")});
   if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js").catch(console.error);
   load();
