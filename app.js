@@ -212,18 +212,35 @@
   function profile(){const el=modal("Пользователь",`<form class="form"><div class="field"><label>Имя в истории</label><input name="user" value="${esc(state.user)}"></div><button class="primary">Сохранить</button></form>`);el.querySelector("form").onsubmit=e=>{e.preventDefault();state.user=new FormData(e.target).get("user").trim()||"Пользователь";localStorage.setItem("kambuz_user",state.user);el.remove();render();toast("Пользователь изменён")}}
 
   function importJson(){
-    const el=modal("Импорт каталога",`<div class="import-box"><div class="drop-zone"><div class="drop-icon">📥</div><b>Выбери JSON-файл</b><small>Совпадения по штрихкоду обновятся, новые товары добавятся. Остатки не меняются.</small><input id="json-file" type="file" accept="application/json,.json"></div><div id="import-preview"></div></div>`);
+    const el=modal("Импорт каталога",`<div class="import-box"><div class="drop-zone"><div class="drop-icon">📥</div><b>Выбери JSON-файл</b><small>Поддерживаются файлы каталога «Камбуз» и обычные массивы товаров. Совпадения по штрихкоду обновятся, новые позиции добавятся с нулевым остатком.</small><input id="json-file" type="file" accept="application/json,.json"></div><div id="import-preview"></div></div>`);
     const inp=el.querySelector("#json-file"),preview=el.querySelector("#import-preview");
-    inp.onchange=async()=>{const file=inp.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data))throw new Error("JSON должен быть массивом");const normalized=data.map(normalizeImport).filter(x=>x.name);const duplicates=normalized.filter(x=>x.barcode&&state.items.some(i=>i.barcode===x.barcode)).length;preview.innerHTML=`<div class="import-summary"><div><b>${normalized.length}</b><small>товаров</small></div><div><b>${duplicates}</b><small>обновятся</small></div><div><b>${normalized.length-duplicates}</b><small>добавятся</small></div></div><button class="primary full" id="confirm-import">Импортировать</button>`;preview.querySelector("#confirm-import").onclick=()=>runImport(normalized,el)}catch(e){preview.innerHTML=`<div class="error-box">Не удалось прочитать файл: ${esc(e.message)}</div>`}}
+    inp.onchange=async()=>{
+      const file=inp.files?.[0];if(!file)return;
+      try{
+        const raw=JSON.parse(await file.text());
+        const products=Array.isArray(raw)?raw:Array.isArray(raw?.products)?raw.products:null;
+        if(!products)throw new Error("В файле не найден массив товаров");
+        const normalized=products.map(normalizeImport).filter(x=>x.name);
+        if(!normalized.length)throw new Error("В файле нет подходящих товаров");
+        const seen=new Set();
+        const duplicateInFile=normalized.filter(x=>x.barcode&&(seen.has(x.barcode)||!seen.add(x.barcode))).length;
+        const updates=normalized.filter(x=>x.barcode&&state.items.some(i=>i.barcode===x.barcode)).length;
+        const withoutBarcode=normalized.filter(x=>!x.barcode).length;
+        preview.innerHTML=`<div class="import-summary"><div><b>${normalized.length}</b><small>товаров</small></div><div><b>${updates}</b><small>обновятся</small></div><div><b>${normalized.length-updates}</b><small>добавятся</small></div></div>${withoutBarcode?`<div class="import-note">Без штрихкода: ${withoutBarcode}. Такие позиции будут сопоставляться по названию и бренду.</div>`:""}${duplicateInFile?`<div class="error-box">Внутри файла повторяются штрихкоды: ${duplicateInFile}</div>`:""}<button class="primary full" id="confirm-import">Импортировать ${normalized.length} товаров</button>`;
+        preview.querySelector("#confirm-import").onclick=()=>runImport(normalized,el);
+      }catch(e){preview.innerHTML=`<div class="error-box">Не удалось прочитать файл: ${esc(e.message)}</div>`}
+    }
   }
   function normalizeImport(x){
     const cat=x.category==="Бытовая химия"?"Химия":["Бумажная продукция","Гигиена"].includes(x.category)?"Хозтовары":(CATEGORIES.includes(x.category)?x.category:"Хозтовары");
-    const packageUnit=x.volume!=null?"мл":x.weight!=null?"г":(x.package_unit||null);const volume=x.volume??x.weight??null;
-    return {barcode:normalizeBarcode(x.barcode)||null,brand:String(x.brand||"").trim()||null,name:String(x.name||"").trim(),category:cat,subcategory:String(x.subcategory||"").trim()||null,volume:volume!=null?Number(volume):null,package_unit:packageUnit,unit:String(x.stock_unit||guessStockUnit(x,cat)),min_qty:Number(x.min_qty||0),location:String(x.location||"Основной склад"),notes:String(x.notes||"").trim()||null,updated_at:now()};
+    const volume=x.packageQuantity??x.volume??x.weight??null;
+    const packageUnit=x.packageUnit??x.package_unit??(x.volume!=null?"мл":x.weight!=null?"г":null);
+    const noteParts=[x.notes,x.status&&x.status!=="confirmed"?`Статус каталога: ${x.status}`:null,x.originalName?`Оригинальное название: ${x.originalName}`:null].filter(Boolean);
+    return {barcode:normalizeBarcode(x.barcode)||null,brand:String(x.brand||"").trim()||null,name:String(x.name||"").trim(),category:cat,subcategory:String(x.subcategory||"").trim()||null,volume:volume!=null&&volume!==""?Number(volume):null,package_unit:String(packageUnit||"").trim()||null,unit:String(x.stockUnit||x.stock_unit||guessStockUnit(x,cat)),min_qty:Number(x.minQty??x.min_qty??0),location:String(x.location||"Основной склад"),notes:noteParts.join(" · ")||null,updated_at:now()};
   }
   function guessStockUnit(x,cat){if(cat==="Химия")return "бут.";if(String(x.subcategory||"").toLowerCase().includes("бумаг"))return "рулон";return "шт."}
   async function runImport(rows,el){
-    try{let added=0,updated=0;for(const row of rows){const existing=row.barcode?state.items.find(i=>i.barcode===row.barcode):null;if(cloudEnabled){if(existing){const {error}=await sb.from("items").update(row).eq("id",existing.id);if(error)throw error;updated++}else{const {error}=await sb.from("items").insert({...row,qty:0});if(error)throw error;added++}}else{if(existing){Object.assign(existing,row);updated++}else{state.items.push({id:uid(),qty:0,...row});added++}}}if(!cloudEnabled)saveLocal();el.remove();await reload();toast(`Добавлено ${added}, обновлено ${updated}`)}catch(e){console.error(e);toast("Ошибка импорта. Выполни kambuz-migration-v0.2.1.sql")}
+    try{let added=0,updated=0,skipped=0;const processed=new Set();for(const row of rows){const key=row.barcode?`b:${row.barcode}`:`n:${(row.brand||"").toLowerCase()}|${row.name.toLowerCase()}`;if(processed.has(key)){skipped++;continue}processed.add(key);const existing=row.barcode?state.items.find(i=>i.barcode===row.barcode):state.items.find(i=>(i.brand||"").toLowerCase()===(row.brand||"").toLowerCase()&&String(i.name||"").toLowerCase()===row.name.toLowerCase());if(cloudEnabled){if(existing){const {error}=await sb.from("items").update(row).eq("id",existing.id);if(error)throw error;updated++}else{const {error}=await sb.from("items").insert({...row,qty:0});if(error)throw error;added++}}else{if(existing){Object.assign(existing,row);updated++}else{state.items.push({id:uid(),qty:0,...row});added++}}}if(!cloudEnabled)saveLocal();el.remove();await reload();toast(`Добавлено ${added}, обновлено ${updated}${skipped?`, пропущено дублей ${skipped}`:""}`)}catch(e){console.error(e);toast(`Ошибка импорта: ${e.message||"проверь структуру базы"}`)}
   }
 
   async function scanBarcode(mode="basket"){
