@@ -1,4 +1,4 @@
-const VERSION = '0.5.3';
+const VERSION = '0.6.0';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -6,9 +6,9 @@ const url = path => new URL(path, SCOPE).href;
 const SHELL = [
   './',
   './index.html',
-  './styles.css?v=0.5.3',
-  './app.js?v=0.5.3',
-  './config.js?v=0.5.3',
+  './styles.css?v=0.6.0',
+  './app.js?v=0.6.0',
+  './config.js?v=0.6.0',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -28,7 +28,7 @@ self.addEventListener('install', event => {
     );
 
     // Без этих файлов приложение не сможет стартовать офлайн.
-    const required = [url('./index.html'), url('./styles.css?v=0.5.3'), url('./app.js?v=0.5.3'), url('./config.js?v=0.5.3')];
+    const required = [url('./index.html'), url('./styles.css?v=0.6.0'), url('./app.js?v=0.6.0'), url('./config.js?v=0.6.0')];
     for (const resource of required) {
       if (!(await cache.match(resource))) {
         const failed = results.filter(r => r.status === 'rejected').map(r => r.reason?.message).join('; ');

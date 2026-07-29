@@ -16,3 +16,5 @@
 /* v0.5.2: версия приложения рядом с названием */
 .brand-title-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.brand-title-row h1{margin:0}.app-version{display:inline-flex;align-items:center;justify-content:center;padding:4px 7px;border-radius:999px;background:#dce9e5;color:#42645b;font-size:11px;font-weight:900;line-height:1;letter-spacing:.02em;white-space:nowrap;border:1px solid rgba(11,93,75,.12)}
 @media(max-width:390px){.brand-title-row{gap:6px}.app-version{font-size:10px;padding:3px 6px}}
+
+.sync-queue-row.queue-error{background:#fff0ed;color:#bd2b22}.sync-queue-row.queue-error small{color:#bd2b22}.sync-queue-row.queue-error>span{color:#bd2b22;font-weight:900}

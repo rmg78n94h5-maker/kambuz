@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "0.5.3";
+  const APP_VERSION = "0.6.0";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -15,6 +15,7 @@
     basket:{type:"consumption",lines:[]}, syncing:false, subscribed:false, syncError:null, lastSync:localStorage.getItem("kambuz_last_sync")||null
   };
   const STORAGE = {items:"kambuz_items",ops:"kambuz_ops",queue:"kambuz_pending_ops"};
+  const ITEM_FIELDS = ["id","name","brand","barcode","category","subcategory","volume","package_unit","unit","qty","min_qty","location","notes","updated_at"];
   const $ = s => document.querySelector(s);
   const esc = s => String(s ?? "").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
   const uid = () => crypto.randomUUID?.() || String(Date.now()+Math.random());
@@ -60,7 +61,10 @@
       await syncPending();
       await loadCloudSilent();
       state.lastSync=now(); localStorage.setItem("kambuz_last_sync",state.lastSync);
-      state.sync="🟢 Синхронизировано";
+      const remaining=getQueue();
+      if(remaining.some(x=>x.status==="error")){state.sync="🔴 Ошибка синхронизации";state.syncError=remaining.filter(x=>x.status==="error").map(x=>x.error).filter(Boolean).join("; ")}
+      else if(remaining.length)state.sync=`🟡 Ожидает (${remaining.length})`;
+      else state.sync="🟢 Синхронизировано";
       subscribe();
     }catch(e){console.error(e);state.syncError=e?.message||"Не удалось связаться с облаком";state.sync="🔴 Ошибка синхронизации"}
     render();
@@ -74,17 +78,35 @@
     localStorage.setItem(STORAGE.items,JSON.stringify(state.items));
     localStorage.setItem(STORAGE.ops,JSON.stringify(state.ops));
   }
-  function getQueue(){return safeParse(STORAGE.queue,[])}
+  function getQueue(){
+    const raw=safeParse(STORAGE.queue,[]);
+    return raw.map(x=>x.kind?x:{...x,kind:"operation",status:x.status||"pending"});
+  }
   function setQueue(q){localStorage.setItem(STORAGE.queue,JSON.stringify(q));updateSyncLabel()}
-  function pendingForItem(itemId){return getQueue().filter(o=>o.item_id===itemId).length}
-  function applyPendingOverlay(items,queue=getQueue()){
-    const map=new Map((items||[]).map(i=>[i.id,{...i}]));
-    for(const op of queue){
-      const item=map.get(op.item_id);if(!item)continue;
-      const current=Number(item.qty||0);
-      if(op.type==="receipt")item.qty=current+Number(op.quantity||0);
-      else if(op.type==="adjustment")item.qty=Number(op.target_qty??op.new_qty??current);
-      else item.qty=Math.max(0,current-Number(op.quantity||0));
+  function pendingForItem(itemId){return getQueue().filter(x=>x.item_id===itemId&&x.status!=="done").length}
+  function queueItemUpsert(item){
+    if(!hasCloudConfig)return;
+    const q=getQueue();
+    const payload=Object.fromEntries(ITEM_FIELDS.filter(k=>item[k]!==undefined).map(k=>[k,item[k]]));
+    const existing=q.find(x=>x.kind==="item_upsert"&&x.item_id===item.id);
+    if(existing){existing.item=payload;existing.status="pending";existing.error=null}
+    else q.unshift({id:`item:${item.id}`,kind:"item_upsert",item_id:item.id,item_name:itemLabel(item),item:payload,status:"pending",created_at:now()});
+    setQueue(q);
+  }
+  function applyPendingOverlay(cloudItems,queue=getQueue()){
+    const localMap=new Map((state.items||[]).map(i=>[i.id,{...i}]));
+    const map=new Map((cloudItems||[]).map(i=>[i.id,{...i}]));
+    for(const [id,item] of localMap){if(!map.has(id))map.set(id,{...item})}
+    for(const task of queue){
+      if(task.kind!=="operation")continue;
+      const item=map.get(task.item_id);if(!item)continue;
+      const cloudItem=(cloudItems||[]).find(i=>i.id===task.item_id);
+      if(cloudItem){
+        const current=Number(item.qty||0);
+        if(task.type==="receipt")item.qty=current+Number(task.quantity||0);
+        else if(task.type==="adjustment")item.qty=Number(task.target_qty??task.new_qty??current);
+        else item.qty=Math.max(0,current-Number(task.quantity||0));
+      }
       item._pending=true;item._pending_count=(item._pending_count||0)+1;
     }
     return [...map.values()];
@@ -102,7 +124,7 @@
   }
   function subscribe(){
     if(state.subscribed)return;state.subscribed=true;
-    sb.channel("kambuz-live-v043")
+    sb.channel("kambuz-live-v060")
       .on("postgres_changes",{event:"*",schema:"public",table:"items"},()=>{if(!getQueue().length)loadCloudSilent()})
       .on("postgres_changes",{event:"*",schema:"public",table:"operations"},()=>{if(!getQueue().length)loadCloudSilent()})
       .subscribe();
@@ -117,7 +139,7 @@
     const queue=getQueue();
     if(items) state.items=applyPendingOverlay(items,queue);
     if(ops){
-      const pendingOps=queue.map(o=>({...o,pending:true}));
+      const pendingOps=queue.filter(o=>o.kind==="operation").map(o=>({...o,pending:true}));
       const pendingIds=new Set(pendingOps.map(o=>o.id));
       state.ops=[...pendingOps,...ops.filter(o=>!pendingIds.has(o.id))];
     }
@@ -125,34 +147,54 @@
   }
   async function syncPending(){
     if(!cloudEnabled||!navigator.onLine||state.syncing)return;
-    let queue=getQueue();if(!queue.length){state.syncError=null;state.sync="🟢 Синхронизировано";return}
+    let queue=getQueue();
+    if(!queue.length){state.syncError=null;state.sync="🟢 Синхронизировано";return}
     state.syncing=true;state.syncError=null;updateSyncLabel();
+    const errors=[];
     try{
-      while(queue.length){
-        const pending=queue[0];
-        const {data,error}=await sb.rpc("kambuz_apply_operation",{
-          p_operation_id:pending.id,
-          p_item_id:pending.item_id,
-          p_type:pending.type,
-          p_quantity:Number(pending.quantity||0),
-          p_target_qty:pending.type==="adjustment"?Number(pending.target_qty):null,
-          p_item_name:pending.item_name,
-          p_reason:pending.reason,
-          p_comment:pending.comment,
-          p_user_name:pending.user_name,
-          p_unit:pending.unit,
-          p_created_at:pending.created_at
-        });
-        if(error)throw new Error(error.message||"Ошибка синхронизации");
-        queue.shift();
-        localStorage.setItem(STORAGE.queue,JSON.stringify(queue));
-        const localOp=state.ops.find(o=>o.id===pending.id);if(localOp)localOp.pending=false;
-        updateSyncLabel();
+      // Старые очереди могли содержать операции по локальным товарам без карточки в облаке.
+      // Перед каждой такой операцией гарантированно создаём/обновляем карточку товара.
+      for(const task of queue){
+        if(task.kind!=="operation")continue;
+        if(!queue.some(x=>x.kind==="item_upsert"&&x.item_id===task.item_id)){
+          const localItem=state.items.find(i=>i.id===task.item_id);
+          if(localItem)queue.unshift({id:`item:${localItem.id}`,kind:"item_upsert",item_id:localItem.id,item_name:itemLabel(localItem),item:Object.fromEntries(ITEM_FIELDS.filter(k=>localItem[k]!==undefined).map(k=>[k,localItem[k]])),status:"pending",created_at:now()});
+        }
       }
-      await loadCloudSilent();
-      state.lastSync=now(); localStorage.setItem("kambuz_last_sync",state.lastSync);
-      state.syncError=null; state.sync="🟢 Синхронизировано";
-    }catch(e){state.syncError=e?.message||"Не удалось отправить операции";state.sync="🔴 Ошибка синхронизации";throw e
+      localStorage.setItem(STORAGE.queue,JSON.stringify(queue));
+
+      for(const task of [...queue]){
+        try{
+          task.status="sending";task.error=null;localStorage.setItem(STORAGE.queue,JSON.stringify(queue));updateSyncLabel();
+          if(task.kind==="item_upsert"){
+            const payload={...task.item};
+            delete payload.qty;
+            // Для новой карточки база сама поставит qty=0; при редактировании существующего товара остаток не перезаписываем.
+            const {error}=await sb.from("items").upsert(payload,{onConflict:"id"});
+            if(error)throw error;
+          }else{
+            const {error}=await sb.rpc("kambuz_apply_operation",{
+              p_operation_id:task.id,p_item_id:task.item_id,p_type:task.type,
+              p_quantity:Number(task.quantity||0),p_target_qty:task.type==="adjustment"?Number(task.target_qty):null,
+              p_item_name:task.item_name,p_reason:task.reason,p_comment:task.comment,
+              p_user_name:task.user_name,p_unit:task.unit,p_created_at:task.created_at
+            });
+            if(error)throw error;
+            const localOp=state.ops.find(o=>o.id===task.id);if(localOp)localOp.pending=false;
+          }
+          queue=queue.filter(x=>x.id!==task.id);
+          localStorage.setItem(STORAGE.queue,JSON.stringify(queue));
+        }catch(e){
+          const live=queue.find(x=>x.id===task.id);if(live){live.status="error";live.error=e?.message||"Ошибка синхронизации"}
+          errors.push(`${task.item_name||"Товар"}: ${e?.message||"ошибка"}`);
+          localStorage.setItem(STORAGE.queue,JSON.stringify(queue));
+          // Ошибка одной записи не блокирует остальные.
+        }
+      }
+      if(navigator.onLine)await loadCloudSilent();
+      state.lastSync=now();localStorage.setItem("kambuz_last_sync",state.lastSync);
+      state.syncError=errors.length?errors.join("; "):null;
+      state.sync=errors.length?"🔴 Ошибка синхронизации":"🟢 Синхронизировано";
     }finally{state.syncing=false;updateSyncLabel()}
   }
   function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
@@ -253,7 +295,7 @@
   function syncPanel(){
     const queue=getQueue();
     const last=state.lastSync?new Date(state.lastSync).toLocaleString("ru-RU"):"ещё не выполнялась";
-    const rows=queue.map(o=>`<div class="sync-queue-row"><div><b>${esc(o.item_name||"Товар")}</b><small>${esc(labelType(o.type))} · ${fmt(o.quantity)} ${esc(o.unit||"")}</small></div><span>◷</span></div>`).join("");
+    const rows=queue.map(o=>{const isItem=o.kind==="item_upsert";const bad=o.status==="error";return `<div class="sync-queue-row ${bad?"queue-error":""}"><div><b>${esc(o.item_name||"Товар")}</b><small>${isItem?"Создание/обновление товара":`${esc(labelType(o.type))} · ${fmt(o.quantity)} ${esc(o.unit||"")}`}${bad?` · ${esc(o.error||"Ошибка")}`:""}</small></div><span>${bad?"!":"◷"}</span></div>`}).join("");
     const el=modal("Синхронизация",`<div class="sync-panel-state ${syncClass()}"><b>${esc(state.sync)}</b><small>${state.syncError?esc(state.syncError):`Последняя синхронизация: ${esc(last)}`}</small></div><div class="compact-title"><b>В очереди: ${queue.length}</b></div><div class="sync-queue">${rows||'<div class="empty small">Очередь пуста</div>'}</div><button class="primary full" id="sync-now" ${!navigator.onLine?'disabled':''}>Синхронизировать сейчас</button>`);
     el.querySelector("#sync-now").onclick=async()=>{state.syncError=null;updateSyncLabel();try{await ensureCloud();await syncPending();await loadCloudSilent();el.remove();toast("Синхронизация завершена")}catch(e){console.error(e);render();el.remove();syncPanel()}};
   }
@@ -276,7 +318,12 @@
     </form>`);
     el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const payload={name:f.name.trim(),brand:f.brand.trim()||null,barcode:normalizeBarcode(f.barcode)||null,category:f.category,subcategory:f.subcategory.trim()||null,volume:f.volume?Number(f.volume):null,package_unit:f.package_unit.trim()||null,unit:f.unit,min_qty:Number(f.min_qty||0),location:f.location.trim()||"Основной склад",notes:f.notes.trim()||null,updated_at:now()};
       if(payload.barcode){const dup=state.items.find(x=>x.barcode===payload.barcode&&x.id!==(isEdit?item.id:null));if(dup){toast("Такой штрихкод уже есть");return}}
-      try{if(cloudEnabled){const q=isEdit?sb.from("items").update(payload).eq("id",item.id):sb.from("items").insert({...payload,qty:0});const {error}=await q;if(error)throw error}else{if(isEdit)Object.assign(item,payload);else state.items.push({id:uid(),qty:0,...payload});saveLocal()}el.remove();await reload();toast("Товар сохранён")}catch(err){console.error(err);toast("Ошибка сохранения. Выполни kambuz-migration-v0.2.1.sql")}
+      try{
+        let saved;
+        if(isEdit){Object.assign(item,payload);saved=item}else{saved={id:uid(),qty:0,...payload};state.items.push(saved)}
+        saveLocal();queueItemUpsert(saved);el.remove();render();toast(navigator.onLine?"Товар сохранён — синхронизирую":"Товар сохранён офлайн — ожидает синхронизации");
+        if(navigator.onLine){try{await ensureCloud();await syncPending()}catch(err){console.error(err)}}
+      }catch(err){console.error(err);toast("Не удалось сохранить товар")}
     };
   }
 
@@ -331,7 +378,7 @@
     const op={id:uid(),item_id:i.id,item_name:itemLabel(i),type,quantity,reason,comment,user_name:state.user,unit:i.unit,previous_qty,new_qty,target_qty:type==="adjustment"?new_qty:null,created_at:now(),pending:hasCloudConfig};
     i.qty=new_qty;state.ops.unshift(op);
     if(!hasCloudConfig){saveLocal();render();return {queued:false}}
-    const queue=getQueue();queue.push(op);
+    const queue=getQueue();queue.push({...op,kind:"operation",status:"pending"});
     localStorage.setItem(STORAGE.queue,JSON.stringify(queue));
     saveLocal();render();updateSyncLabel();
     if(!navigator.onLine){toast("Сохранено без интернета — отправлю позже");return {queued:true}}
@@ -431,7 +478,7 @@
   }
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=0.5.3", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=0.6.0", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();
