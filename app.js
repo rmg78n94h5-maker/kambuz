@@ -3,12 +3,14 @@
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
   const cfg = window.KAMBUZ_CONFIG || {};
-  const cloudEnabled = Boolean(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase);
-  const sb = cloudEnabled ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
+  const hasCloudConfig = Boolean(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY);
+  let cloudEnabled = false;
+  let sb = null;
+  let cloudInitPromise = null;
   const state = {
     tab:"home", items:[], ops:[], query:"", category:"Все",
     user:localStorage.getItem("kambuz_user") || "Никита",
-    sync:cloudEnabled?(navigator.onLine?"Подключение…":"Офлайн") : "Локальный режим",
+    sync:hasCloudConfig?(navigator.onLine?"Подключение…":"Офлайн · данные с телефона") : "Локальный режим",
     basket:{type:"consumption",lines:[]}, syncing:false, subscribed:false
   };
   const STORAGE = {items:"kambuz_items",ops:"kambuz_ops",queue:"kambuz_pending_ops"};
@@ -21,16 +23,44 @@
   const seed = [];
 
   async function load(){
+    // Сначала всегда рисуем последнюю локальную копию. Интернет для запуска не нужен.
     loadLocal();
     render();
-    if(!cloudEnabled) return;
+    if(!hasCloudConfig){updateSyncLabel();return}
     if(!navigator.onLine){updateSyncLabel();return}
+    await connectCloudAndSync();
+  }
+  function loadSupabaseLibrary(){
+    if(window.supabase)return Promise.resolve(window.supabase);
+    if(cloudInitPromise)return cloudInitPromise;
+    cloudInitPromise=new Promise((resolve,reject)=>{
+      const script=document.createElement("script");
+      const timer=setTimeout(()=>{script.remove();cloudInitPromise=null;reject(new Error("Не удалось загрузить модуль облака"))},8000);
+      script.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+      script.async=true;
+      script.onload=()=>{clearTimeout(timer);window.supabase?resolve(window.supabase):(cloudInitPromise=null,reject(new Error("Модуль облака не запустился")))};
+      script.onerror=()=>{clearTimeout(timer);script.remove();cloudInitPromise=null;reject(new Error("Модуль облака недоступен"))};
+      document.head.appendChild(script);
+    });
+    return cloudInitPromise;
+  }
+  async function ensureCloud(){
+    if(cloudEnabled&&sb)return true;
+    if(!hasCloudConfig||!navigator.onLine)return false;
+    const lib=await loadSupabaseLibrary();
+    sb=lib.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+    cloudEnabled=true;
+    return true;
+  }
+  async function connectCloudAndSync(){
     try{
+      state.sync="Подключение…";render();
+      if(!await ensureCloud()){updateSyncLabel();return}
       await syncPending();
       await loadCloudSilent();
       state.sync="Облако подключено";
       subscribe();
-    }catch(e){console.error(e);updateSyncLabel()}
+    }catch(e){console.error(e);state.sync=getQueue().length?`Ожидает отправки · ${getQueue().length}`:"Офлайн · данные с телефона"}
     render();
   }
   function safeParse(key,fallback){try{return JSON.parse(localStorage.getItem(key)||"null")??fallback}catch{return fallback}}
@@ -59,8 +89,9 @@
   }
   function updateSyncLabel(){
     const n=getQueue().length;
-    if(!cloudEnabled)state.sync="Локальный режим";
-    else if(!navigator.onLine)state.sync=n?`Офлайн · в очереди ${n}`:"Офлайн · данные сохранены";
+    if(!hasCloudConfig)state.sync="Локальный режим";
+    else if(!navigator.onLine)state.sync=n?`Офлайн · в очереди ${n}`:"Офлайн · данные с телефона";
+    else if(!cloudEnabled)state.sync=n?`Ожидает отправки · ${n}`:"Подключение…";
     else if(state.syncing)state.sync=n?`Синхронизация · ${n}`:"Синхронизация…";
     else state.sync=n?`Ожидает отправки · ${n}`:"Облако подключено";
     render();
@@ -279,14 +310,14 @@
     el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const q=Number(f.quantity);const prev=Number(i.qty);let next=prev;if(type==="receipt")next=prev+q;else if(type==="adjustment")next=q;else next=prev-q;if(next<0){toast("Недостаточный остаток");return}try{await persistOperation(i,type,type==="adjustment"?Math.abs(next-prev):q,prev,next,f.reason||null,f.comment||null);el.remove();await reload();toast("Операция сохранена")}catch(err){console.error(err);toast("Ошибка операции")}};
   }
   async function persistOperation(i,type,quantity,previous_qty,new_qty,reason=null,comment=null){
-    const op={id:uid(),item_id:i.id,item_name:itemLabel(i),type,quantity,reason,comment,user_name:state.user,unit:i.unit,previous_qty,new_qty,target_qty:type==="adjustment"?new_qty:null,created_at:now(),pending:cloudEnabled};
+    const op={id:uid(),item_id:i.id,item_name:itemLabel(i),type,quantity,reason,comment,user_name:state.user,unit:i.unit,previous_qty,new_qty,target_qty:type==="adjustment"?new_qty:null,created_at:now(),pending:hasCloudConfig};
     i.qty=new_qty;state.ops.unshift(op);
-    if(!cloudEnabled){saveLocal();render();return {queued:false}}
+    if(!hasCloudConfig){saveLocal();render();return {queued:false}}
     const queue=getQueue();queue.push(op);
     localStorage.setItem(STORAGE.queue,JSON.stringify(queue));
     saveLocal();render();updateSyncLabel();
     if(!navigator.onLine){toast("Сохранено без интернета — отправлю позже");return {queued:true}}
-    try{await syncPending();return {queued:false}}catch(e){console.error(e);updateSyncLabel();toast("Сохранено на телефоне — синхронизирую позже");return {queued:true}}
+    try{await ensureCloud();await syncPending();return {queued:false}}catch(e){console.error(e);updateSyncLabel();toast("Сохранено на телефоне — синхронизирую позже");return {queued:true}}
   }
 
   function inventory(){
@@ -380,7 +411,7 @@
     if(cloudEnabled&&navigator.onLine&&!getQueue().length){try{await loadCloudSilent()}catch(e){console.error(e);updateSyncLabel()}}
     else render();
   }
-  window.addEventListener("online",async()=>{state.sync="Синхронизация…";render();try{await syncPending();subscribe();toast("Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
+  window.addEventListener("online",async()=>{state.sync="Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{updateSyncLabel();toast("Нет интернета — работаем офлайн")});
   if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js").catch(console.error);
   load();
