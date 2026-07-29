@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "0.9.0";
+  const APP_VERSION = "0.9.1";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -21,6 +21,7 @@
   const esc = s => String(s ?? "").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
   const uid = () => crypto.randomUUID?.() || String(Date.now()+Math.random());
   const now = () => new Date().toISOString();
+  const localDateKey = value => { const d=value?new Date(value):new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
   const fmt = n => Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:3});
   const normalizeBarcode = v => String(v||"").replace(/\D/g,"");
   const seed = [];
@@ -277,8 +278,8 @@
 
   function home(){
     const low=state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0)).length;
-    const today=new Date().toISOString().slice(0,10);
-    const used=state.ops.filter(o=>o.type==="consumption"&&String(o.created_at).slice(0,10)===today).reduce((s,o)=>s+Number(o.quantity),0);
+    const today=localDateKey();
+    const used=state.ops.filter(o=>o.type==="consumption"&&localDateKey(o.created_at)===today).reduce((s,o)=>s+Number(o.quantity),0);
     return `<div class="hero">
       <div><div class="eyebrow">Быстрый учёт</div><h2>Что делаем сейчас?</h2></div>
       <button class="scan-round" data-action="scan">▣</button>
@@ -337,7 +338,7 @@
   }
   function stock(){
     return `<div class="page-head"><div><div class="eyebrow">Каталог</div><h2>Склад</h2></div><button class="secondary compact" data-action="add-item">＋ Товар</button></div>
-      <div class="search"><input id="search" placeholder="Название или штрихкод" value="${esc(state.query)}" autocomplete="off"><button class="filter-btn" data-action="scan-search">▣</button></div>
+      <div class="search"><div class="search-input-wrap"><input id="search" placeholder="Название или штрихкод" value="${esc(state.query)}" autocomplete="off"><button type="button" id="search-clear" class="search-clear" aria-label="Очистить поиск" ${state.query?"":"hidden"}>×</button></div><button class="filter-btn" data-action="scan-search">▣</button></div>
       <div class="stock-toolbar"><button class="secondary compact ${activeFilterCount()?"active-filter":""}" data-action="stock-filter">⚙ Фильтр${activeFilterCount()?` · ${activeFilterCount()}`:""}</button><button class="secondary compact" data-action="stock-sort">↕ ${sortLabel()}</button></div>
       ${activeFilterCount()?`<div class="active-filter-bar"><span>Фильтры включены · найдено ${filteredStockItems().length}</span><button data-action="stock-filter-reset">Сбросить</button></div>`:""}
       <div class="chips">${["Все",...CATEGORIES].map(c=>`<button class="chip ${state.category===c?"active":""}" data-category="${c}">${c}</button>`).join("")}</div>
@@ -368,12 +369,14 @@
     bindStockItems(document);
     const s=$("#search");if(s)s.oninput=e=>{
       state.query=e.target.value;
+      const clear=$("#search-clear");if(clear)clear.hidden=!state.query;
       const list=$("#stock-list");
       if(list){
         list.innerHTML=stockListHtml();
         bindStockItems(list);
       }
     };
+    const clear=$("#search-clear");if(clear)clear.onclick=()=>{state.query="";s.value="";clear.hidden=true;const list=$("#stock-list");if(list){list.innerHTML=stockListHtml();bindStockItems(list)}s.focus()};
   }
   function handle(a){
     if(a==="add-item") itemForm();
@@ -447,13 +450,13 @@
   function openItem(id){
     const i=state.items.find(x=>x.id===id);if(!i)return;
     const itemOps=state.ops.filter(o=>o.item_id===i.id).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-    const monthAgo=Date.now()-30*86400000;
-    const used30=itemOps.filter(o=>o.type==="consumption"&&new Date(o.created_at).getTime()>=monthAgo).reduce((sum,o)=>sum+Number(o.quantity||0),0);
+    const today=localDateKey();
+    const usedToday=itemOps.filter(o=>o.type==="consumption"&&localDateKey(o.created_at)===today).reduce((sum,o)=>sum+Number(o.quantity||0),0);
     const lastReceipt=itemOps.find(o=>o.type==="receipt");
     const lastUse=itemOps.find(o=>o.type==="consumption");
     const history=itemOps.slice(0,8).map(o=>`<div class="mini-history"><span><b>${labelType(o.type)}</b><small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}</small></span><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i.unit)}</strong></div>`).join("")||'<div class="empty small">По товару ещё нет операций</div>';
     const pending=pendingForItem(i.id);
-    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty ${pending?"pending-qty":""}">${fmt(i.qty)} <span>${esc(i.unit)}</span>${pending?'<span class="pending-clock big">◷</span>':""}</div>${pending?`<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>`:""}<div class="detail-grid"><div><small>Расход за 30 дней</small><b>${fmt(used30)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div>
+    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty ${pending?"pending-qty":""}">${fmt(i.qty)} <span>${esc(i.unit)}</span>${pending?'<span class="pending-clock big">◷</span>':""}</div>${pending?`<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>`:""}<div class="detail-grid"><div><small>Расход сегодня</small><b>${fmt(usedToday)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div>
       <div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="edit" data-edit>Изменить</button><button class="adjustment" data-op="adjustment">Исправить остаток</button></div>
       <div class="section-title compact-title"><h2>Последние операции</h2></div><div class="mini-history-list">${history}</div>`);
     el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>{el.remove();singleOperation(i,b.dataset.op)});
@@ -488,11 +491,11 @@
   function singleOperation(i,type){
     const isAdjustment=type==="adjustment";
     const factor=packageToBase(i);
-    const canUsePieces=!isAdjustment&&factor&&["кг","л"].includes(normalizedUnit(i.unit));
-    const operationWord=type==="receipt"?"поступит":"спишется";
+    const canUsePieces=Boolean(factor&&["кг","л"].includes(normalizedUnit(i.unit)));
+    const operationWord=isAdjustment?"останется":type==="receipt"?"поступит":"спишется";
     const el=modal(isAdjustment?"Исправить остаток":labelType(type),`<form class="form smart-operation"><div class="field"><label>Товар</label><input disabled value="${esc(itemLabel(i))}"></div>
-      <div class="field"><label>${isAdjustment?"Фактическое количество":`Количество в ${esc(i.unit)}`}</label><input name="quantity" data-base-qty type="number" inputmode="decimal" min="0" step="0.001" value="${isAdjustment?esc(i.qty):""}" ${canUsePieces?"":"required"}></div>
-      ${canUsePieces?`<div class="smart-or"><span>или</span></div><div class="field"><label>Количество упаковок / штук</label><input name="pieces" data-piece-qty type="number" inputmode="decimal" min="0" step="0.001" placeholder="Например, 2"><small>Фасовка одной штуки: ${packLabel(i)}</small></div><div class="conversion-preview" data-conversion-preview>Введи вес/объём или количество штук</div>`:""}
+      <div class="field"><label>${isAdjustment?`Фактический остаток в ${esc(i.unit)}`:`Количество в ${esc(i.unit)}`}</label><input name="quantity" data-base-qty type="number" inputmode="decimal" min="0" step="0.001" value="${isAdjustment?esc(i.qty):""}" ${canUsePieces?"":"required"}></div>
+      ${canUsePieces?`<div class="smart-or"><span>или</span></div><div class="field"><label>${isAdjustment?"Фактический остаток в упаковках / штуках":"Количество упаковок / штук"}</label><input name="pieces" data-piece-qty type="number" inputmode="decimal" min="0" step="0.001" placeholder="Например, 2"><small>Фасовка одной штуки: ${packLabel(i)}</small></div><div class="conversion-preview" data-conversion-preview>Введи вес/объём или количество штук</div>`:""}
       ${type==="writeoff"?`<div class="field"><label>Причина</label><select name="reason">${WRITE_OFF_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></div>`:""}${isAdjustment?"":`<div class="field"><label>Комментарий</label><input name="comment"></div>`}<button class="primary" type="submit">Сохранить количество</button></form>`);
     const baseInput=el.querySelector('[data-base-qty]'),pieceInput=el.querySelector('[data-piece-qty]'),preview=el.querySelector('[data-conversion-preview]');
     if(isAdjustment){setTimeout(()=>{baseInput.focus();baseInput.select()},80)}
