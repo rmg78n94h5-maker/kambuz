@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "0.5.2";
+  const APP_VERSION = "0.5.3";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -431,6 +431,8 @@
   }
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js").catch(console.error);
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=0.5.3", {scope:"./"})
+    .then(reg=>reg.update().catch(()=>{}))
+    .catch(console.error);
   load();
 })();
