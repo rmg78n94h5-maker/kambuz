@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "1.0.0";
+  const APP_VERSION = "1.1.0";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -233,33 +233,44 @@
   function syncIcon(){const c=syncClass();return c==="ok"?"✓":c==="wait"?"◷":c==="bad"?"!":"↯"}
   function syncShort(){const c=syncClass(),n=getQueue().length;return c==="ok"?"Онлайн":c==="wait"?`Ожидает${n?` (${n})`:""}`:c==="bad"?"Ошибка":"Офлайн"}
   function itemLabel(i){return [i.brand,i.name].filter(Boolean).join(" ").replace(/\s+/g," ").trim()||"Без названия"}
-  function packLabel(i){const v=i.volume??i.weight;return v?`${fmt(v)} ${esc(i.package_unit||i.unit||"")}`:""}
+  function packLabel(i){const v=i.volume??i.weight;return v?`${fmt(v)} ${esc(i.package_unit||"")}`:""}
   function normalizedUnit(v){return String(v||"").toLowerCase().trim().replace(/\.$/,"")}
-  function packageCount(i,qty=i.qty){const factor=packageToBase(i);return factor?Number(qty||0)/factor:null}
-  function dualQtyHtml(i,qty=i.qty,compact=false){const factor=packageToBase(i),base=Number(qty||0);if(!factor)return `${fmt(base)} ${esc(i.unit)}`;const pieces=base/factor;return compact?`${fmt(pieces)} уп. · ${fmt(base)} ${esc(i.unit)}`:`<span class="dual-main">${fmt(pieces)} <small>уп.</small></span><span class="dual-sub">${fmt(base)} ${esc(i.unit)}</span>`}
-  function packageToBase(i){
-    const base=normalizedUnit(i.unit),pack=normalizedUnit(i.package_unit),amount=Number(i.volume??i.weight??0);
-    if(!amount||amount<=0)return null;
-    if(base==="кг"){if(["г","гр","g"].includes(pack))return amount/1000;if(["кг","kg"].includes(pack))return amount}
-    if(base==="л"){if(["мл","ml"].includes(pack))return amount/1000;if(["л","l"].includes(pack))return amount}
+  function normalizedPackage(i){
+    const v=Number(i.volume??i.weight??0),u=normalizedUnit(i.package_unit);
+    if(!v||v<=0)return null;
+    if(["кг","kg"].includes(u))return {kg:v};
+    if(["г","гр","g"].includes(u))return {kg:v/1000};
+    if(["л","l"].includes(u))return {l:v};
+    if(["мл","ml"].includes(u))return {l:v/1000};
     return null;
   }
-  function suggestedUnit(i){
-    const sub=String(i.subcategory||"").toLowerCase(),name=String(i.name||"").toLowerCase();
-    const kgSubs=["птица","субпродукты","свинина","говядина","колбасы","мясная гастрономия","мясные полуфабрикаты","замороженные полуфабрикаты","сыры","сухофрукты","овощи","зелень","фрукты","яблоки","цитрусовые","тропические фрукты","корнеплоды","капуста","томат","перец","салаты","крупы","рис","мука","сахар","кондитерские изделия","сухие завтраки","макаронные изделия","бобовые и крупы"];
-    const lNames=["молоко","кефир","сливки","сок","соевый соус","уксус","масло растительное","йогурт питьевой","безалкогольные напитки"];
-    if(lNames.some(x=>name.includes(x)))return "л";
-    if(kgSubs.some(x=>sub.includes(x)))return "кг";
-    return null;
+  function isLooseWeightItem(i){
+    const t=`${i.name||""} ${i.subcategory||""}`.toLowerCase().replace(/ё/g,"е");
+    return /(овощ|фрукт|зелень|яблок|цитрус|банан|груш|ананас|манго|киви|картоф|лук|капуст|томат|огур|перец|баклаж|кабач|броккол|мяс|птиц|курин|индей|свин|говяж|теля|баранин|рыб|лосос|семг|сельд|скумбр|минтай|треск|колбас|ветчин|сало|грудинк|сосиск|сардельк|шпикач|купат|сыр(?! hochland)|творог|масло сливоч)/.test(t);
+  }
+  function desiredStockUnit(i){
+    if(isLooseWeightItem(i))return "кг";
+    if(normalizedPackage(i))return "шт.";
+    return i.unit||"шт.";
   }
   function repairKnownUnits(){
     let changed=false;
     for(const i of state.items){
-      const wanted=suggestedUnit(i);
-      if(wanted&&normalizedUnit(i.unit)!==wanted){i.unit=wanted;i.updated_at=now();changed=true;queueItemUpsert(i)}
+      const wanted=desiredStockUnit(i);
+      if(wanted&&normalizedUnit(i.unit)!==normalizedUnit(wanted)){i.unit=wanted;i.updated_at=now();changed=true;queueItemUpsert(i)}
     }
     if(changed)saveLocal();
     return changed;
+  }
+  function reportAmountFromStock(i){
+    const qty=Number(i.qty||0),u=normalizedUnit(i.unit),pack=normalizedPackage(i);
+    if(["кг","kg"].includes(u))return {kg:qty};
+    if(["г","гр","g"].includes(u))return {kg:qty/1000};
+    if(["л","l"].includes(u))return {l:qty};
+    if(["мл","ml"].includes(u))return {l:qty/1000};
+    if(pack?.kg)return {kg:qty*pack.kg};
+    if(pack?.l)return {l:qty*pack.l};
+    return null;
   }
 
   function shell(content){
@@ -349,7 +360,7 @@
   function itemRow(i){
     const low=Number(i.qty)<=Number(i.min_qty||0);
     const pending=pendingForItem(i.id);
-    const qtyText=packageToBase(i)?dualQtyHtml(i,i.qty,true):`${fmt(i.qty)} ${esc(i.unit)}`;
+    const qtyText=`${fmt(i.qty)} ${esc(i.unit)}`;
     return `<button class="item" data-item="${i.id}"><div class="item-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div><div class="item-main"><div class="item-title">${esc(itemLabel(i))}</div><div class="item-meta">${esc(i.subcategory||i.category)}${packLabel(i)?` · ${packLabel(i)}`:""}</div></div><div class="qty-wrap"><div class="qty ${pending?"pending-qty":low?"low":""}">${qtyText}${pending?'<span class="pending-clock" aria-label="Ожидает синхронизации">◷</span>':""}</div><div class="item-meta ${pending?"pending-text":""}">${pending?`ожидает · ${pending}`:`мин. ${fmt(i.min_qty||0)}`}</div></div></button>`;
   }
 
@@ -455,26 +466,14 @@
     const itemOps=state.ops.filter(o=>o.item_id===i.id).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
     const today=localDateKey();
     const usedToday=itemOps.filter(o=>o.type==="consumption"&&localDateKey(o.created_at)===today).reduce((sum,o)=>sum+Number(o.quantity||0),0);
-    const lastReceipt=itemOps.find(o=>o.type==="receipt");
-    const lastUse=itemOps.find(o=>o.type==="consumption");
-    const history=itemOps.slice(0,8).map(o=>{const amount=packageToBase(i)?dualQtyHtml(i,o.quantity,true):`${fmt(o.quantity)} ${esc(o.unit||i.unit)}`;return `<div class="mini-history"><span><b>${labelType(o.type)}</b><small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}</small></span><strong>${sign(o.type)}${amount}</strong></div>`}).join("")||'<div class="empty small">По товару ещё нет операций</div>';
-    const pending=pendingForItem(i.id),factor=packageToBase(i);
-    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty ${factor?"dual-qty":""} ${pending?"pending-qty":""}">${factor?dualQtyHtml(i):`${fmt(i.qty)} <span>${esc(i.unit)}</span>`}${pending?'<span class="pending-clock big">◷</span>':""}</div>${factor?`<button class="secondary full package-repair" data-repair-pack>Текущий остаток введён упаковками</button>`:""}${pending?`<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>`:""}<div class="detail-grid"><div><small>Расход сегодня</small><b>${fmt(usedToday)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div>
-      <div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="edit" data-edit>Изменить</button><button class="adjustment" data-op="adjustment">Исправить остаток</button></div>
-      <div class="section-title compact-title"><h2>Последние операции</h2></div><div class="mini-history-list">${history}</div>`);
-    el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>{el.remove();singleOperation(i,b.dataset.op)});
-    el.querySelector("[data-edit]").onclick=()=>{el.remove();itemForm(i)};
-    const repair=el.querySelector("[data-repair-pack]");if(repair)repair.onclick=()=>repairCurrentAsPackages(i,el);
+    const lastReceipt=itemOps.find(o=>o.type==="receipt"),lastUse=itemOps.find(o=>o.type==="consumption");
+    const history=itemOps.slice(0,8).map(o=>`<div class="mini-history"><span><b>${labelType(o.type)}</b><small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}</small></span><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i.unit)}</strong></div>`).join("")||'<div class="empty small">По товару ещё нет операций</div>';
+    const pending=pendingForItem(i.id),rv=reportAmountFromStock(i);
+    const reportHint=rv?`<div class="detail-report-hint">В сводный отчёт: <b>${fmt(rv.kg??rv.l)} ${rv.kg!=null?"кг":"л"}</b></div>`:"";
+    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty ${pending?"pending-qty":""}">${fmt(i.qty)} <span>${esc(i.unit)}</span>${pending?'<span class="pending-clock big">◷</span>':""}</div>${reportHint}${pending?'<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>':""}<div class="detail-grid"><div><small>Расход сегодня</small><b>${fmt(usedToday)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div><div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="secondary" data-op="adjustment">Исправить остаток</button></div><h3>Последние операции</h3><div>${history}</div><button class="secondary full" data-edit-item>Изменить товар</button>`);
+    el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>singleOperation(i,b.dataset.op));
+    el.querySelector("[data-edit-item]").onclick=()=>{el.remove();itemForm(i)};
   }
-
-  function repairCurrentAsPackages(i,parent){
-    const factor=packageToBase(i);if(!factor)return;
-    const current=Number(i.qty||0),converted=current*factor;
-    const el=modal("Пересчитать остаток",`<div class="detail-card"><p>Сейчас записано: <b>${fmt(current)} ${esc(i.unit)}</b></p><p>Если число ${fmt(current)} на самом деле означает упаковки по ${packLabel(i)}, новый остаток будет:</p><div class="big-qty dual-qty">${dualQtyHtml(i,converted)}</div></div><div class="modal-actions"><button class="secondary" data-cancel>Отмена</button><button class="primary" data-confirm>Да, это упаковки</button></div>`);
-    el.querySelector("[data-cancel]").onclick=()=>el.remove();
-    el.querySelector("[data-confirm]").onclick=async()=>{try{await persistOperation(i,"adjustment",Math.abs(converted-current),current,converted,null,"Пересчёт остатка: значение было введено как количество упаковок");el.remove();parent?.remove();await reload();toast(`Остаток пересчитан: ${fmt(current)} уп. = ${fmt(converted)} ${i.unit}`)}catch(e){console.error(e);toast("Не удалось пересчитать остаток")}};
-  }
-
   function openBasket(type){
     state.basket={type,lines:[]};
     const title=type==="consumption"?"Быстрый расход":"Массовое поступление";
@@ -502,33 +501,11 @@
 
   function singleOperation(i,type){
     const isAdjustment=type==="adjustment";
-    const factor=packageToBase(i);
-    const canUsePieces=Boolean(factor&&["кг","л"].includes(normalizedUnit(i.unit)));
-    const operationWord=isAdjustment?"останется":type==="receipt"?"поступит":"спишется";
-    const el=modal(isAdjustment?"Исправить остаток":labelType(type),`<form class="form smart-operation"><div class="field"><label>Товар</label><input disabled value="${esc(itemLabel(i))}"></div>
-      <div class="field"><label>${isAdjustment?`Фактический остаток в ${esc(i.unit)}`:`Количество в ${esc(i.unit)}`}</label><input name="quantity" data-base-qty type="number" inputmode="decimal" min="0" step="0.001" value="${isAdjustment&&!canUsePieces?esc(i.qty):""}" ${canUsePieces?"":"required"}></div>
-      ${canUsePieces?`<div class="smart-or"><span>или</span></div><div class="field"><label>${isAdjustment?"Фактический остаток в упаковках / штуках":"Количество упаковок / штук"}</label><input name="pieces" data-piece-qty type="number" inputmode="decimal" min="0" step="0.001" value="${isAdjustment?fmt(packageCount(i)):""}" placeholder="Например, 2"><small>Фасовка одной штуки: ${packLabel(i)}</small></div><div class="conversion-preview" data-conversion-preview>Введи вес/объём или количество штук</div>`:""}
-      ${type==="writeoff"?`<div class="field"><label>Причина</label><select name="reason">${WRITE_OFF_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></div>`:""}${isAdjustment?"":`<div class="field"><label>Комментарий</label><input name="comment"></div>`}<button class="primary" type="submit">Сохранить количество</button></form>`);
-    const baseInput=el.querySelector('[data-base-qty]'),pieceInput=el.querySelector('[data-piece-qty]'),preview=el.querySelector('[data-conversion-preview]');
-    if(isAdjustment){setTimeout(()=>{const target=pieceInput||baseInput;target.focus();target.select()},80)}
-    if(canUsePieces){
-      const updatePreview=()=>{
-        const pieces=Number(pieceInput.value||0),base=Number(baseInput.value||0);
-        if(pieces>0){preview.textContent=`${fmt(pieces)} шт. × ${packLabel(i)} → ${operationWord} ${fmt(pieces*factor)} ${i.unit}`;preview.classList.add("active")}
-        else if(base>0){preview.textContent=`${operationWord[0].toUpperCase()+operationWord.slice(1)} ${fmt(base)} ${i.unit}`;preview.classList.add("active")}
-        else{preview.textContent="Введи вес/объём или количество штук";preview.classList.remove("active")}
-      };
-      pieceInput.oninput=()=>{if(pieceInput.value)baseInput.value="";updatePreview()};
-      baseInput.oninput=()=>{if(baseInput.value)pieceInput.value="";updatePreview()};
-    }
-    el.querySelector("form").onsubmit=async e=>{
-      e.preventDefault();const f=Object.fromEntries(new FormData(e.target));
-      let q=Number(f.quantity||0);if(canUsePieces&&Number(f.pieces)>0)q=Number(f.pieces)*factor;
-      if(!Number.isFinite(q)||q<=0){toast("Укажи количество");return}
-      const prev=Number(i.qty);let next=prev;if(type==="receipt")next=prev+q;else if(type==="adjustment")next=q;else next=prev-q;
-      if(next<0){toast(`Недостаточный остаток: доступно ${fmt(prev)} ${i.unit}`);return}
-      try{await persistOperation(i,type,type==="adjustment"?Math.abs(next-prev):q,prev,next,f.reason||null,f.comment||null);el.remove();await reload();toast("Операция сохранена")}catch(err){console.error(err);toast("Ошибка операции")}
-    };
+    const one=reportAmountFromStock({...i,qty:1});
+    const hint=packLabel(i)?`<div class="conversion-preview active">Складской учёт: ${esc(i.unit)} · фасовка: ${packLabel(i)}${one?` · 1 ${esc(i.unit)} = ${fmt(one.kg??one.l)} ${one.kg!=null?"кг":"л"} в отчёте`:""}</div>`:"";
+    const el=modal(isAdjustment?"Исправить остаток":labelType(type),`<form class="form"><div class="field"><label>Товар</label><input disabled value="${esc(itemLabel(i))}"></div><div class="field"><label>${isAdjustment?`Фактический остаток в ${esc(i.unit)}`:`Количество в ${esc(i.unit)}`}</label><input name="quantity" type="number" inputmode="decimal" min="0" step="0.001" value="${isAdjustment?esc(i.qty):""}" required></div>${hint}${type==="writeoff"?`<div class="field"><label>Причина</label><select name="reason">${WRITE_OFF_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></div>`:""}${isAdjustment?"":`<div class="field"><label>Комментарий</label><input name="comment"></div>`}<button class="primary" type="submit">Сохранить количество</button></form>`);
+    const input=el.querySelector('[name="quantity"]');setTimeout(()=>{input.focus();input.select()},80);
+    el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const q=Number(f.quantity||0);if(!Number.isFinite(q)||q<0||(!isAdjustment&&q<=0)){toast("Укажи количество");return}const prev=Number(i.qty);let next=prev;if(type==="receipt")next=prev+q;else if(type==="adjustment")next=q;else next=prev-q;if(next<0){toast(`Недостаточный остаток: доступно ${fmt(prev)} ${i.unit}`);return}try{await persistOperation(i,type,type==="adjustment"?Math.abs(next-prev):q,prev,next,f.reason||null,f.comment||null);el.remove();await reload();toast("Операция сохранена")}catch(err){console.error(err);toast("Ошибка операции")}};
   }
   async function persistOperation(i,type,quantity,previous_qty,new_qty,reason=null,comment=null){
     const op={id:uid(),item_id:i.id,item_name:itemLabel(i),type,quantity,reason,comment,user_name:state.user,unit:i.unit,previous_qty,new_qty,target_qty:type==="adjustment"?new_qty:null,created_at:now(),pending:hasCloudConfig};
@@ -634,33 +611,12 @@
     if(/круп|греч|рис|булгур|перлов|манн|пшенич|горох колот|макарон|мук|сахар|овсян|мюсли|хлоп|масло раст/.test(t))return "grocery";
     return null;
   }
-  function normalizedPackage(i){
-    const v=Number(i.volume??i.weight??0);
-    const u=String(i.package_unit||"").toLowerCase().trim().replace(".","");
-    if(!v)return null;
-    if(["кг","kg"].includes(u))return {kg:v};
-    if(["г","гр","g"].includes(u))return {kg:v/1000};
-    if(["л","l"].includes(u))return {l:v};
-    if(["мл","ml"].includes(u))return {l:v/1000};
-    return null;
-  }
+
   function itemReportAmount(i,group){
-    const qty=Number(i.qty||0),unit=String(i.unit||"").toLowerCase().trim().replace(".","");
-    const pack=normalizedPackage(i);
-    if(group==="milk"){
-      if(["л","l"].includes(unit))return qty;
-      if(["мл","ml"].includes(unit))return qty/1000;
-      if(pack?.l)return qty*pack.l;
-      return null;
-    }
-    if(["кг","kg"].includes(unit))return qty;
-    if(["г","гр","g"].includes(unit))return qty/1000;
-    if(pack?.kg)return qty*pack.kg;
-    if(group==="grocery"&&/масло раст/.test(reportText(i))){
-      const liters=["л","l"].includes(unit)?qty:["мл","ml"].includes(unit)?qty/1000:pack?.l?qty*pack.l:null;
-      return liters==null?null:liters*0.92;
-    }
-    return null;
+    const converted=reportAmountFromStock(i);if(!converted)return null;
+    if(group==="milk")return converted.l??null;
+    if(group==="grocery"&&/масло раст/.test(reportText(i))&&converted.l!=null)return converted.l*0.92;
+    return converted.kg??null;
   }
   function unresolvedReportReason(i,group){
     const qty=Number(i.qty||0),unit=String(i.unit||"").trim().toLowerCase().replace(/\.$/,"");
@@ -717,7 +673,7 @@
   }
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=0.7.1", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=1.1.0", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();
