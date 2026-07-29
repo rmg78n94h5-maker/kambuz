@@ -38,3 +38,10 @@
 .report-problem-row small{color:var(--muted);font-size:11px;margin-top:3px;line-height:1.35}
 .report-problem-row em{font-style:normal;color:var(--red);font-size:12px;font-weight:700;margin-top:6px}
 .report-fix-btn{padding:9px 11px;white-space:nowrap}
+
+/* v0.8.0 — ввод по основной единице или по фасовке */
+.smart-operation .field small{display:block;margin-top:7px;color:#6f817c;font-size:13px}
+.smart-or{display:flex;align-items:center;gap:12px;color:#7d8e89;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+.smart-or::before,.smart-or::after{content:"";height:1px;background:#dce7e3;flex:1}
+.conversion-preview{padding:13px 15px;border-radius:14px;background:#f1f6f4;color:#657a73;font-weight:700;line-height:1.35}
+.conversion-preview.active{background:#e3f5ed;color:#0c6d55}

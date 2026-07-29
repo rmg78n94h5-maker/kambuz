@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "0.7.1";
+  const APP_VERSION = "0.8.0";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -73,6 +73,7 @@
   function loadLocal(){
     state.items=safeParse(STORAGE.items,seed);
     state.ops=safeParse(STORAGE.ops,[]);
+    repairKnownUnits();
   }
   function saveLocal(){
     localStorage.setItem(STORAGE.items,JSON.stringify(state.items));
@@ -138,6 +139,7 @@
     if(e1||e2)throw e1||e2;
     const queue=getQueue();
     if(items) state.items=applyPendingOverlay(items,queue);
+    repairKnownUnits();
     if(ops){
       const pendingOps=queue.filter(o=>o.kind==="operation").map(o=>({...o,pending:true}));
       const pendingIds=new Set(pendingOps.map(o=>o.id));
@@ -203,6 +205,31 @@
   function syncShort(){const c=syncClass(),n=getQueue().length;return c==="ok"?"Онлайн":c==="wait"?`Ожидает${n?` (${n})`:""}`:c==="bad"?"Ошибка":"Офлайн"}
   function itemLabel(i){return [i.brand,i.name].filter(Boolean).join(" ").replace(/\s+/g," ").trim()||"Без названия"}
   function packLabel(i){const v=i.volume??i.weight;return v?`${fmt(v)} ${esc(i.package_unit||i.unit||"")}`:""}
+  function normalizedUnit(v){return String(v||"").toLowerCase().trim().replace(/\.$/,"")}
+  function packageToBase(i){
+    const base=normalizedUnit(i.unit),pack=normalizedUnit(i.package_unit),amount=Number(i.volume??i.weight??0);
+    if(!amount||amount<=0)return null;
+    if(base==="кг"){if(["г","гр","g"].includes(pack))return amount/1000;if(["кг","kg"].includes(pack))return amount}
+    if(base==="л"){if(["мл","ml"].includes(pack))return amount/1000;if(["л","l"].includes(pack))return amount}
+    return null;
+  }
+  function suggestedUnit(i){
+    const sub=String(i.subcategory||"").toLowerCase(),name=String(i.name||"").toLowerCase();
+    const kgSubs=["птица","субпродукты","свинина","говядина","колбасы","мясная гастрономия","мясные полуфабрикаты","замороженные полуфабрикаты","сыры","сухофрукты","овощи","зелень","фрукты","яблоки","цитрусовые","тропические фрукты","корнеплоды","капуста","томат","перец","салаты","крупы","рис","мука","сахар","кондитерские изделия","сухие завтраки","макаронные изделия","бобовые и крупы"];
+    const lNames=["молоко","кефир","сливки","сок","соевый соус","уксус","масло растительное","йогурт питьевой","безалкогольные напитки"];
+    if(lNames.some(x=>name.includes(x)))return "л";
+    if(kgSubs.some(x=>sub.includes(x)))return "кг";
+    return null;
+  }
+  function repairKnownUnits(){
+    let changed=false;
+    for(const i of state.items){
+      const wanted=suggestedUnit(i);
+      if(wanted&&normalizedUnit(i.unit)!==wanted){i.unit=wanted;i.updated_at=now();changed=true;queueItemUpsert(i)}
+    }
+    if(changed)saveLocal();
+    return changed;
+  }
 
   function shell(content){
     return `<div class="app-shell">
@@ -388,9 +415,33 @@
 
   function singleOperation(i,type){
     const isAdjustment=type==="adjustment";
-    const el=modal(isAdjustment?"Исправить остаток":labelType(type),`<form class="form"><div class="field"><label>Товар</label><input disabled value="${esc(itemLabel(i))}"></div><div class="field"><label>${isAdjustment?"Фактическое количество":"Количество"}</label><input name="quantity" type="number" min="0" step="0.001" value="${isAdjustment?esc(i.qty):1}" required></div>${type==="writeoff"?`<div class="field"><label>Причина</label><select name="reason">${WRITE_OFF_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></div>`:""}${isAdjustment?"":`<div class="field"><label>Комментарий</label><input name="comment"></div>`}<button class="primary" type="submit">Сохранить количество</button></form>`);
-    if(isAdjustment){const input=el.querySelector('input[name="quantity"]');setTimeout(()=>{input.focus();input.select()},80)}
-    el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const q=Number(f.quantity);const prev=Number(i.qty);let next=prev;if(type==="receipt")next=prev+q;else if(type==="adjustment")next=q;else next=prev-q;if(next<0){toast("Недостаточный остаток");return}try{await persistOperation(i,type,type==="adjustment"?Math.abs(next-prev):q,prev,next,f.reason||null,f.comment||null);el.remove();await reload();toast("Операция сохранена")}catch(err){console.error(err);toast("Ошибка операции")}};
+    const factor=packageToBase(i);
+    const canUsePieces=!isAdjustment&&factor&&["кг","л"].includes(normalizedUnit(i.unit));
+    const operationWord=type==="receipt"?"поступит":"спишется";
+    const el=modal(isAdjustment?"Исправить остаток":labelType(type),`<form class="form smart-operation"><div class="field"><label>Товар</label><input disabled value="${esc(itemLabel(i))}"></div>
+      <div class="field"><label>${isAdjustment?"Фактическое количество":`Количество в ${esc(i.unit)}`}</label><input name="quantity" data-base-qty type="number" inputmode="decimal" min="0" step="0.001" value="${isAdjustment?esc(i.qty):""}" ${canUsePieces?"":"required"}></div>
+      ${canUsePieces?`<div class="smart-or"><span>или</span></div><div class="field"><label>Количество упаковок / штук</label><input name="pieces" data-piece-qty type="number" inputmode="decimal" min="0" step="0.001" placeholder="Например, 2"><small>Фасовка одной штуки: ${packLabel(i)}</small></div><div class="conversion-preview" data-conversion-preview>Введи вес/объём или количество штук</div>`:""}
+      ${type==="writeoff"?`<div class="field"><label>Причина</label><select name="reason">${WRITE_OFF_REASONS.map(r=>`<option>${r}</option>`).join("")}</select></div>`:""}${isAdjustment?"":`<div class="field"><label>Комментарий</label><input name="comment"></div>`}<button class="primary" type="submit">Сохранить количество</button></form>`);
+    const baseInput=el.querySelector('[data-base-qty]'),pieceInput=el.querySelector('[data-piece-qty]'),preview=el.querySelector('[data-conversion-preview]');
+    if(isAdjustment){setTimeout(()=>{baseInput.focus();baseInput.select()},80)}
+    if(canUsePieces){
+      const updatePreview=()=>{
+        const pieces=Number(pieceInput.value||0),base=Number(baseInput.value||0);
+        if(pieces>0){preview.textContent=`${fmt(pieces)} шт. × ${packLabel(i)} → ${operationWord} ${fmt(pieces*factor)} ${i.unit}`;preview.classList.add("active")}
+        else if(base>0){preview.textContent=`${operationWord[0].toUpperCase()+operationWord.slice(1)} ${fmt(base)} ${i.unit}`;preview.classList.add("active")}
+        else{preview.textContent="Введи вес/объём или количество штук";preview.classList.remove("active")}
+      };
+      pieceInput.oninput=()=>{if(pieceInput.value)baseInput.value="";updatePreview()};
+      baseInput.oninput=()=>{if(baseInput.value)pieceInput.value="";updatePreview()};
+    }
+    el.querySelector("form").onsubmit=async e=>{
+      e.preventDefault();const f=Object.fromEntries(new FormData(e.target));
+      let q=Number(f.quantity||0);if(canUsePieces&&Number(f.pieces)>0)q=Number(f.pieces)*factor;
+      if(!Number.isFinite(q)||q<=0){toast("Укажи количество");return}
+      const prev=Number(i.qty);let next=prev;if(type==="receipt")next=prev+q;else if(type==="adjustment")next=q;else next=prev-q;
+      if(next<0){toast(`Недостаточный остаток: доступно ${fmt(prev)} ${i.unit}`);return}
+      try{await persistOperation(i,type,type==="adjustment"?Math.abs(next-prev):q,prev,next,f.reason||null,f.comment||null);el.remove();await reload();toast("Операция сохранена")}catch(err){console.error(err);toast("Ошибка операции")}
+    };
   }
   async function persistOperation(i,type,quantity,previous_qty,new_qty,reason=null,comment=null){
     const op={id:uid(),item_id:i.id,item_name:itemLabel(i),type,quantity,reason,comment,user_name:state.user,unit:i.unit,previous_qty,new_qty,target_qty:type==="adjustment"?new_qty:null,created_at:now(),pending:hasCloudConfig};
@@ -441,7 +492,7 @@
     const volume=x.packageQuantity??x.volume??x.weight??null;
     const packageUnit=x.packageUnit??x.package_unit??(x.volume!=null?"мл":x.weight!=null?"г":null);
     const noteParts=[x.notes,x.status&&x.status!=="confirmed"?`Статус каталога: ${x.status}`:null,x.originalName?`Оригинальное название: ${x.originalName}`:null].filter(Boolean);
-    return {barcode:normalizeBarcode(x.barcode)||null,brand:String(x.brand||"").trim()||null,name:String(x.name||"").trim(),category:cat,subcategory:String(x.subcategory||"").trim()||null,volume:volume!=null&&volume!==""?Number(volume):null,package_unit:String(packageUnit||"").trim()||null,unit:String(x.stockUnit||x.stock_unit||guessStockUnit(x,cat)),min_qty:Number(x.minQty??x.min_qty??0),location:String(x.location||"Основной склад"),notes:noteParts.join(" · ")||null,updated_at:now()};
+    return {barcode:normalizeBarcode(x.barcode)||null,brand:String(x.brand||"").trim()||null,name:String(x.name||"").trim(),category:cat,subcategory:String(x.subcategory||"").trim()||null,volume:volume!=null&&volume!==""?Number(volume):null,package_unit:String(packageUnit||"").trim()||null,unit:String(x.unit||x.stockUnit||x.stock_unit||guessStockUnit(x,cat)),min_qty:Number(x.minQty??x.min_qty??0),location:String(x.location||"Основной склад"),notes:noteParts.join(" · ")||null,updated_at:now()};
   }
   function guessStockUnit(x,cat){if(cat==="Химия")return "бут.";if(String(x.subcategory||"").toLowerCase().includes("бумаг"))return "рулон";return "шт."}
   async function runImport(rows,el){
@@ -466,8 +517,8 @@
     try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}});const video=el.querySelector("#scanner-video");video.srcObject=stream;await video.play();el._stream=stream;if("BarcodeDetector" in window){const detector=new BarcodeDetector({formats:["ean_13","ean_8","code_128","upc_a","upc_e"]});let active=true;el._stop=()=>active=false;const tick=async()=>{if(!active||!document.body.contains(el))return;try{const codes=await detector.detect(video);if(codes[0]?.rawValue){onCode(codes[0].rawValue);if(!continuous)return}}catch{}setTimeout(tick,180)};tick()}else el.querySelector("#scan-status").textContent="Автосканер не поддерживается — введи код вручную"}catch(e){el.querySelector("#scan-status").textContent="Камера недоступна — введи код вручную"}
   }
   function quickScannedItem(item){
-    const el=modal("Товар найден",`<div class="scan-found"><div class="item-avatar large">${esc((item.brand||item.name||"?").slice(0,1).toUpperCase())}</div><h3>${esc(itemLabel(item))}</h3><p>${esc(item.subcategory||item.category)}${packLabel(item)?` · ${packLabel(item)}`:""}</p><div class="big-qty">${fmt(item.qty)} <span>${esc(item.unit)}</span></div></div><div class="detail-actions"><button class="consumption" data-quick="consumption">−1 Расход</button><button class="receipt" data-quick="receipt">+1 Поступление</button><button class="edit" data-card>Карточка</button><button class="secondary" data-scan-again>Сканировать ещё</button></div>`);
-    el.querySelectorAll("[data-quick]").forEach(b=>b.onclick=async()=>{const type=b.dataset.quick,prev=Number(item.qty),next=type==="receipt"?prev+1:prev-1;if(next<0){toast("Недостаточный остаток");return}try{await persistOperation(item,type,1,prev,next);el.remove();await reload();toast(type==="receipt"?"Добавлено 1":"Списано 1")}catch(e){toast("Ошибка операции")}});
+    const el=modal("Товар найден",`<div class="scan-found"><div class="item-avatar large">${esc((item.brand||item.name||"?").slice(0,1).toUpperCase())}</div><h3>${esc(itemLabel(item))}</h3><p>${esc(item.subcategory||item.category)}${packLabel(item)?` · ${packLabel(item)}`:""}</p><div class="big-qty">${fmt(item.qty)} <span>${esc(item.unit)}</span></div></div><div class="detail-actions"><button class="consumption" data-quick="consumption">− Расход</button><button class="receipt" data-quick="receipt">+ Поступление</button><button class="edit" data-card>Карточка</button><button class="secondary" data-scan-again>Сканировать ещё</button></div>`);
+    el.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>{const type=b.dataset.quick;el.remove();singleOperation(item,type)});
     el.querySelector("[data-card]").onclick=()=>{el.remove();openItem(item.id)};
     el.querySelector("[data-scan-again]").onclick=()=>{el.remove();scanBarcode("quick")};
   }
