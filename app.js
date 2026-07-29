@@ -10,8 +10,8 @@
   const state = {
     tab:"home", items:[], ops:[], query:"", category:"Все",
     user:localStorage.getItem("kambuz_user") || "Никита",
-    sync:hasCloudConfig?(navigator.onLine?"Подключение…":"Офлайн · данные с телефона") : "Локальный режим",
-    basket:{type:"consumption",lines:[]}, syncing:false, subscribed:false
+    sync:hasCloudConfig?(navigator.onLine?"🟡 Подключение…":"🟠 Офлайн") : "Локальный режим",
+    basket:{type:"consumption",lines:[]}, syncing:false, subscribed:false, syncError:null, lastSync:localStorage.getItem("kambuz_last_sync")||null
   };
   const STORAGE = {items:"kambuz_items",ops:"kambuz_ops",queue:"kambuz_pending_ops"};
   const $ = s => document.querySelector(s);
@@ -54,13 +54,14 @@
   }
   async function connectCloudAndSync(){
     try{
-      state.sync="Подключение…";render();
+      state.sync="🟡 Подключение…";state.syncError=null;render();
       if(!await ensureCloud()){updateSyncLabel();return}
       await syncPending();
       await loadCloudSilent();
-      state.sync="Облако подключено";
+      state.lastSync=now(); localStorage.setItem("kambuz_last_sync",state.lastSync);
+      state.sync="🟢 Синхронизировано";
       subscribe();
-    }catch(e){console.error(e);state.sync=getQueue().length?`Ожидает отправки · ${getQueue().length}`:"Офлайн · данные с телефона"}
+    }catch(e){console.error(e);state.syncError=e?.message||"Не удалось связаться с облаком";state.sync="🔴 Ошибка синхронизации"}
     render();
   }
   function safeParse(key,fallback){try{return JSON.parse(localStorage.getItem(key)||"null")??fallback}catch{return fallback}}
@@ -90,10 +91,12 @@
   function updateSyncLabel(){
     const n=getQueue().length;
     if(!hasCloudConfig)state.sync="Локальный режим";
-    else if(!navigator.onLine)state.sync=n?`Офлайн · в очереди ${n}`:"Офлайн · данные с телефона";
-    else if(!cloudEnabled)state.sync=n?`Ожидает отправки · ${n}`:"Подключение…";
-    else if(state.syncing)state.sync=n?`Синхронизация · ${n}`:"Синхронизация…";
-    else state.sync=n?`Ожидает отправки · ${n}`:"Облако подключено";
+    else if(state.syncError&&navigator.onLine)state.sync="🔴 Ошибка синхронизации";
+    else if(!navigator.onLine)state.sync=n?`🟡 Ожидает (${n})`:"🟠 Офлайн";
+    else if(state.syncing)state.sync=n?`🟡 Ожидает (${n})`:"🟡 Синхронизация…";
+    else if(n)state.sync=`🟡 Ожидает (${n})`;
+    else if(cloudEnabled)state.sync="🟢 Синхронизировано";
+    else state.sync="🟡 Подключение…";
     render();
   }
   function subscribe(){
@@ -121,8 +124,8 @@
   }
   async function syncPending(){
     if(!cloudEnabled||!navigator.onLine||state.syncing)return;
-    let queue=getQueue();if(!queue.length){state.sync="Облако подключено";return}
-    state.syncing=true;updateSyncLabel();
+    let queue=getQueue();if(!queue.length){state.syncError=null;state.sync="🟢 Синхронизировано";return}
+    state.syncing=true;state.syncError=null;updateSyncLabel();
     try{
       while(queue.length){
         const pending=queue[0];
@@ -146,18 +149,20 @@
         updateSyncLabel();
       }
       await loadCloudSilent();
-      state.sync="Облако подключено";
+      state.lastSync=now(); localStorage.setItem("kambuz_last_sync",state.lastSync);
+      state.syncError=null; state.sync="🟢 Синхронизировано";
+    }catch(e){state.syncError=e?.message||"Не удалось отправить операции";state.sync="🔴 Ошибка синхронизации";throw e
     }finally{state.syncing=false;updateSyncLabel()}
   }
   function toast(msg){const t=$("#toast");if(!t)return;t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400)}
-  function syncClass(){return state.sync.includes("подключено")?"ok":state.sync.includes("Ошибка")?"bad":""}
+  function syncClass(){return state.sync.includes("Синхронизировано")?"ok":state.sync.includes("Ошибка")?"bad":state.sync.includes("Ожидает")?"wait":"offline"}
   function itemLabel(i){return [i.brand,i.name].filter(Boolean).join(" ").replace(/\s+/g," ").trim()||"Без названия"}
   function packLabel(i){const v=i.volume??i.weight;return v?`${fmt(v)} ${esc(i.package_unit||i.unit||"")}`:""}
 
   function shell(content){
     return `<div class="app-shell">
       <header class="topbar"><div class="brand"><div class="logo">⚓</div><div><h1>Камбуз</h1><div class="subtitle">${esc(cfg.PROJECT_NAME||"Основной камбуз")}</div></div></div><button class="icon-btn" data-action="profile">👤</button></header>
-      <div class="sync ${syncClass()}">${esc(state.sync)} · ${esc(state.user)}</div>
+      <button class="sync ${syncClass()}" data-action="sync-panel">${esc(state.sync)} · ${esc(state.user)}</button>
       ${content}
       ${state.tab==="stock"?'<button class="fab" data-action="add-item">＋</button>':''}
     </div>
@@ -239,7 +244,17 @@
     else if(a==="import-json") importJson();
     else if(a==="scan"||a==="scan-search") scanBarcode(a==="scan-search"?"search":"quick");
     else if(a==="analytics") analytics();
+    else if(a==="sync-panel") syncPanel();
   }
+
+  function syncPanel(){
+    const queue=getQueue();
+    const last=state.lastSync?new Date(state.lastSync).toLocaleString("ru-RU"):"ещё не выполнялась";
+    const rows=queue.map(o=>`<div class="sync-queue-row"><div><b>${esc(o.item_name||"Товар")}</b><small>${esc(labelType(o.type))} · ${fmt(o.quantity)} ${esc(o.unit||"")}</small></div><span>◷</span></div>`).join("");
+    const el=modal("Синхронизация",`<div class="sync-panel-state ${syncClass()}"><b>${esc(state.sync)}</b><small>${state.syncError?esc(state.syncError):`Последняя синхронизация: ${esc(last)}`}</small></div><div class="compact-title"><b>В очереди: ${queue.length}</b></div><div class="sync-queue">${rows||'<div class="empty small">Очередь пуста</div>'}</div><button class="primary full" id="sync-now" ${!navigator.onLine?'disabled':''}>Синхронизировать сейчас</button>`);
+    el.querySelector("#sync-now").onclick=async()=>{state.syncError=null;updateSyncLabel();try{await ensureCloud();await syncPending();await loadCloudSilent();el.remove();toast("Синхронизация завершена")}catch(e){console.error(e);render();el.remove();syncPanel()}};
+  }
+
   function modal(title,body,wide=false){
     const el=document.createElement("div");el.className="modal-backdrop";el.innerHTML=`<div class="modal ${wide?"wide":""}"><div class="modal-head"><h3>${esc(title)}</h3><button class="close">✕</button></div>${body}</div>`;document.body.appendChild(el);el.querySelector(".close").onclick=()=>el.remove();el.onclick=e=>{if(e.target===el)el.remove()};return el;
   }
@@ -411,8 +426,8 @@
     if(cloudEnabled&&navigator.onLine&&!getQueue().length){try{await loadCloudSilent()}catch(e){console.error(e);updateSyncLabel()}}
     else render();
   }
-  window.addEventListener("online",async()=>{state.sync="Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
-  window.addEventListener("offline",()=>{updateSyncLabel();toast("Нет интернета — работаем офлайн")});
+  window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
+  window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
   if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js").catch(console.error);
   load();
 })();
