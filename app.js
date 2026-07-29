@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "0.7.0";
+  const APP_VERSION = "0.7.1";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -524,6 +524,21 @@
     }
     return null;
   }
+  function unresolvedReportReason(i,group){
+    const qty=Number(i.qty||0),unit=String(i.unit||"").trim().toLowerCase().replace(/\.$/,"");
+    const volume=Number(i.volume??i.weight??0),packageUnit=String(i.package_unit||"").trim().toLowerCase().replace(/\.$/,"");
+    if(!Number.isFinite(qty))return "Некорректный остаток";
+    if(["шт","штук","бут","бан","уп","упак","пач","кор","рулон"].includes(unit)){
+      if(!volume||volume<=0)return "Не указана фасовка";
+      if(!packageUnit)return "Не указана единица фасовки";
+      const allowed=group==="milk"?["мл","ml","л","l"]:["г","гр","g","кг","kg","мл","ml","л","l"];
+      if(!allowed.includes(packageUnit))return `Неподходящая единица фасовки: ${i.package_unit}`;
+      return "Фасовка не распознана";
+    }
+    if(group==="milk"&&!(["л","l","мл","ml"].includes(unit)))return `Нужны литры или миллилитры, сейчас: ${i.unit||"не указано"}`;
+    if(group!=="milk"&&!(["кг","kg","г","гр","g","л","l","мл","ml"].includes(unit)))return `Неподходящая единица учёта: ${i.unit||"не указано"}`;
+    return "Не удалось определить способ пересчёта";
+  }
   function buildSummaryReport(){
     const totals=Object.fromEntries(REPORT_GROUPS.map(g=>[g.id,0]));
     const details=Object.fromEntries(REPORT_GROUPS.map(g=>[g.id,[]]));
@@ -531,17 +546,23 @@
     for(const i of state.items){
       const group=reportGroup(i);if(!group)continue;
       const amount=itemReportAmount(i,group);
-      if(amount==null){unresolved.push(i);continue}
+      if(amount==null){unresolved.push({item:i,group,reason:unresolvedReportReason(i,group)});continue}
       totals[group]+=amount;details[group].push({item:i,amount});
     }
     return {totals,details,unresolved};
   }
+  function showUnresolvedReportItems(rows){
+    const body=rows.map(x=>{const g=REPORT_GROUPS.find(y=>y.id===x.group);return `<div class="report-problem-row"><div><b>${esc(itemLabel(x.item))}</b><small>${esc(g?.name||"")} · Остаток: ${fmt(x.item.qty)} ${esc(x.item.unit||"")}${packLabel(x.item)?` · Фасовка: ${esc(packLabel(x.item))}`:""}</small><em>${esc(x.reason)}</em></div><button class="secondary report-fix-btn" data-fix-report-item="${x.item.id}">Исправить</button></div>`}).join("");
+    const problemModal=modal("Что нужно исправить",`<div class="report-problem-hint">Нажми «Исправить» у товара, укажи фасовку и её единицу, затем снова открой отчёт.</div><div class="report-problem-list">${body}</div>`);
+    problemModal.querySelectorAll("[data-fix-report-item]").forEach(b=>b.onclick=()=>{const item=state.items.find(i=>i.id===b.dataset.fixReportItem);if(!item)return;problemModal.remove();itemForm(item)});
+  }
   function summaryReport(){
     const r=buildSummaryReport();
     const rows=REPORT_GROUPS.map(g=>`<button class="report-row" data-report-group="${g.id}"><span><b>${esc(g.name)}</b><small>${r.details[g.id].length} позиций</small></span><strong>${fmt(r.totals[g.id])} ${g.unit}</strong><i>›</i></button>`).join("");
-    const warning=r.unresolved.length?`<div class="report-warning"><b>⚠️ Не удалось пересчитать: ${r.unresolved.length}</b><small>У этих товаров не указана подходящая фасовка в г/кг/мл/л.</small></div>`:"";
+    const warning=r.unresolved.length?`<button class="report-warning" id="show-unresolved-report"><span><b>⚠️ Не удалось пересчитать: ${r.unresolved.length}</b><small>Нажми, чтобы увидеть товары и исправить фасовку.</small></span><i>›</i></button>`:"";
     const el=modal("Пробный сводный отчёт",`<div class="report-date">Остатки на ${new Date().toLocaleString("ru-RU")}</div><div class="report-list">${rows}</div>${warning}<div class="report-note">Растительное масло временно пересчитывается по коэффициенту <b>0,92 кг/л</b>.</div><button class="primary full" id="copy-summary-report">Скопировать отчёт</button>`);
     el.querySelectorAll("[data-report-group]").forEach(b=>b.onclick=()=>{const id=b.dataset.reportGroup,g=REPORT_GROUPS.find(x=>x.id===id);modal(g.name,`<div class="analytics-list">${r.details[id].map(x=>`<div><span>${esc(itemLabel(x.item))}<small>${fmt(x.item.qty)} ${esc(x.item.unit)}${packLabel(x.item)?` · ${packLabel(x.item)}`:""}</small></span><b>${fmt(x.amount)} ${g.unit}</b></div>`).join("")||'<div class="empty">Подходящих товаров пока нет</div>'}</div>`)});
+    el.querySelector("#show-unresolved-report")?.addEventListener("click",()=>showUnresolvedReportItems(r.unresolved));
     el.querySelector("#copy-summary-report").onclick=async()=>{const text=[`Сводный остаток на ${new Date().toLocaleDateString("ru-RU")}`,...REPORT_GROUPS.map(g=>`${g.name} — ${fmt(r.totals[g.id])} ${g.unit}`)].join("\n");try{await navigator.clipboard.writeText(text);toast("Отчёт скопирован")}catch{toast("Не удалось скопировать")}};
   }
 
@@ -558,7 +579,7 @@
   }
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=0.7.0", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=0.7.1", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();
