@@ -18,3 +18,12 @@
 @media(max-width:390px){.brand-title-row{gap:6px}.app-version{font-size:10px;padding:3px 6px}}
 
 .sync-queue-row.queue-error{background:#fff0ed;color:#bd2b22}.sync-queue-row.queue-error small{color:#bd2b22}.sync-queue-row.queue-error>span{color:#bd2b22;font-weight:900}
+
+/* v0.7.0 — пробный сводный отчёт */
+.report-date{font-size:13px;color:var(--muted,#687b76);margin:0 0 12px}
+.report-list{display:grid;gap:9px}
+.report-row{width:100%;border:1px solid rgba(31,87,73,.12);background:#fff;border-radius:16px;padding:14px;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;text-align:left}
+.report-row span{display:grid;gap:3px}.report-row small{font-size:12px;color:#72827e}.report-row strong{font-size:17px;color:#193d34}.report-row i{font-style:normal;color:#8b9a96}
+.report-warning{margin-top:12px;padding:12px;border-radius:14px;background:#fff4dc;display:grid;gap:4px}.report-warning small{color:#735f37;line-height:1.35}
+.report-note{font-size:12px;line-height:1.4;color:#667873;margin:12px 2px}
+.analytics-list span small{display:block;font-size:11px;color:#72827e;margin-top:3px}

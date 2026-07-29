@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "0.6.1";
+  const APP_VERSION = "0.7.0";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -239,6 +239,7 @@
       ${quick("📦","Открыть склад","Поиск и карточки","stock","a-gray")}
       ${quick("📥","Импорт JSON","Добавить каталог","import-json","a-blue")}
       ${quick("📊","Аналитика","Расход и прогноз","analytics","a-green")}
+      ${quick("🧮","Сводный отчёт","Молоко · консервация · бакалея","summary-report","a-amber")}
     </div>
     ${low?`<div class="section-title"><h2>Заканчивается</h2><button class="link-btn" data-tab="stock">Все</button></div><div class="card">${state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0)).slice(0,5).map(itemRow).join("")}</div>`:""}`;
   }
@@ -305,6 +306,7 @@
     else if(a==="import-json") importJson();
     else if(a==="scan"||a==="scan-search") scanBarcode(a==="scan-search"?"search":"quick");
     else if(a==="analytics") analytics();
+    else if(a==="summary-report") summaryReport();
     else if(a==="sync-panel") syncPanel();
   }
 
@@ -481,6 +483,68 @@
     modal("Аналитика за 30 дней",`<div class="analytics-summary"><div><b>${rows.length}</b><small>операций расхода</small></div><div><b>${top.length}</b><small>товаров использовали</small></div></div><div class="analytics-list">${top.map((x,n)=>`<div><span>${n+1}. ${esc(x.name)}</span><b>${fmt(x.qty)} ${esc(x.unit)}</b></div>`).join("")||'<div class="empty">Пока нет расхода за период</div>'}</div>`);
   }
 
+  const REPORT_GROUPS = [
+    {id:"milk",name:"Молоко",unit:"л"},
+    {id:"preserves",name:"Консервация",unit:"кг"},
+    {id:"grocery",name:"Бакалея",unit:"кг"}
+  ];
+  function reportText(i){return `${i.name||""} ${i.brand||""} ${i.subcategory||""} ${i.notes||""}`.toLowerCase().replace(/ё/g,"е")}
+  function reportGroup(i){
+    const t=reportText(i);
+    if(/молоко/.test(t)&&!/сгущ|сухое|кокос|миндал|соев/.test(t))return "milk";
+    if(/консерв|консерва|лечо|икра кабач|икра из баклаж|шпрот|паштет|оливк|маслин|корнишон|горошек|кукуруз|сайра|горбуш|тунец|фасоль/.test(t))return "preserves";
+    if(/круп|греч|рис|булгур|перлов|манн|пшенич|горох колот|макарон|мук|сахар|овсян|мюсли|хлоп|масло раст/.test(t))return "grocery";
+    return null;
+  }
+  function normalizedPackage(i){
+    const v=Number(i.volume??i.weight??0);
+    const u=String(i.package_unit||"").toLowerCase().trim().replace(".","");
+    if(!v)return null;
+    if(["кг","kg"].includes(u))return {kg:v};
+    if(["г","гр","g"].includes(u))return {kg:v/1000};
+    if(["л","l"].includes(u))return {l:v};
+    if(["мл","ml"].includes(u))return {l:v/1000};
+    return null;
+  }
+  function itemReportAmount(i,group){
+    const qty=Number(i.qty||0),unit=String(i.unit||"").toLowerCase().trim().replace(".","");
+    const pack=normalizedPackage(i);
+    if(group==="milk"){
+      if(["л","l"].includes(unit))return qty;
+      if(["мл","ml"].includes(unit))return qty/1000;
+      if(pack?.l)return qty*pack.l;
+      return null;
+    }
+    if(["кг","kg"].includes(unit))return qty;
+    if(["г","гр","g"].includes(unit))return qty/1000;
+    if(pack?.kg)return qty*pack.kg;
+    if(group==="grocery"&&/масло раст/.test(reportText(i))){
+      const liters=["л","l"].includes(unit)?qty:["мл","ml"].includes(unit)?qty/1000:pack?.l?qty*pack.l:null;
+      return liters==null?null:liters*0.92;
+    }
+    return null;
+  }
+  function buildSummaryReport(){
+    const totals=Object.fromEntries(REPORT_GROUPS.map(g=>[g.id,0]));
+    const details=Object.fromEntries(REPORT_GROUPS.map(g=>[g.id,[]]));
+    const unresolved=[];
+    for(const i of state.items){
+      const group=reportGroup(i);if(!group)continue;
+      const amount=itemReportAmount(i,group);
+      if(amount==null){unresolved.push(i);continue}
+      totals[group]+=amount;details[group].push({item:i,amount});
+    }
+    return {totals,details,unresolved};
+  }
+  function summaryReport(){
+    const r=buildSummaryReport();
+    const rows=REPORT_GROUPS.map(g=>`<button class="report-row" data-report-group="${g.id}"><span><b>${esc(g.name)}</b><small>${r.details[g.id].length} позиций</small></span><strong>${fmt(r.totals[g.id])} ${g.unit}</strong><i>›</i></button>`).join("");
+    const warning=r.unresolved.length?`<div class="report-warning"><b>⚠️ Не удалось пересчитать: ${r.unresolved.length}</b><small>У этих товаров не указана подходящая фасовка в г/кг/мл/л.</small></div>`:"";
+    const el=modal("Пробный сводный отчёт",`<div class="report-date">Остатки на ${new Date().toLocaleString("ru-RU")}</div><div class="report-list">${rows}</div>${warning}<div class="report-note">Растительное масло временно пересчитывается по коэффициенту <b>0,92 кг/л</b>.</div><button class="primary full" id="copy-summary-report">Скопировать отчёт</button>`);
+    el.querySelectorAll("[data-report-group]").forEach(b=>b.onclick=()=>{const id=b.dataset.reportGroup,g=REPORT_GROUPS.find(x=>x.id===id);modal(g.name,`<div class="analytics-list">${r.details[id].map(x=>`<div><span>${esc(itemLabel(x.item))}<small>${fmt(x.item.qty)} ${esc(x.item.unit)}${packLabel(x.item)?` · ${packLabel(x.item)}`:""}</small></span><b>${fmt(x.amount)} ${g.unit}</b></div>`).join("")||'<div class="empty">Подходящих товаров пока нет</div>'}</div>`)});
+    el.querySelector("#copy-summary-report").onclick=async()=>{const text=[`Сводный остаток на ${new Date().toLocaleDateString("ru-RU")}`,...REPORT_GROUPS.map(g=>`${g.name} — ${fmt(r.totals[g.id])} ${g.unit}`)].join("\n");try{await navigator.clipboard.writeText(text);toast("Отчёт скопирован")}catch{toast("Не удалось скопировать")}};
+  }
+
   function exportModal(){const el=modal("Экспорт остатков",`<div class="form"><div class="field"><label>Категория</label><select id="export-category"><option>Все</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join("")}</select></div><button class="primary" id="export-pdf">PDF / печать</button><button class="secondary" id="export-doc">Word (.doc)</button></div>`);el.querySelector("#export-pdf").onclick=()=>exportPdf(el.querySelector("#export-category").value);el.querySelector("#export-doc").onclick=()=>exportDoc(el.querySelector("#export-category").value)}
   function exportItems(cat){return state.items.filter(i=>cat==="Все"||i.category===cat)}
   function exportPdf(cat){const items=exportItems(cat);const w=window.open("","_blank");w.document.write(`<html><head><meta charset="utf-8"><title>Остатки Камбуз</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #aaa;padding:7px}h1{margin-bottom:4px}.muted{color:#666}</style></head><body><h1>Инвентаризационная ведомость</h1><p class="muted">${new Date().toLocaleDateString("ru-RU")} · ${esc(cat)}</p><table><tr><th>№</th><th>Наименование</th><th>По базе</th><th>Ед.</th><th>Факт</th><th>Разница</th></tr>${items.map((i,n)=>`<tr><td>${n+1}</td><td>${esc(itemLabel(i))}</td><td>${fmt(i.qty)}</td><td>${esc(i.unit)}</td><td></td><td></td></tr>`).join("")}</table><p>Подпись: __________________</p><script>print()</script></body></html>`);w.document.close()}
@@ -494,7 +558,7 @@
   }
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=0.6.1", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=0.7.0", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();
