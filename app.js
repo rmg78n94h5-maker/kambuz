@@ -1,4 +1,5 @@
 (() => {
+  const APP_VERSION = "0.5.2";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -163,7 +164,7 @@
 
   function shell(content){
     return `<div class="app-shell">
-      <header class="topbar"><div class="brand"><div class="logo">⚓</div><div><h1>Камбуз</h1><div class="subtitle">${esc(cfg.PROJECT_NAME||"Основной камбуз")}</div></div></div><div class="top-actions"><button class="sync-indicator ${syncClass()}" data-action="sync-panel" aria-label="${esc(state.sync)}" title="${esc(state.sync)}"><span class="sync-glyph">${syncIcon()}</span><span class="sync-mini-label">${esc(syncShort())}</span></button><button class="icon-btn" data-action="profile">👤</button></div></header>
+      <header class="topbar"><div class="brand"><div class="logo">⚓</div><div><div class="brand-title-row"><h1>Камбуз</h1><span class="app-version">v${APP_VERSION}</span></div><div class="subtitle">${esc(cfg.PROJECT_NAME||"Основной камбуз")}</div></div></div><div class="top-actions"><button class="sync-indicator ${syncClass()}" data-action="sync-panel" aria-label="${esc(state.sync)}" title="${esc(state.sync)}"><span class="sync-glyph">${syncIcon()}</span><span class="sync-mini-label">${esc(syncShort())}</span></button><button class="icon-btn" data-action="profile">👤</button></div></header>
       <button class="sync ${syncClass()}" data-action="sync-panel">${esc(state.sync)} · ${esc(state.user)}</button>
       ${content}
       ${state.tab==="stock"?'<button class="fab" data-action="add-item">＋</button>':''}
