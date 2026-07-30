@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "1.1.0";
+  const APP_VERSION = "1.1.1";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -245,8 +245,12 @@
     return null;
   }
   function isLooseWeightItem(i){
-    const t=`${i.name||""} ${i.subcategory||""}`.toLowerCase().replace(/ё/g,"е");
-    return /(овощ|фрукт|зелень|яблок|цитрус|банан|груш|ананас|манго|киви|картоф|лук|капуст|томат|огур|перец|баклаж|кабач|броккол|мяс|птиц|курин|индей|свин|говяж|теля|баранин|рыб|лосос|семг|сельд|скумбр|минтай|треск|колбас|ветчин|сало|грудинк|сосиск|сардельк|шпикач|купат|сыр(?! hochland)|творог|масло сливоч)/.test(t);
+    const t=`${i.category||""} ${i.subcategory||""} ${i.name||""}`.toLowerCase().replace(/ё/g,"е");
+    // Консервы и другие товары с указанной фасовкой считаются поштучно.
+    // Важно: слово «грибы» содержит сочетание «рыб», поэтому не используем
+    // расплывчатый поиск по подстроке «рыб».
+    if(/консерв|маринован|солен|баноч|жестян|стеклянн.*банк/.test(t))return false;
+    return /(овощ|фрукт|зелень|яблок|цитрус|банан|груш|ананас|манго|киви|картоф|лук|капуст|томат|огур|перец|баклаж|кабач|броккол|гриб свеж|шампиньон свеж|мяс|птиц|курин|индей|свин|говяж|теля|баранин|рыба|рыбн|лосос|семг|сельд|скумбр|минтай|треск|колбас|ветчин|сало|грудинк|сосиск|сардельк|шпикач|купат|сыр(?! hochland)|творог|масло сливоч)/.test(t);
   }
   function desiredStockUnit(i){
     if(isLooseWeightItem(i))return "кг";
@@ -673,7 +677,7 @@
   }
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=1.1.0", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=1.1.1", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();
