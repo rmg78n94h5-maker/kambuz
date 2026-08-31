@@ -1,4 +1,4 @@
-const VERSION = '1.2.1';
+const VERSION = '1.2.2';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -10,6 +10,7 @@ const SHELL = [
   './app.js?v=1.1.1',
   './config.js?v=1.2.1',
   './offline-receipt-addon.js?v=1.2.1',
+  './sync-resilience-addon.js?v=1.2.2',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -27,7 +28,8 @@ self.addEventListener('install', event => {
     );
     const required = [
       url('./index.html'), url('./styles.css?v=1.2.1'), url('./app.js?v=1.1.1'),
-      url('./config.js?v=1.2.1'), url('./offline-receipt-addon.js?v=1.2.1')
+      url('./config.js?v=1.2.1'), url('./offline-receipt-addon.js?v=1.2.1'),
+      url('./sync-resilience-addon.js?v=1.2.2')
     ];
     for (const resource of required) {
       if (!(await cache.match(resource))) {
