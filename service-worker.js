@@ -1,4 +1,4 @@
-const VERSION = '1.1.1';
+const VERSION = '1.2.0';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -6,9 +6,10 @@ const url = path => new URL(path, SCOPE).href;
 const SHELL = [
   './',
   './index.html',
-  './styles.css?v=1.1.1',
+  './styles.css?v=1.2.0',
   './app.js?v=1.1.1',
-  './config.js?v=1.1.1',
+  './config.js?v=1.2.0',
+  './offline-receipt-addon.js?v=1.2.0',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -17,8 +18,6 @@ const SHELL = [
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    // Кэшируем каждый файл отдельно: временная ошибка одного ресурса
-    // не должна ломать установку всего офлайн-режима.
     const results = await Promise.allSettled(
       SHELL.map(async resource => {
         const response = await fetch(new Request(resource, { cache: 'reload' }));
@@ -26,9 +25,10 @@ self.addEventListener('install', event => {
         await cache.put(resource, response.clone());
       })
     );
-
-    // Без этих файлов приложение не сможет стартовать офлайн.
-    const required = [url('./index.html'), url('./styles.css?v=1.1.1'), url('./app.js?v=1.1.1'), url('./config.js?v=1.1.1')];
+    const required = [
+      url('./index.html'), url('./styles.css?v=1.2.0'), url('./app.js?v=1.1.1'),
+      url('./config.js?v=1.2.0'), url('./offline-receipt-addon.js?v=1.2.0')
+    ];
     for (const resource of required) {
       if (!(await cache.match(resource))) {
         const failed = results.filter(r => r.status === 'rejected').map(r => r.reason?.message).join('; ');
@@ -57,28 +57,12 @@ self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
 
-  // Для переходов всегда сначала отдаём локальный app shell.
-  // Это важно для iOS PWA: сетевой fetch в авиарежиме может долго висеть,
-  // из-за чего пользователь видит пустой белый экран.
   if (event.request.mode === 'navigate') {
     event.respondWith((async () => {
       const cached = await cachedShell('./index.html');
-      if (cached) {
-        event.waitUntil((async () => {
-          try {
-            const fresh = await fetch(event.request);
-            if (fresh.ok) {
-              const cache = await caches.open(CACHE);
-              await cache.put(url('./index.html'), fresh.clone());
-            }
-          } catch (_) {}
-        })());
-        return cached;
-      }
-
-      try {
-        return await fetch(event.request);
-      } catch (_) {
+      if (cached) return cached;
+      try { return await fetch(event.request); }
+      catch (_) {
         return new Response(
           '<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:system-ui;padding:32px"><h1>Камбуз</h1><p>Офлайн-кэш ещё не установлен. Один раз открой приложение с интернетом.</p></body></html>',
           { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
@@ -88,12 +72,10 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Статические файлы — cache first, сеть только для обновления/промаха.
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const cached = (await cache.match(event.request)) || (await cache.match(event.request, { ignoreSearch: true }));
     if (cached) return cached;
-
     try {
       const fresh = await fetch(event.request);
       if (fresh.ok) await cache.put(event.request, fresh.clone());
