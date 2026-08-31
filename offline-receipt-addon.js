@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.0';
+  const VERSION = '1.2.1';
   const STORAGE = {
     items: 'kambuz_items',
     ops: 'kambuz_ops',
@@ -195,7 +195,7 @@
     el.id = 'receipt-addon-toast';
     el.textContent = message;
     Object.assign(el.style, {
-      position: 'fixed', left: '16px', right: '16px', bottom: 'calc(env(safe-area-inset-bottom) + 88px)',
+      position: 'fixed', left: '16px', right: '16px', bottom: 'calc(env(safe-area-inset-bottom) + 92px)',
       zIndex: '100000', padding: '14px 16px', borderRadius: '16px', background: '#173d34', color: '#fff',
       font: '600 15px system-ui', boxShadow: '0 10px 30px rgba(0,0,0,.25)'
     });
@@ -232,23 +232,56 @@
     input.click();
   }
 
+  function setVisibleVersion() {
+    document.querySelectorAll('#app *').forEach(el => {
+      if (el.children.length === 0 && /^v1\.(1\.1|2\.0)$/.test((el.textContent || '').trim())) {
+        el.textContent = `v${VERSION}`;
+      }
+    });
+  }
+
+  function findWorkHeading() {
+    return [...document.querySelectorAll('#app h1,#app h2,#app h3,#app h4,#app div,#app span')]
+      .find(el => (el.textContent || '').trim() === 'Рабочие действия');
+  }
+
   function installButton() {
+    setVisibleVersion();
     if (document.getElementById('receipt-json-import-button')) return;
+    const heading = findWorkHeading();
+    if (!heading || !heading.parentElement) return;
+
     const btn = document.createElement('button');
     btn.id = 'receipt-json-import-button';
     btn.type = 'button';
-    btn.textContent = '＋ Поставка JSON';
+    btn.innerHTML = '<span style="font-size:24px;line-height:1">＋</span><span><b style="display:block;font-size:18px">Поставка JSON</b><small style="display:block;margin-top:3px;opacity:.7;font-size:13px">Принять поставку из файла</small></span>';
     btn.title = 'Импортировать фактическое поступление из JSON (работает офлайн)';
     Object.assign(btn.style, {
-      position: 'fixed', right: '14px', bottom: 'calc(env(safe-area-inset-bottom) + 14px)', zIndex: '99990',
-      border: '0', borderRadius: '999px', padding: '12px 16px', background: '#0b745e', color: '#fff',
-      font: '700 14px system-ui', boxShadow: '0 8px 24px rgba(0,0,0,.22)'
+      width: '100%', margin: '12px 0 16px', border: '0', borderRadius: '22px', padding: '18px 20px',
+      background: '#dff4ec', color: '#08745d', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '14px',
+      font: 'inherit', boxSizing: 'border-box', boxShadow: 'none'
     });
     btn.addEventListener('click', chooseReceiptFile);
-    document.body.appendChild(btn);
+    heading.insertAdjacentElement('afterend', btn);
+  }
+
+  function refreshUi() {
+    setVisibleVersion();
+    installButton();
   }
 
   window.KAMBUZ_RECEIPT_IMPORT = { version: VERSION, importReceipt, chooseReceiptFile };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installButton, { once: true });
-  else installButton();
+  const start = () => {
+    refreshUi();
+    const root = document.getElementById('app');
+    if (root) {
+      let timer = null;
+      new MutationObserver(() => {
+        clearTimeout(timer);
+        timer = setTimeout(refreshUi, 40);
+      }).observe(root, { childList: true, subtree: true });
+    }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
 })();
