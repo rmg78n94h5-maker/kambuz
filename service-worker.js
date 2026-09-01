@@ -1,4 +1,4 @@
-const VERSION = '1.2.3';
+const VERSION = '1.2.4';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -6,12 +6,13 @@ const url = path => new URL(path, SCOPE).href;
 const SHELL = [
   './',
   './index.html',
-  './styles.css?v=1.2.3',
-  './app.js?v=1.2.3',
-  './config.js?v=1.2.3',
+  './styles.css?v=1.2.4',
+  './app.js?v=1.2.4',
+  './config.js?v=1.2.4',
   './sync-resilience-addon.js?v=1.2.2',
   './offline-receipt-addon.js?v=1.2.1',
-  './version-addon.js?v=1.2.3',
+  './sync-queue-ui-addon.js?v=1.2.4',
+  './version-addon.js?v=1.2.4',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -30,11 +31,12 @@ self.addEventListener('install', event => {
 
     const required = [
       url('./index.html'),
-      url('./styles.css?v=1.2.3'),
-      url('./app.js?v=1.2.3'),
-      url('./config.js?v=1.2.3'),
+      url('./styles.css?v=1.2.4'),
+      url('./app.js?v=1.2.4'),
+      url('./config.js?v=1.2.4'),
       url('./offline-receipt-addon.js?v=1.2.1'),
-      url('./version-addon.js?v=1.2.3')
+      url('./sync-queue-ui-addon.js?v=1.2.4'),
+      url('./version-addon.js?v=1.2.4')
     ];
 
     for (const resource of required) {
@@ -75,8 +77,6 @@ self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
 
-  // Навигация: коротко пробуем получить свежий index.html, затем используем локальный кэш.
-  // Это сохраняет офлайн-запуск и не даёт PWA навсегда застревать на старой версии.
   if (event.request.mode === 'navigate') {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE);
