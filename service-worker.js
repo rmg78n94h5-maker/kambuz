@@ -1,4 +1,4 @@
-const VERSION = '1.9.0';
+const VERSION = '1.9.1';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -9,6 +9,7 @@ const SHELL = [
   './styles.css?v=1.2.4',
   './app.js?v=1.2.4',
   './config.js?v=1.2.4',
+  './local-ops-sanitizer.js?v=1.9.1',
   './classification-addon.js?v=1.8.0',
   './sync-resilience-addon.js?v=1.2.2',
   './offline-receipt-addon.js?v=1.3.1',
@@ -18,7 +19,7 @@ const SHELL = [
   './imo-report-addon.js?v=1.8.0',
   './item-card-addon.js?v=1.9.0',
   './sync-queue-ui-addon.js?v=1.2.4',
-  './version-addon.js?v=1.9.0',
+  './version-addon.js?v=1.9.1',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -40,6 +41,7 @@ self.addEventListener('install', event => {
       url('./styles.css?v=1.2.4'),
       url('./app.js?v=1.2.4'),
       url('./config.js?v=1.2.4'),
+      url('./local-ops-sanitizer.js?v=1.9.1'),
       url('./classification-addon.js?v=1.8.0'),
       url('./offline-receipt-addon.js?v=1.3.1'),
       url('./inventory-addon.js?v=1.4.0'),
@@ -48,7 +50,7 @@ self.addEventListener('install', event => {
       url('./imo-report-addon.js?v=1.8.0'),
       url('./item-card-addon.js?v=1.9.0'),
       url('./sync-queue-ui-addon.js?v=1.2.4'),
-      url('./version-addon.js?v=1.9.0')
+      url('./version-addon.js?v=1.9.1')
     ];
 
     for (const resource of required) {
