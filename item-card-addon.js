@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const VERSION='1.9.0';
+  const VERSION='1.9.2';
   const KEYS={items:'kambuz_items',ops:'kambuz_ops'};
   const GROUP_LABELS={
     frozen_meat_fish:'Frozen foods, meat, fish, chicken',
@@ -19,8 +19,33 @@
   let lastItemId=null;
   let cloudClient=null;
 
+  function safeQuantity(op){
+    const n=Number(op?.quantity);
+    if(!Number.isFinite(n)||n<0)return null;
+    // Unix timestamps in milliseconds must never be interpreted as stock quantities.
+    if(n>=978307200000&&n<=4133980800000)return null;
+    // A galley stock operation above one billion units is data corruption, not real usage.
+    if(n>1000000000)return null;
+    return n;
+  }
+  function validOperation(op){
+    if(!op||typeof op!=='object')return false;
+    if(safeQuantity(op)===null)return false;
+    const t=new Date(op.created_at).getTime();
+    return Number.isFinite(t);
+  }
+  function sanitizeOps(ops){return (Array.isArray(ops)?ops:[]).filter(validOperation)}
+  function mergeById(primary,secondary){
+    const out=[],seen=new Set();
+    for(const op of [...sanitizeOps(primary),...sanitizeOps(secondary)]){
+      const key=op.id||`${op.item_id}|${op.type}|${op.created_at}|${op.quantity}`;
+      if(seen.has(key))continue;seen.add(key);out.push(op);
+    }
+    return out.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  }
+
   function itemById(id){return (read(KEYS.items,[])||[]).find(x=>x.id===id)}
-  function localOps(id){return (read(KEYS.ops,[])||[]).filter(o=>o.item_id===id).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))}
+  function localOps(id){return sanitizeOps(read(KEYS.ops,[])||[]).filter(o=>o.item_id===id).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))}
   function opLabel(o){
     if(o.type==='receipt')return 'Поступление';
     if(o.type==='consumption')return 'Расход';
@@ -45,22 +70,23 @@
       if(!all){
         let q=client.from('operations').select('*').eq('item_id',itemId).order('created_at',{ascending:false}).limit(1000);
         if(since)q=q.gte('created_at',since.toISOString());
-        const {data,error}=await q;if(error)throw error;return data||[];
+        const {data,error}=await q;if(error)throw error;return sanitizeOps(data||[]);
       }
       const out=[];let from=0;
       while(true){
         const {data,error}=await client.from('operations').select('*').eq('item_id',itemId).order('created_at',{ascending:false}).range(from,from+999);
         if(error)throw error;const page=data||[];out.push(...page);if(page.length<1000||out.length>=10000)break;from+=1000;
       }
-      return out;
+      return sanitizeOps(out);
     }catch(e){console.warn('Item history cloud fetch failed',e);return null}
   }
 
-  function stats(ops){
+  function stats(rawOps){
+    const ops=sanitizeOps(rawOps);
     const now=new Date(),today=startOfDay(now),start7=addDays(today,-6),start30=addDays(today,-29);
     const consumption=ops.filter(o=>o.type==='consumption');
-    const sumSince=start=>consumption.filter(o=>new Date(o.created_at)>=start).reduce((s,o)=>s+Number(o.quantity||0),0);
-    const todayQty=consumption.filter(o=>dayKey(o.created_at)===dayKey(today)).reduce((s,o)=>s+Number(o.quantity||0),0);
+    const sumSince=start=>consumption.filter(o=>new Date(o.created_at)>=start).reduce((s,o)=>s+(safeQuantity(o)??0),0);
+    const todayQty=consumption.filter(o=>dayKey(o.created_at)===dayKey(today)).reduce((s,o)=>s+(safeQuantity(o)??0),0);
     const q7=sumSince(start7),q30=sumSince(start30);
     const relevant=ops.filter(o=>new Date(o.created_at)>=start30);
     let days=30;
@@ -72,11 +98,12 @@
     return {today:todayQty,q7,q30,avg:q30/days,days,start30,today};
   }
 
-  function chartHtml(ops){
+  function chartHtml(rawOps){
+    const ops=sanitizeOps(rawOps);
     const today=startOfDay(new Date()),days=[];
     for(let n=29;n>=0;n--){const d=addDays(today,-n);days.push({key:dayKey(d),date:d,value:0})}
     const map=new Map(days.map(x=>[x.key,x]));
-    ops.filter(o=>o.type==='consumption').forEach(o=>{const x=map.get(dayKey(o.created_at));if(x)x.value+=Number(o.quantity||0)});
+    ops.filter(o=>o.type==='consumption').forEach(o=>{const x=map.get(dayKey(o.created_at));if(x)x.value+=(safeQuantity(o)??0)});
     const max=Math.max(1,...days.map(x=>x.value));
     return `<div class="ic-chart"><div class="ic-bars">${days.map(x=>`<div class="ic-bar-wrap" title="${x.date.toLocaleDateString('ru-RU')}: ${fmt(x.value)}"><div class="ic-bar${x.value?' active':''}" style="height:${Math.max(2,Math.round(x.value/max*52))}px"></div></div>`).join('')}</div><div class="ic-chart-axis"><span>${days[0].date.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})}</span><span>Расход за 30 дней</span><span>сегодня</span></div></div>`;
   }
@@ -113,8 +140,9 @@
       </div>${chartHtml(ops)}</div>`;
   }
 
-  function historyPreview(item,ops){
-    const rows=ops.slice(0,5).map(o=>`<div class="ic-op"><div><span class="ic-badge t-${esc(o.type)}">${esc(opLabel(o))}</span><small>${new Date(o.created_at).toLocaleString('ru-RU')}${o.reason?` · ${esc(o.reason)}`:''}${o.comment?` · ${esc(o.comment)}`:''}</small></div><strong>${opSign(o)}${fmt(o.quantity)} ${esc(o.unit||item.unit||'')}</strong></div>`).join('')||'<div class="ic-empty">Операций пока нет</div>';
+  function historyPreview(item,rawOps){
+    const ops=sanitizeOps(rawOps);
+    const rows=ops.slice(0,5).map(o=>`<div class="ic-op"><div><span class="ic-badge t-${esc(o.type)}">${esc(opLabel(o))}</span><small>${new Date(o.created_at).toLocaleString('ru-RU')}${o.reason?` · ${esc(o.reason)}`:''}${o.comment?` · ${esc(o.comment)}`:''}</small></div><strong>${opSign(o)}${fmt(safeQuantity(o)??0)} ${esc(o.unit||item.unit||'')}</strong></div>`).join('')||'<div class="ic-empty">Операций пока нет</div>';
     return `<div class="ic-section"><div class="ic-section-title"><b>📜 История</b><small class="ic-history-count">${ops.length} операций загружено</small></div>${rows}<button class="ic-history-btn" type="button">Вся история</button></div>`;
   }
 
@@ -151,15 +179,17 @@
     const since=addDays(startOfDay(new Date()),-29);
     const cloud=await fetchCloudOps(item.id,{since});
     if(!cloud||!holder.isConnected)return;
-    const allRecent=[...cloud];
+    const pendingLocal=localOps(item.id).filter(o=>o.pending&&new Date(o.created_at)>=since);
+    const allRecent=mergeById(cloud,pendingLocal);
     const metrics=holder.querySelectorAll('.ic-section')[1];
     if(metrics)metrics.outerHTML=metricsHtml(item,allRecent);
     const count=holder.querySelector('.ic-history-count');if(count)count.textContent='история доступна из облака';
   }
 
-  function renderHistoryRows(box,item,ops,filter){
+  function renderHistoryRows(box,item,rawOps,filter){
+    const ops=sanitizeOps(rawOps);
     const list=filter==='all'?ops:filter==='inventory'?ops.filter(o=>o.type==='adjustment'&&/инвентаризац/i.test(`${o.reason||''} ${o.comment||''}`)):ops.filter(o=>o.type===filter);
-    box.innerHTML=list.map(o=>`<div class="ich-row"><div class="ich-top"><span class="ic-badge t-${esc(o.type)}">${esc(opLabel(o))}</span><strong>${opSign(o)}${fmt(o.quantity)} ${esc(o.unit||item.unit||'')}</strong></div><div class="ich-meta">${new Date(o.created_at).toLocaleString('ru-RU')} · ${esc(o.user_name||'Пользователь')}${o.reason?` · ${esc(o.reason)}`:''}${o.comment?` · ${esc(o.comment)}`:''}${o.previous_qty!=null&&o.new_qty!=null?` · ${fmt(o.previous_qty)} → ${fmt(o.new_qty)}`:''}</div></div>`).join('')||'<div class="ich-loading">Нет операций этого типа</div>';
+    box.innerHTML=list.map(o=>`<div class="ich-row"><div class="ich-top"><span class="ic-badge t-${esc(o.type)}">${esc(opLabel(o))}</span><strong>${opSign(o)}${fmt(safeQuantity(o)??0)} ${esc(o.unit||item.unit||'')}</strong></div><div class="ich-meta">${new Date(o.created_at).toLocaleString('ru-RU')} · ${esc(o.user_name||'Пользователь')}${o.reason?` · ${esc(o.reason)}`:''}${o.comment?` · ${esc(o.comment)}`:''}${o.previous_qty!=null&&o.new_qty!=null?` · ${fmt(o.previous_qty)} → ${fmt(o.new_qty)}`:''}</div></div>`).join('')||'<div class="ich-loading">Нет операций этого типа</div>';
   }
 
   async function openHistory(item){
@@ -168,7 +198,7 @@
     let ops=localOps(item.id),filter='all';const box=o.querySelector('.ich-list'),status=o.querySelector('.ich-status');renderHistoryRows(box,item,ops,filter);status.textContent=`${ops.length} операций на телефоне`;
     o.querySelectorAll('[data-hf]').forEach(b=>b.onclick=()=>{filter=b.dataset.hf;o.querySelectorAll('[data-hf]').forEach(x=>x.classList.toggle('on',x===b));renderHistoryRows(box,item,ops,filter)});
     const cloud=await fetchCloudOps(item.id,{all:true});
-    if(cloud&&o.isConnected){ops=cloud;status.textContent=`${ops.length} операций · облако`;renderHistoryRows(box,item,ops,filter)}else if(o.isConnected&&!navigator.onLine)status.textContent=`${ops.length} операций · офлайн`;
+    if(cloud&&o.isConnected){ops=mergeById(cloud,localOps(item.id).filter(x=>x.pending));status.textContent=`${ops.length} операций · облако`;renderHistoryRows(box,item,ops,filter)}else if(o.isConnected&&!navigator.onLine)status.textContent=`${ops.length} операций · офлайн`;
   }
 
   function detectModal(node){
@@ -181,6 +211,6 @@
     document.addEventListener('click',e=>{const row=e.target.closest?.('[data-item]');if(row?.dataset.item)lastItemId=row.dataset.item},true);
     new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(detectModal))).observe(document.body,{childList:true,subtree:true});
   }
-  window.KAMBUZ_ITEM_CARD={version:VERSION,openHistory};
+  window.KAMBUZ_ITEM_CARD={version:VERSION,openHistory,safeQuantity,sanitizeOps};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
