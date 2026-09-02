@@ -20,6 +20,6 @@
   }
 
   window.KAMBUZ_DISPLAY_VERSION = VERSION;
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
-  else start();
+  if (document.getElementById('app')) start();
+  else document.addEventListener('DOMContentLoaded', start, { once: true });
 })();
