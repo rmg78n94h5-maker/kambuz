@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const VERSION='1.9.2';
+  const VERSION='1.9.3';
   const KEYS={items:'kambuz_items',ops:'kambuz_ops'};
   const GROUP_LABELS={
     frozen_meat_fish:'Frozen foods, meat, fish, chicken',
@@ -22,24 +22,22 @@
   function safeQuantity(op){
     const n=Number(op?.quantity);
     if(!Number.isFinite(n)||n<0)return null;
-    // Unix timestamps in milliseconds must never be interpreted as stock quantities.
     if(n>=978307200000&&n<=4133980800000)return null;
-    // A galley stock operation above one billion units is data corruption, not real usage.
     if(n>1000000000)return null;
     return n;
   }
   function validOperation(op){
     if(!op||typeof op!=='object')return false;
     if(safeQuantity(op)===null)return false;
-    const t=new Date(op.created_at).getTime();
-    return Number.isFinite(t);
+    return Number.isFinite(new Date(op.created_at).getTime());
   }
   function sanitizeOps(ops){return (Array.isArray(ops)?ops:[]).filter(validOperation)}
   function mergeById(primary,secondary){
     const out=[],seen=new Set();
     for(const op of [...sanitizeOps(primary),...sanitizeOps(secondary)]){
       const key=op.id||`${op.item_id}|${op.type}|${op.created_at}|${op.quantity}`;
-      if(seen.has(key))continue;seen.add(key);out.push(op);
+      if(seen.has(key))continue;
+      seen.add(key);out.push(op);
     }
     return out.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   }
@@ -50,7 +48,7 @@
     if(o.type==='receipt')return 'Поступление';
     if(o.type==='consumption')return 'Расход';
     if(o.type==='writeoff')return 'Списание';
-    if(o.type==='adjustment' && /инвентаризац/i.test(`${o.reason||''} ${o.comment||''}`))return 'Инвентаризация';
+    if(o.type==='adjustment'&&/инвентаризац/i.test(`${o.reason||''} ${o.comment||''}`))return 'Инвентаризация';
     if(o.type==='adjustment')return 'Корректировка';
     return o.type||'Операция';
   }
@@ -70,12 +68,17 @@
       if(!all){
         let q=client.from('operations').select('*').eq('item_id',itemId).order('created_at',{ascending:false}).limit(1000);
         if(since)q=q.gte('created_at',since.toISOString());
-        const {data,error}=await q;if(error)throw error;return sanitizeOps(data||[]);
+        const {data,error}=await q;
+        if(error)throw error;
+        return sanitizeOps(data||[]);
       }
       const out=[];let from=0;
       while(true){
         const {data,error}=await client.from('operations').select('*').eq('item_id',itemId).order('created_at',{ascending:false}).range(from,from+999);
-        if(error)throw error;const page=data||[];out.push(...page);if(page.length<1000||out.length>=10000)break;from+=1000;
+        if(error)throw error;
+        const page=data||[];out.push(...page);
+        if(page.length<1000||out.length>=10000)break;
+        from+=1000;
       }
       return sanitizeOps(out);
     }catch(e){console.warn('Item history cloud fetch failed',e);return null}
@@ -83,25 +86,28 @@
 
   function stats(rawOps){
     const ops=sanitizeOps(rawOps);
-    const now=new Date(),today=startOfDay(now),start7=addDays(today,-6),start30=addDays(today,-29);
+    const now=new Date();
+    const todayDate=startOfDay(now);
+    const start7=addDays(todayDate,-6);
+    const start30=addDays(todayDate,-29);
     const consumption=ops.filter(o=>o.type==='consumption');
     const sumSince=start=>consumption.filter(o=>new Date(o.created_at)>=start).reduce((s,o)=>s+(safeQuantity(o)??0),0);
-    const todayQty=consumption.filter(o=>dayKey(o.created_at)===dayKey(today)).reduce((s,o)=>s+(safeQuantity(o)??0),0);
+    const todayQty=consumption.filter(o=>dayKey(o.created_at)===dayKey(todayDate)).reduce((s,o)=>s+(safeQuantity(o)??0),0);
     const q7=sumSince(start7),q30=sumSince(start30);
     const relevant=ops.filter(o=>new Date(o.created_at)>=start30);
     let days=30;
     if(relevant.length){
       const oldest=new Date(Math.min(...relevant.map(o=>new Date(o.created_at).getTime())));
       const first=startOfDay(oldest)>start30?startOfDay(oldest):start30;
-      days=Math.max(1,Math.min(30,Math.floor((today-first)/86400000)+1));
+      days=Math.max(1,Math.min(30,Math.floor((todayDate-first)/86400000)+1));
     }
-    return {today:todayQty,q7,q30,avg:q30/days,days,start30,today};
+    return {today:todayQty,q7,q30,avg:q30/days,days,start30};
   }
 
   function chartHtml(rawOps){
     const ops=sanitizeOps(rawOps);
-    const today=startOfDay(new Date()),days=[];
-    for(let n=29;n>=0;n--){const d=addDays(today,-n);days.push({key:dayKey(d),date:d,value:0})}
+    const todayDate=startOfDay(new Date()),days=[];
+    for(let n=29;n>=0;n--){const d=addDays(todayDate,-n);days.push({key:dayKey(d),date:d,value:0})}
     const map=new Map(days.map(x=>[x.key,x]));
     ops.filter(o=>o.type==='consumption').forEach(o=>{const x=map.get(dayKey(o.created_at));if(x)x.value+=(safeQuantity(o)??0)});
     const max=Math.max(1,...days.map(x=>x.value));
@@ -194,11 +200,17 @@
 
   async function openHistory(item){
     document.getElementById('item-history-v2')?.remove();
-    const o=document.createElement('div');o.id='item-history-v2';o.className='ich-overlay';o.innerHTML=`<div class="ich-head"><div><b>${esc(item.name)}</b><small class="ich-status">История товара</small></div><button class="ich-close">×</button></div><div class="ich-filters">${[['all','Все'],['consumption','Расход'],['receipt','Поступление'],['writeoff','Списание'],['inventory','Инвентаризация'],['adjustment','Корректировки']].map(([v,l])=>`<button class="ich-chip${v==='all'?' on':''}" data-hf="${v}">${l}</button>`).join('')}</div><div class="ich-list"><div class="ich-loading">Загружаю историю…</div></div>`;document.body.appendChild(o);o.querySelector('.ich-close').onclick=()=>o.remove();
-    let ops=localOps(item.id),filter='all';const box=o.querySelector('.ich-list'),status=o.querySelector('.ich-status');renderHistoryRows(box,item,ops,filter);status.textContent=`${ops.length} операций на телефоне`;
+    const o=document.createElement('div');o.id='item-history-v2';o.className='ich-overlay';o.innerHTML=`<div class="ich-head"><div><b>${esc(item.name)}</b><small class="ich-status">История товара</small></div><button class="ich-close">×</button></div><div class="ich-filters">${[['all','Все'],['consumption','Расход'],['receipt','Поступление'],['writeoff','Списание'],['inventory','Инвентаризация'],['adjustment','Корректировки']].map(([v,l])=>`<button class="ich-chip${v==='all'?' on':''}" data-hf="${v}">${l}</button>`).join('')}</div><div class="ich-list"><div class="ich-loading">Загружаю историю…</div></div>`;
+    document.body.appendChild(o);
+    o.querySelector('.ich-close').onclick=()=>o.remove();
+    let ops=localOps(item.id),filter='all';
+    const box=o.querySelector('.ich-list'),status=o.querySelector('.ich-status');
+    renderHistoryRows(box,item,ops,filter);
+    status.textContent=`${ops.length} операций на телефоне`;
     o.querySelectorAll('[data-hf]').forEach(b=>b.onclick=()=>{filter=b.dataset.hf;o.querySelectorAll('[data-hf]').forEach(x=>x.classList.toggle('on',x===b));renderHistoryRows(box,item,ops,filter)});
     const cloud=await fetchCloudOps(item.id,{all:true});
-    if(cloud&&o.isConnected){ops=mergeById(cloud,localOps(item.id).filter(x=>x.pending));status.textContent=`${ops.length} операций · облако`;renderHistoryRows(box,item,ops,filter)}else if(o.isConnected&&!navigator.onLine)status.textContent=`${ops.length} операций · офлайн`;
+    if(cloud&&o.isConnected){ops=mergeById(cloud,localOps(item.id).filter(x=>x.pending));status.textContent=`${ops.length} операций · облако`;renderHistoryRows(box,item,ops,filter)}
+    else if(o.isConnected&&!navigator.onLine)status.textContent=`${ops.length} операций · офлайн`;
   }
 
   function detectModal(node){
@@ -211,6 +223,6 @@
     document.addEventListener('click',e=>{const row=e.target.closest?.('[data-item]');if(row?.dataset.item)lastItemId=row.dataset.item},true);
     new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(detectModal))).observe(document.body,{childList:true,subtree:true});
   }
-  window.KAMBUZ_ITEM_CARD={version:VERSION,openHistory,safeQuantity,sanitizeOps};
+  window.KAMBUZ_ITEM_CARD={version:VERSION,openHistory,safeQuantity,sanitizeOps,stats};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
