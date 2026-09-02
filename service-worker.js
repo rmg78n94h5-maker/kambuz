@@ -1,4 +1,4 @@
-const VERSION = '1.4.0';
+const VERSION = '1.4.1';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -10,10 +10,10 @@ const SHELL = [
   './app.js?v=1.2.4',
   './config.js?v=1.2.4',
   './sync-resilience-addon.js?v=1.2.2',
-  './offline-receipt-addon.js?v=1.3.0',
+  './offline-receipt-addon.js?v=1.3.1',
   './inventory-addon.js?v=1.4.0',
   './sync-queue-ui-addon.js?v=1.2.4',
-  './version-addon.js?v=1.4.0',
+  './version-addon.js?v=1.4.1',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -35,10 +35,10 @@ self.addEventListener('install', event => {
       url('./styles.css?v=1.2.4'),
       url('./app.js?v=1.2.4'),
       url('./config.js?v=1.2.4'),
-      url('./offline-receipt-addon.js?v=1.3.0'),
+      url('./offline-receipt-addon.js?v=1.3.1'),
       url('./inventory-addon.js?v=1.4.0'),
       url('./sync-queue-ui-addon.js?v=1.2.4'),
-      url('./version-addon.js?v=1.4.0')
+      url('./version-addon.js?v=1.4.1')
     ];
 
     for (const resource of required) {
