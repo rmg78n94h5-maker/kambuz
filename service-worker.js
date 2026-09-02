@@ -1,4 +1,4 @@
-const VERSION = '1.9.2';
+const VERSION = '1.9.3';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -17,9 +17,9 @@ const SHELL = [
   './duplicate-cleanup-addon.js?v=1.5.0',
   './bulk-writeoff-addon.js?v=1.6.0',
   './imo-report-addon.js?v=1.8.0',
-  './item-card-addon.js?v=1.9.2',
+  './item-card-addon.js?v=1.9.3',
   './sync-queue-ui-addon.js?v=1.2.4',
-  './version-addon.js?v=1.9.2',
+  './version-addon.js?v=1.9.3',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -35,7 +35,6 @@ self.addEventListener('install', event => {
         await cache.put(resource, response.clone());
       })
     );
-
     const required = [
       url('./index.html'),
       url('./styles.css?v=1.2.4'),
@@ -48,11 +47,10 @@ self.addEventListener('install', event => {
       url('./duplicate-cleanup-addon.js?v=1.5.0'),
       url('./bulk-writeoff-addon.js?v=1.6.0'),
       url('./imo-report-addon.js?v=1.8.0'),
-      url('./item-card-addon.js?v=1.9.2'),
+      url('./item-card-addon.js?v=1.9.3'),
       url('./sync-queue-ui-addon.js?v=1.2.4'),
-      url('./version-addon.js?v=1.9.2')
+      url('./version-addon.js?v=1.9.3')
     ];
-
     for (const resource of required) {
       if (!(await cache.match(resource))) {
         const failed = results.filter(r => r.status === 'rejected').map(r => r.reason?.message).join('; ');
@@ -79,11 +77,8 @@ async function cachedShell(path) {
 async function fetchWithTimeout(request, ms = 2500) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
-  try {
-    return await fetch(request, { cache: 'no-store', signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
+  try { return await fetch(request, { cache: 'no-store', signal: controller.signal }); }
+  finally { clearTimeout(timer); }
 }
 
 self.addEventListener('fetch', event => {
@@ -101,14 +96,9 @@ self.addEventListener('fetch', event => {
           return fresh;
         }
       } catch (_) {}
-
       const cached = await cachedShell('./index.html');
       if (cached) return cached;
-
-      return new Response(
-        '<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:system-ui;padding:32px"><h1>Камбуз</h1><p>Офлайн-кэш ещё не установлен. Один раз открой приложение с интернетом.</p></body></html>',
-        { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-      );
+      return new Response('<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:system-ui;padding:32px"><h1>Камбуз</h1><p>Офлайн-кэш ещё не установлен. Один раз открой приложение с интернетом.</p></body></html>', { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     })());
     return;
   }
@@ -117,7 +107,6 @@ self.addEventListener('fetch', event => {
     const cache = await caches.open(CACHE);
     const cached = (await cache.match(event.request)) || (await cache.match(event.request, { ignoreSearch: true }));
     if (cached) return cached;
-
     try {
       const fresh = await fetch(event.request);
       if (fresh.ok) await cache.put(event.request, fresh.clone());
