@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.3.0';
+  const VERSION = '1.3.1';
   const STORAGE = {
     items: 'kambuz_items',
     ops: 'kambuz_ops',
@@ -66,7 +66,6 @@
     const n = norm(raw);
     if (!n) return '';
 
-    // Текстиль: цвет и размер не создают новую складскую позицию.
     if (/наволоч/.test(n)) return 'Наволочка';
     if (/пододеяль/.test(n)) return 'Пододеяльник';
     if (/простын/.test(n)) return 'Простыня';
@@ -78,7 +77,6 @@
     if (/штор.*душ/.test(n)) return 'Шторка для душа';
     if (/коврик.*душ/.test(n)) return 'Коврик для душа';
 
-    // Посуда/инвентарь: технические хвосты убираем, но значимый размер сохраняем.
     if (/сковород/.test(n)) {
       const d = extractDiameter(raw);
       return d ? `Сковорода Ø${d} мм` : 'Сковорода';
@@ -100,7 +98,6 @@
     if (/тележк.*мусор|подставк.*мусор/.test(n)) return 'Тележка под мусорный бак';
     if (/губк.*уборк/.test(n)) return 'Губка для уборки';
 
-    // Пакеты: размер различает товар и поэтому сохраняется.
     if (/пакет/.test(n)) {
       const size = extractSize(raw);
       if (/мусор/.test(n)) return 'Пакеты мусорные';
@@ -108,7 +105,6 @@
       if (/упаков/.test(n)) return `Пакеты упаковочные${size ? ` ${size}` : ''}`;
     }
 
-    // Химия: фасовка хранится отдельно, а не в названии.
     if (/стиральн.*порош/.test(n)) return 'Стиральный порошок';
     if (/мягк.*мыл/.test(n)) return 'Мягкое мыло';
     if (/моющ.*посуд/.test(n)) return 'Моющее средство для посуды';
@@ -207,7 +203,6 @@
     const candidates = items.filter(i => canonicalKey(i.name) === key && compatiblePackage(i, line));
     if (candidates.length === 1) return candidates[0];
 
-    // Если несколько вариантов одного товара, выбираем только при однозначной фасовке.
     if (candidates.length > 1) {
       const packaged = candidates.filter(i => {
         const a = basePackage(i.volume ?? i.weight, i.package_unit);
@@ -339,7 +334,6 @@
       item.qty = next;
       item.updated_at = stamp;
 
-      // Карточка всегда идёт в очередь до операции — так новый товар гарантированно существует в облаке.
       queueItemUpsert(queue, item);
 
       const op = {
@@ -446,17 +440,12 @@
     input.click();
   }
 
-  function setVisibleVersion() {
-    document.querySelectorAll('.app-version').forEach(el => { el.textContent = `v${VERSION}`; });
-  }
-
   function findWorkHeading() {
     return [...document.querySelectorAll('#app h1,#app h2,#app h3,#app h4,#app div,#app span')]
       .find(el => (el.textContent || '').trim() === 'Рабочие действия');
   }
 
   function installButton() {
-    setVisibleVersion();
     if (document.getElementById('receipt-json-import-button')) return;
     const heading = findWorkHeading();
     if (!heading || !heading.parentElement) return;
@@ -476,7 +465,6 @@
   }
 
   function refreshUi() {
-    setVisibleVersion();
     installButton();
   }
 
