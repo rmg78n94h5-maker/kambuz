@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const VERSION = '1.4.0';
+  const VERSION = '1.4.1';
 
   function applyVersion() {
     document.querySelectorAll('.app-version').forEach(el => {
@@ -12,11 +12,11 @@
   function start() {
     applyVersion();
     const root = document.getElementById('app') || document.documentElement;
-    let timer;
-    new MutationObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(applyVersion, 20);
-    }).observe(root, { childList: true, subtree: true, characterData: true });
+    new MutationObserver(applyVersion).observe(root, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
   }
 
   window.KAMBUZ_DISPLAY_VERSION = VERSION;
