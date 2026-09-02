@@ -1,4 +1,4 @@
-const VERSION = '1.8.0';
+const VERSION = '1.9.0';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -16,8 +16,9 @@ const SHELL = [
   './duplicate-cleanup-addon.js?v=1.5.0',
   './bulk-writeoff-addon.js?v=1.6.0',
   './imo-report-addon.js?v=1.8.0',
+  './item-card-addon.js?v=1.9.0',
   './sync-queue-ui-addon.js?v=1.2.4',
-  './version-addon.js?v=1.8.0',
+  './version-addon.js?v=1.9.0',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -45,8 +46,9 @@ self.addEventListener('install', event => {
       url('./duplicate-cleanup-addon.js?v=1.5.0'),
       url('./bulk-writeoff-addon.js?v=1.6.0'),
       url('./imo-report-addon.js?v=1.8.0'),
+      url('./item-card-addon.js?v=1.9.0'),
       url('./sync-queue-ui-addon.js?v=1.2.4'),
-      url('./version-addon.js?v=1.8.0')
+      url('./version-addon.js?v=1.9.0')
     ];
 
     for (const resource of required) {
