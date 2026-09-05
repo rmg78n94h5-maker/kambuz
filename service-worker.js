@@ -1,4 +1,4 @@
-const VERSION = '1.9.3';
+const VERSION = '1.9.4';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -18,8 +18,9 @@ const SHELL = [
   './bulk-writeoff-addon.js?v=1.6.0',
   './imo-report-addon.js?v=1.8.0',
   './item-card-addon.js?v=1.9.3',
+  './average-consumption-addon.js?v=1.9.4',
   './sync-queue-ui-addon.js?v=1.2.4',
-  './version-addon.js?v=1.9.3',
+  './version-addon.js?v=1.9.4',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -48,8 +49,9 @@ self.addEventListener('install', event => {
       url('./bulk-writeoff-addon.js?v=1.6.0'),
       url('./imo-report-addon.js?v=1.8.0'),
       url('./item-card-addon.js?v=1.9.3'),
+      url('./average-consumption-addon.js?v=1.9.4'),
       url('./sync-queue-ui-addon.js?v=1.2.4'),
-      url('./version-addon.js?v=1.9.3')
+      url('./version-addon.js?v=1.9.4')
     ];
     for (const resource of required) {
       if (!(await cache.match(resource))) {
