@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const VERSION = '1.9.4';
+  const VERSION = '2.0.0';
 
   function applyVersion() {
     document.querySelectorAll('.app-version').forEach(el => {
