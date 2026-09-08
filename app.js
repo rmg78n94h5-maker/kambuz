@@ -252,16 +252,29 @@
     if(/консерв|маринован|солен|баноч|жестян|стеклянн.*банк/.test(t))return false;
     return /(овощ|фрукт|зелень|яблок|цитрус|банан|груш|ананас|манго|киви|картоф|лук|капуст|томат|огур|перец|баклаж|кабач|броккол|гриб свеж|шампиньон свеж|мяс|птиц|курин|индей|свин|говяж|теля|баранин|рыба|рыбн|лосос|семг|сельд|скумбр|минтай|треск|колбас|ветчин|сало|грудинк|сосиск|сардельк|шпикач|купат|сыр(?! hochland)|творог|масло сливоч)/.test(t);
   }
-  function desiredStockUnit(i){
-    if(isLooseWeightItem(i))return "кг";
-    if(normalizedPackage(i))return "шт.";
-    return i.unit||"шт.";
-  }
+  const KNOWN_UNIT_REPAIRS = {
+    "6bb3bfb8-b7a6-4633-b970-4c2e036fea71":"шт.",
+    "644feb04-4299-4a14-9f1b-c2378147a1e4":"л",
+    "cdca2174-3c87-4cce-97e7-0d2f2c7b059d":"л",
+    "ca4a6161-7b9d-4a8a-98bd-2ac2bd3b17b8":"шт.",
+    "367ebd29-254d-4028-b3f9-e8df1d460d63":"шт.",
+    "024ba627-a310-4523-9582-24927f8bdb97":"л",
+    "73a75281-49c6-473e-893b-14c1d6f67702":"шт.",
+    "8d3fc5b8-11e0-458b-a0d7-0ae17e3b3286":"шт.",
+    "855537cc-779d-4c14-8ad2-fa3aca8a5d93":"шт.",
+    "6fae9995-d806-4c41-bd73-da33eece057a":"шт.",
+    "7fc2189c-06ff-42a6-81f0-236555980927":"шт.",
+    "c56d5c12-3ebd-4ba0-a5fc-1e982b5a2899":"шт.",
+    "f82b7fae-ccfc-4eaf-bdf0-b5f3fdc4defe":"шт."
+  };
   function repairKnownUnits(){
     let changed=false;
     for(const i of state.items){
-      const wanted=desiredStockUnit(i);
-      if(wanted&&normalizedUnit(i.unit)!==normalizedUnit(wanted)){i.unit=wanted;i.updated_at=now();changed=true;queueItemUpsert(i)}
+      const wanted=KNOWN_UNIT_REPAIRS[i.id];
+      if(!wanted)continue;
+      if(normalizedUnit(i.unit)!==normalizedUnit(wanted)){
+        i.unit=wanted;i.updated_at=now();changed=true;queueItemUpsert(i);
+      }
     }
     if(changed)saveLocal();
     return changed;
