@@ -1,4 +1,4 @@
-const VERSION = '2.1.5';
+const VERSION = '2.1.6';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -9,8 +9,8 @@ const SHELL = [
   './offline-receipt-addon.js?v=1.3.2','./inventory-addon.js?v=1.4.0',
   './duplicate-cleanup-addon.js?v=1.5.0','./bulk-writeoff-addon.js?v=1.6.0',
   './imo-report-addon.js?v=1.8.0','./item-card-addon.js?v=1.9.5',
-  './average-consumption-addon.js?v=1.9.4','./food-cost-addon.js?v=2.1.4',
-  './sync-queue-ui-addon.js?v=1.2.4','./version-addon.js?v=2.1.5',
+  './average-consumption-addon.js?v=1.9.4','./food-cost-addon.js?v=2.1.6',
+  './sync-queue-ui-addon.js?v=1.2.4','./version-addon.js?v=2.1.6',
   './manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'
 ].map(url);
 
