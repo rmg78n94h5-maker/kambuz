@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "1.1.1";
+  const APP_VERSION = "2.1.3";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -203,6 +203,12 @@
             // Для новой карточки база сама поставит qty=0; при редактировании существующего товара остаток не перезаписываем.
             const {error}=await sb.from("items").upsert(payload,{onConflict:"id"});
             if(error)throw error;
+          }else if(task.kind==="operation_delete"){
+            const {error}=await sb.rpc("kambuz_delete_consumption_operation",{
+              p_operation_id:task.operation_id,
+              p_deleted_by:task.deleted_by||state.user
+            });
+            if(error)throw error;
           }else{
             const {error}=await sb.rpc("kambuz_apply_operation",{
               p_operation_id:task.id,p_item_id:task.item_id,p_type:task.type,
@@ -382,7 +388,7 @@
   }
 
   function history(){
-    const rows=state.ops.map(o=>{const i=state.items.find(x=>x.id===o.item_id);return `<div class="history-entry ${o.pending?"history-pending":""}"><div class="history-top"><div><span class="badge b-${o.type}">${labelType(o.type)}</span> <b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b>${o.pending?'<span class="pending-pill">◷ Ожидает</span>':""}</div><b>${sign(o.type)}${fmt(o.quantity)} ${esc(i?.unit||o.unit||"")}</b></div><div class="item-meta">${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}${o.reason?` · ${esc(o.reason)}`:""}${o.comment?` · ${esc(o.comment)}`:""}</div></div>`}).join("");
+    const rows=state.ops.map(o=>{const i=state.items.find(x=>x.id===o.item_id);const canDelete=o.type==="consumption"||o.type==="writeoff";return `<div class="history-entry ${o.pending?"history-pending":""}"><div class="history-top"><div><span class="badge b-${o.type}">${labelType(o.type)}</span> <b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b>${o.pending?'<span class="pending-pill">◷ Ожидает</span>':""}</div><b>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i?.unit||"")}</b></div><div class="history-bottom"><div class="item-meta">${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}${o.reason?` · ${esc(o.reason)}`:""}${o.comment?` · ${esc(o.comment)}`:""}</div>${canDelete?`<button class="history-delete" type="button" data-op-delete="${o.id}">Удалить</button>`:""}</div></div>`}).join("");
     return `<div class="page-head"><div><div class="eyebrow">Журнал</div><h2>История операций</h2></div></div><div class="card">${rows||'<div class="empty">Операций пока нет</div>'}</div>`;
   }
   function more(){return `<div class="page-head"><div><div class="eyebrow">Настройки и отчёты</div><h2>Ещё</h2></div></div>
@@ -396,6 +402,7 @@
   function bind(){
     document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;render()});
     document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>handle(b.dataset.action));
+    document.querySelectorAll("[data-op-delete]").forEach(b=>b.onclick=e=>{e.stopPropagation();deleteOperation(b.dataset.opDelete)});
     document.querySelectorAll("[data-category]").forEach(b=>b.onclick=()=>{state.category=b.dataset.category;render()});
     bindStockItems(document);
     const s=$("#search");if(s)s.oninput=e=>{
@@ -426,6 +433,62 @@
     else if(a==="sync-panel") syncPanel();
   }
 
+  function operationRestoreDelta(o){
+    const prev=Number(o?.previous_qty),next=Number(o?.new_qty);
+    if(Number.isFinite(prev)&&Number.isFinite(next)&&prev!==next)return Math.abs(next-prev);
+    const q=Number(o?.quantity||0);
+    return Number.isFinite(q)&&q>0?q:0;
+  }
+
+  function deleteOperation(operationId){
+    const o=state.ops.find(x=>x.id===operationId);
+    if(!o){toast("Операция уже удалена");return}
+    if(!["consumption","writeoff"].includes(o.type)){toast("Удалять можно только расход или списание");return}
+    const item=state.items.find(x=>x.id===o.item_id);
+    if(!item){toast("Карточка товара не найдена");return}
+    const delta=operationRestoreDelta(o);
+    if(!(delta>0)){toast("Не удалось определить количество для возврата");return}
+    const unit=item.unit||o.unit||"";
+    const el=modal(o.type==="writeoff"?"Удалить списание?":"Удалить расход?",`
+      <div class="delete-op-note">
+        <b>${esc(itemLabel(item))}</b>
+        <p>Операция <strong>−${fmt(o.quantity)} ${esc(o.unit||unit)}</strong> будет удалена.</p>
+        <p>На остаток вернётся <strong>+${fmt(delta)} ${esc(unit)}</strong>. Стоимость этой позиции также исчезнет из расчёта питания.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary" id="delete-op-cancel">Отмена</button>
+        <button class="danger" id="delete-op-confirm">Удалить и вернуть на остаток</button>
+      </div>
+    `,true);
+    el.querySelector("#delete-op-cancel").onclick=()=>el.remove();
+    el.querySelector("#delete-op-confirm").onclick=async()=>{
+      const btn=el.querySelector("#delete-op-confirm");btn.disabled=true;
+      try{
+        let queue=getQueue();
+        queue=queue.filter(t=>!(t.kind==="operation"&&t.id===o.id)&&!(t.kind==="operation_delete"&&t.operation_id===o.id));
+        queue.unshift({
+          id:`delete:${o.id}`,kind:"operation_delete",operation_id:o.id,
+          item_id:o.item_id,item_name:itemLabel(item),quantity:delta,unit,
+          deleted_by:state.user,status:"pending",created_at:now()
+        });
+        item.qty=Number(item.qty||0)+delta;
+        item.updated_at=now();
+        state.ops=state.ops.filter(x=>x.id!==o.id);
+        saveLocal();
+        setQueue(queue);
+        el.remove();
+        render();
+        document.dispatchEvent(new CustomEvent("kambuz-operation-deleted",{detail:{operationId:o.id,itemId:o.item_id}}));
+        toast(navigator.onLine?`Удалено · возвращено ${fmt(delta)} ${unit}`:`Удалено офлайн · возвращено ${fmt(delta)} ${unit}`);
+        if(navigator.onLine){
+          try{await ensureCloud();await syncPending()}catch(err){console.error(err)}
+        }
+      }catch(err){
+        console.error(err);btn.disabled=false;toast("Не удалось удалить операцию");
+      }
+    };
+  }
+
   function stockFilterModal(){
     const f=state.stockFilters;
     const groups=STOCK_GROUPS.map(g=>`<div class="stock-filter-group"><label class="check-row"><input type="checkbox" data-filter-group="${g.id}" ${f.groups.includes(g.id)?"checked":""}><b>${esc(g.label)}</b></label><button type="button" class="sub-toggle" data-sub-toggle="${g.id}">Подгруппы ▾</button><div class="subgroup-list" data-sub-list="${g.id}" hidden>${(g.subs||[]).map(s=>`<label class="check-row small"><input type="checkbox" data-filter-sub="${esc(s)}" ${f.subgroups.includes(s)?"checked":""}>${esc(s)}</label>`).join("")||'<small>Для этой группы подгрупп нет</small>'}</div></div>`).join("");
@@ -446,7 +509,7 @@
   function syncPanel(){
     const queue=getQueue();
     const last=state.lastSync?new Date(state.lastSync).toLocaleString("ru-RU"):"ещё не выполнялась";
-    const rows=queue.map(o=>{const isItem=o.kind==="item_upsert";const bad=o.status==="error";return `<div class="sync-queue-row ${bad?"queue-error":""}"><div><b>${esc(o.item_name||"Товар")}</b><small>${isItem?"Создание/обновление товара":`${esc(labelType(o.type))} · ${fmt(o.quantity)} ${esc(o.unit||"")}`}${bad?` · ${esc(o.error||"Ошибка")}`:""}</small></div><span>${bad?"!":"◷"}</span></div>`}).join("");
+    const rows=queue.map(o=>{const isItem=o.kind==="item_upsert",isDelete=o.kind==="operation_delete";const bad=o.status==="error";const descr=isItem?"Создание/обновление товара":isDelete?`Удаление расхода · возврат ${fmt(o.quantity)} ${esc(o.unit||"")}`:`${esc(labelType(o.type))} · ${fmt(o.quantity)} ${esc(o.unit||"")}`;return `<div class="sync-queue-row ${bad?"queue-error":""}"><div><b>${esc(o.item_name||"Товар")}</b><small>${descr}${bad?` · ${esc(o.error||"Ошибка")}`:""}</small></div><span>${bad?"!":"◷"}</span></div>`}).join("");
     const el=modal("Синхронизация",`<div class="sync-panel-state ${syncClass()}"><b>${esc(state.sync)}</b><small>${state.syncError?esc(state.syncError):`Последняя синхронизация: ${esc(last)}`}</small></div><div class="compact-title"><b>В очереди: ${queue.length}</b></div><div class="sync-queue">${rows||'<div class="empty small">Очередь пуста</div>'}</div><button class="primary full" id="sync-now" ${!navigator.onLine?'disabled':''}>Синхронизировать сейчас</button>`);
     el.querySelector("#sync-now").onclick=async()=>{state.syncError=null;updateSyncLabel();try{await ensureCloud();await syncPending();await loadCloudSilent();el.remove();toast("Синхронизация завершена")}catch(e){console.error(e);render();el.remove();syncPanel()}};
   }
@@ -688,9 +751,10 @@
     if(cloudEnabled&&navigator.onLine&&!getQueue().length){try{await loadCloudSilent()}catch(e){console.error(e);updateSyncLabel()}}
     else render();
   }
+  window.KAMBUZ_OPERATIONS={deleteOperation};
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=1.1.1", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=2.1.3", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();
