@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "2.1.3";
+  const APP_VERSION = "2.1.5";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -396,6 +396,7 @@
       <button data-action="export"><span>⬇️</span><div><b>Экспорт остатков</b><small>PDF и Word</small></div><i>›</i></button>
       <button data-action="import-json"><span>📥</span><div><b>Импорт каталога</b><small>JSON без дублей</small></div><i>›</i></button>
       <button data-action="analytics"><span>📊</span><div><b>Аналитика</b><small>Расход за период</small></div><i>›</i></button>
+      <button data-action="force-update"><span>🔄</span><div><b>Обновить Камбуз</b><small>Проверить новую версию и перезапустить</small></div><i>›</i></button>
       <button data-action="profile"><span>👤</span><div><b>Пользователь</b><small>${esc(state.user)}</small></div><i>›</i></button>
     </div>`}
 
@@ -427,6 +428,7 @@
     else if(a==="scan"||a==="scan-search") scanBarcode(a==="scan-search"?"search":"quick");
     else if(a==="analytics") analytics();
     else if(a==="summary-report") summaryReport();
+    else if(a==="force-update") forceUpdateApp();
     else if(a==="stock-filter") stockFilterModal();
     else if(a==="stock-sort") stockSortModal();
     else if(a==="stock-filter-reset"){state.stockFilters=defaultStockFilters();saveStockFilters();render()}
@@ -487,6 +489,24 @@
         console.error(err);btn.disabled=false;toast("Не удалось удалить операцию");
       }
     };
+  }
+
+  async function forceUpdateApp(){
+    if(!navigator.onLine){toast("Для проверки обновления нужен интернет");return}
+    toast("Проверяю обновление…");
+    try{
+      if(!("serviceWorker" in navigator)){location.reload();return}
+      const reg=await navigator.serviceWorker.getRegistration("./");
+      if(reg){
+        await reg.update();
+        if(reg.waiting)reg.waiting.postMessage({type:"SKIP_WAITING"});
+      }
+      await new Promise(r=>setTimeout(r,900));
+      location.reload();
+    }catch(e){
+      console.error(e);
+      toast("Не удалось обновить — попробуй ещё раз при устойчивой связи");
+    }
   }
 
   function stockFilterModal(){
@@ -754,7 +774,7 @@
   window.KAMBUZ_OPERATIONS={deleteOperation};
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=2.1.3", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=2.1.5", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();
