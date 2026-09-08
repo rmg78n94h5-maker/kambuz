@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.3.1';
+  const VERSION = '1.3.2';
   const STORAGE = {
     items: 'kambuz_items',
     ops: 'kambuz_ops',
@@ -321,6 +321,7 @@
         if (clean(item.barcode) === '') { item.barcode = null; changed = true; }
         if (line.volume && !Number(item.volume)) { item.volume = line.volume; changed = true; }
         if (line.package_unit && !clean(item.package_unit)) { item.package_unit = line.package_unit; changed = true; }
+        if (line.unit && normalizeUnit(item.unit) !== normalizeUnit(line.unit)) { item.unit = normalizeUnit(line.unit); changed = true; }
         if (line.barcode && !clean(item.barcode)) { item.barcode = line.barcode; changed = true; }
         if (line.subcategory && !clean(item.subcategory)) { item.subcategory = line.subcategory; changed = true; }
         if (line.brand && !clean(item.brand)) { item.brand = line.brand; changed = true; }
