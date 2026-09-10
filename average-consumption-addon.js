@@ -1,9 +1,10 @@
 (() => {
   'use strict';
-  const VERSION='1.9.4';
+  const VERSION='1.9.5';
   const OPS_KEY='kambuz_ops';
   let lastItemId=null;
   let sb=null;
+  let refreshToken=0;
   const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??f}catch{return f}};
   const fmt=n=>Number(n||0).toLocaleString('ru-RU',{maximumFractionDigits:3});
   const sod=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x};
@@ -30,40 +31,49 @@
   }
   function applyToCard(itemId,ops){
     const modal=[...document.querySelectorAll('.modal-backdrop')].find(m=>m.querySelector('.ic-metrics'));
-    if(!modal)return;
+    if(!modal)return false;
     const tiles=modal.querySelectorAll('.ic-metrics>div');
-    if(tiles.length<4)return;
+    if(tiles.length<4)return false;
     const result=calc(ops);
     const unit=(read('kambuz_items',[])||[]).find(i=>i.id===itemId)?.unit||'';
     const strong=tiles[3].querySelector('strong');
     const em=tiles[3].querySelector('em');
-    if(strong)strong.textContent=`${fmt(result.avg)} ${unit}`.trim();
-    if(em)em.textContent=result.days?`за ${result.days} календ. дн. от первого расхода`:'расходов пока нет';
+    const strongText=`${fmt(result.avg)} ${unit}`.trim();
+    const emText=result.days?`за ${result.days} календ. дн. от первого расхода`:'расходов пока нет';
+    if(strong&&strong.textContent!==strongText)strong.textContent=strongText;
+    if(em&&em.textContent!==emText)em.textContent=emText;
+    return true;
   }
   async function refresh(itemId){
+    const token=++refreshToken;
     const local=localConsumptions(itemId);
-    applyToCard(itemId,local);
     const c=await client();
-    if(!c)return;
+    if(token!==refreshToken||itemId!==lastItemId)return;
+    if(!c){applyToCard(itemId,local);return;}
     const today=sod(new Date()),start30=addDays(today,-29);
     try{
       const {data,error}=await c.from('operations').select('*').eq('item_id',itemId).eq('type','consumption').gte('created_at',start30.toISOString()).order('created_at',{ascending:true});
       if(error)throw error;
+      if(token!==refreshToken||itemId!==lastItemId)return;
       const byId=new Map();
       for(const o of [...(data||[]),...local.filter(o=>o.pending)])byId.set(o.id||`${o.created_at}|${o.quantity}`,o);
       applyToCard(itemId,[...byId.values()]);
-    }catch(e){console.warn('Average consumption refresh failed',e)}
+    }catch(e){
+      console.warn('Average consumption refresh failed',e);
+      if(token===refreshToken&&itemId===lastItemId)applyToCard(itemId,local);
+    }
   }
-  function maybeRefresh(){
-    if(!lastItemId)return;
-    const modal=[...document.querySelectorAll('.modal-backdrop')].find(m=>m.querySelector('.ic-metrics'));
-    if(modal)refresh(lastItemId);
+  function scheduleRefresh(itemId){
+    setTimeout(()=>refresh(itemId),120);
+    setTimeout(()=>refresh(itemId),700);
   }
   document.addEventListener('click',e=>{
     const row=e.target.closest?.('[data-item]');
-    if(row?.dataset.item)lastItemId=row.dataset.item;
+    if(row?.dataset.item){lastItemId=row.dataset.item;scheduleRefresh(lastItemId);}
   },true);
-  let timer;
-  new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(maybeRefresh,80)}).observe(document.body,{childList:true,subtree:true});
-  window.KAMBUZ_AVERAGE_CONSUMPTION={version:VERSION,calc};
+  document.addEventListener('kambuz:item-card-open',e=>{
+    const id=e?.detail?.itemId;
+    if(id){lastItemId=id;scheduleRefresh(id);}
+  });
+  window.KAMBUZ_AVERAGE_CONSUMPTION={version:VERSION,calc,refresh};
 })();
