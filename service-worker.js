@@ -1,4 +1,4 @@
-const VERSION = '2.1.7';
+const VERSION = '2.2.0';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -8,9 +8,9 @@ const SHELL = [
   './classification-addon.js?v=1.8.0','./sync-resilience-addon.js?v=1.2.2',
   './offline-receipt-addon.js?v=1.3.2','./inventory-addon.js?v=1.4.0',
   './duplicate-cleanup-addon.js?v=1.5.0','./bulk-writeoff-addon.js?v=1.6.0',
-  './imo-report-addon.js?v=1.8.0','./item-card-addon.js?v=1.9.5',
-  './average-consumption-addon.js?v=1.9.4','./food-cost-addon.js?v=2.1.7',
-  './sync-queue-ui-addon.js?v=1.2.4','./version-addon.js?v=2.1.7',
+  './imo-report-addon.js?v=1.8.0','./item-card-addon.js?v=1.9.6',
+  './average-consumption-addon.js?v=1.9.6','./food-cost-addon.js?v=2.2.0',
+  './sync-queue-ui-addon.js?v=1.2.4','./version-addon.js?v=2.2.0',
   './manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'
 ].map(url);
 
@@ -27,8 +27,6 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil((async()=>{
-    // Старые кэши не удаляем сразу: на слабой связи они служат запасным офлайн-слоем,
-    // пока новый кэш дозаполняется в фоне.
     await self.clients.claim();
   })());
 });
@@ -72,7 +70,6 @@ self.addEventListener('fetch', event => {
       return null;
     })();
 
-    // Даже если связь медленная, не обрываем загрузку: она обновит кэш в фоне.
     event.waitUntil(network.then(()=>{}).catch(()=>{}));
     event.respondWith((async()=>{
       const fresh = await Promise.race([network,delay(7000)]);
