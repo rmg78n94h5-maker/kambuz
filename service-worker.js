@@ -1,4 +1,4 @@
-const VERSION = '2.2.1';
+const VERSION = '2.2.2';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -10,7 +10,7 @@ const SHELL = [
   './duplicate-cleanup-addon.js?v=1.5.0','./bulk-writeoff-addon.js?v=1.6.0',
   './imo-report-addon.js?v=1.8.0','./item-card-addon.js?v=1.9.6',
   './average-consumption-addon.js?v=1.9.6','./food-cost-addon.js?v=2.2.0',
-  './home-cost-addon.js?v=2.2.1','./sync-queue-ui-addon.js?v=1.2.4','./version-addon.js?v=2.2.1',
+  './sync-queue-ui-addon.js?v=1.2.4','./version-addon.js?v=2.2.2',
   './manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'
 ].map(url);
 
@@ -26,9 +26,7 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil((async()=>{
-    await self.clients.claim();
-  })());
+  event.waitUntil((async()=>{ await self.clients.claim(); })());
 });
 
 self.addEventListener('message', event => {
@@ -69,21 +67,15 @@ self.addEventListener('fetch', event => {
       }catch{}
       return null;
     })();
-
     event.waitUntil(network.then(()=>{}).catch(()=>{}));
     event.respondWith((async()=>{
       const fresh = await Promise.race([network,delay(7000)]);
       if(fresh) return fresh;
-
       const cached = await currentCached(url('./index.html')) || await newestFallback(url('./index.html'));
       if(cached) return cached;
-
       const late = await network;
       if(late) return late;
-
-      return new Response('<h1>Камбуз</h1><p>Один раз открой приложение с интернетом.</p>',{
-        headers:{'Content-Type':'text/html; charset=utf-8'}
-      });
+      return new Response('<h1>Камбуз</h1><p>Один раз открой приложение с интернетом.</p>',{headers:{'Content-Type':'text/html; charset=utf-8'}});
     })());
     return;
   }
@@ -91,7 +83,6 @@ self.addEventListener('fetch', event => {
   event.respondWith((async()=>{
     const exact = await currentCached(event.request);
     if(exact) return exact;
-
     const network = (async()=>{
       try{
         const fresh = await fetch(event.request,{cache:'no-store'});
@@ -103,13 +94,8 @@ self.addEventListener('fetch', event => {
       }catch{}
       return null;
     })();
-
     const fallback = await newestFallback(event.request);
-    if(fallback){
-      event.waitUntil(network.then(()=>{}).catch(()=>{}));
-      return fallback;
-    }
-
+    if(fallback){event.waitUntil(network.then(()=>{}).catch(()=>{}));return fallback;}
     const fresh = await network;
     return fresh || new Response('',{status:503});
   })());
