@@ -11,17 +11,23 @@
       .reduce((sum,o)=>sum+Number(o.cost_total_rub||0),0);
   }
   function apply(){
+    const next=money(todayCost());
     document.querySelectorAll('.card.stat').forEach(card=>{
       const label=card.querySelector('span');
       if(label?.textContent.trim()!=='Расход сегодня')return;
       const value=card.querySelector('strong');
-      if(value)value.textContent=money(todayCost());
+      if(value && value.textContent!==next)value.textContent=next;
     });
   }
   function start(){
     apply();
     const root=document.getElementById('app')||document.body;
-    new MutationObserver(()=>apply()).observe(root,{childList:true,subtree:true});
+    let queued=false;
+    new MutationObserver(()=>{
+      if(queued)return;
+      queued=true;
+      requestAnimationFrame(()=>{queued=false;apply()});
+    }).observe(root,{childList:true,subtree:true});
     window.addEventListener('storage',apply);
     document.addEventListener('kambuz-operation-deleted',apply);
   }
