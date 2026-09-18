@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const VERSION='1.9.3';
+  const VERSION='1.9.7';
   const KEYS={items:'kambuz_items',ops:'kambuz_ops'};
   const GROUP_LABELS={
     frozen_meat_fish:'Frozen foods, meat, fish, chicken',
@@ -58,7 +58,7 @@
     if(cloudClient)return cloudClient;
     const cfg=window.KAMBUZ_CONFIG||{};
     if(!navigator.onLine||!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY||!window.supabase)return null;
-    cloudClient=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+    cloudClient=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
     return cloudClient;
   }
   async function fetchCloudOps(itemId,{since=null,all=false}={}){
@@ -86,22 +86,22 @@
 
   function stats(rawOps){
     const ops=sanitizeOps(rawOps);
-    const now=new Date();
-    const todayDate=startOfDay(now);
+    const todayDate=startOfDay(new Date());
+    const tomorrow=addDays(todayDate,1);
     const start7=addDays(todayDate,-6);
     const start30=addDays(todayDate,-29);
-    const consumption=ops.filter(o=>o.type==='consumption');
+    const consumption=ops.filter(o=>o.type==='consumption'&&new Date(o.created_at)<tomorrow);
     const sumSince=start=>consumption.filter(o=>new Date(o.created_at)>=start).reduce((s,o)=>s+(safeQuantity(o)??0),0);
     const todayQty=consumption.filter(o=>dayKey(o.created_at)===dayKey(todayDate)).reduce((s,o)=>s+(safeQuantity(o)??0),0);
     const q7=sumSince(start7),q30=sumSince(start30);
-    const relevant=ops.filter(o=>new Date(o.created_at)>=start30);
-    let days=30;
-    if(relevant.length){
-      const oldest=new Date(Math.min(...relevant.map(o=>new Date(o.created_at).getTime())));
+    const recent30=consumption.filter(o=>new Date(o.created_at)>=start30);
+    let days=0;
+    if(recent30.length){
+      const oldest=new Date(Math.min(...recent30.map(o=>new Date(o.created_at).getTime())));
       const first=startOfDay(oldest)>start30?startOfDay(oldest):start30;
       days=Math.max(1,Math.min(30,Math.floor((todayDate-first)/86400000)+1));
     }
-    return {today:todayQty,q7,q30,avg:q30/days,days,start30};
+    return {today:todayQty,q7,q30,avg:days?q30/days:0,days,start30};
   }
 
   function chartHtml(rawOps){
@@ -142,7 +142,7 @@
         <div><small>Сегодня</small><strong>${fmt(s.today)} ${u}</strong></div>
         <div><small>7 дней</small><strong>${fmt(s.q7)} ${u}</strong></div>
         <div><small>30 дней</small><strong>${fmt(s.q30)} ${u}</strong></div>
-        <div><small>Средний / день</small><strong>${fmt(s.avg)} ${u}</strong><em>за ${s.days} дн. данных</em></div>
+        <div><small>Средний / день</small><strong>${fmt(s.avg)} ${u}</strong><em>${s.days?`за ${s.days} календ. дн. от первого расхода`:'расходов за 30 дней нет'}</em></div>
       </div>${chartHtml(ops)}</div>`;
   }
 
