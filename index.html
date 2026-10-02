@@ -11,18 +11,20 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="styles.css?v=1.2.6" />
   <link rel="stylesheet" href="maritime-theme.css?v=0.1.0" />
-  <title>Камбуз</title>
+  <style>.preview-flag{position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom) + 88px);z-index:99999;background:#08243df2;color:#75f4ef;border:1px solid #1d6174;border-radius:999px;padding:8px 11px;font:800 10px/1 system-ui;letter-spacing:.05em;box-shadow:0 8px 24px #08243d33;pointer-events:none}</style>
+  <title>Камбуз Preview</title>
 </head>
 <body>
+  <div class="preview-flag">ТЕСТ · ДАННЫЕ ИЗОЛИРОВАНЫ</div>
   <div id="app"><div style="padding:calc(env(safe-area-inset-top) + 24px) 24px;font-family:system-ui;color:#10243a"><b>Камбуз <span class="app-version" style="font-size:12px;color:#718195">v2.2.3</span></b><p>Загружаю локальные данные…</p></div></div>
   <div id="toast" class="toast" aria-live="polite"></div>
   <script src="version-addon.js?v=2.2.2"></script>
   <script src="config.js?v=1.2.4"></script>
-  <script src="auth-addon.js?v=2.1.1"></script>
   <script src="merge-tombstone-addon.js?v=2.0.2"></script>
   <script src="local-ops-sanitizer.js?v=1.9.1"></script>
   <script src="classification-addon.js?v=1.8.0"></script>
   <script src="sync-resilience-addon.js?v=1.2.2"></script>
+  <script src="preview-seed.js?v=0.1.0"></script>
   <script src="app.js?v=1.2.7"></script>
   <script>
   (()=>{
