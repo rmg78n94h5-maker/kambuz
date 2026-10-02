@@ -320,14 +320,14 @@
     const locations=[...new Set(state.items.map(i=>String(i.location||"").trim()).filter(Boolean))];
     const locationCards=locations.slice(0,4).map(loc=>{
       const count=state.items.filter(i=>String(i.location||"").trim()===loc).length;
-      return \`<button class="home-zone" data-home-zone="\${esc(loc)}"><span class="home-zone-icon">▦</span><span><b>\${esc(loc)}</b><small>\${count} позиций</small></span><i>›</i></button>\`;
+      return `<button class="home-zone" data-home-zone="${esc(loc)}"><span class="home-zone-icon">▦</span><span><b>${esc(loc)}</b><small>${count} позиций</small></span><i>›</i></button>`;
     }).join("");
     const recent=state.ops.slice(0,4).map(o=>{
       const i=state.items.find(x=>x.id===o.item_id);
-      return \`<div class="home-move"><span class="home-move-badge \${o.type}">\${sign(o.type)}</span><span><b>\${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b><small>\${labelType(o.type)} · \${new Date(o.created_at).toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</small></span><strong>\${sign(o.type)}\${fmt(o.quantity)} \${esc(o.unit||i?.unit||"")}</strong></div>\`;
+      return `<div class="home-move"><span class="home-move-badge ${o.type}">${sign(o.type)}</span><span><b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b><small>${labelType(o.type)} · ${new Date(o.created_at).toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</small></span><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i?.unit||"")}</strong></div>`;
     }).join("");
 
-    return \`<section class="home-hero-card">
+    return `<section class="home-hero-card">
       <div class="home-hero-copy">
         <div class="eyebrow">Судовой склад</div>
         <h2>Камбуз под контролем</h2>
@@ -350,26 +350,26 @@
     </div>
 
     <div class="home-stats">
-      \${stat(state.items.length,"Позиций")}
-      \${stat(low,"Заканчивается")}
-      \${stat(fmt(used),"Расход сегодня")}
-      \${stat(state.ops.length,"Операций")}
+      ${stat(state.items.length,"Позиций")}
+      ${stat(low,"Заканчивается")}
+      ${stat(fmt(used),"Расход сегодня")}
+      ${stat(state.ops.length,"Операций")}
     </div>
 
-    \${low?\`<div class="home-section-head"><div><span>Требует внимания</span><h3>Низкий остаток</h3></div><button class="link-btn" data-tab="stock">Открыть склад</button></div>
-    <div class="home-alert-list">\${lowItems.slice(0,4).map(i=>\`<button class="home-alert" data-item="\${i.id}"><span class="home-alert-dot"></span><span><b>\${esc(itemLabel(i))}</b><small>\${esc(i.location||i.subcategory||i.category||"Склад")}</small></span><strong>\${fmt(i.qty)} \${esc(i.unit)}</strong></button>\`).join("")}</div>\`:""}
+    ${low?`<div class="home-section-head"><div><span>Требует внимания</span><h3>Низкий остаток</h3></div><button class="link-btn" data-tab="stock">Открыть склад</button></div>
+    <div class="home-alert-list">${lowItems.slice(0,4).map(i=>`<button class="home-alert" data-item="${i.id}"><span class="home-alert-dot"></span><span><b>${esc(itemLabel(i))}</b><small>${esc(i.location||i.subcategory||i.category||"Склад")}</small></span><strong>${fmt(i.qty)} ${esc(i.unit)}</strong></button>`).join("")}</div>`:""}
 
-    \${locationCards?\`<div class="home-section-head"><div><span>Где что лежит</span><h3>Зоны хранения</h3></div></div><div class="home-zones">\${locationCards}</div>\`:""}
+    ${locationCards?`<div class="home-section-head"><div><span>Где что лежит</span><h3>Зоны хранения</h3></div></div><div class="home-zones">${locationCards}</div>`:""}
 
     <div class="home-section-head"><div><span>Последние изменения</span><h3>Движение по складу</h3></div><button class="link-btn" data-tab="history">Вся история</button></div>
-    <div class="home-moves">\${recent||'<div class="empty small">Операций пока нет</div>'}</div>
+    <div class="home-moves">${recent||'<div class="empty small">Операций пока нет</div>'}</div>
 
     <div class="home-secondary-actions">
-      \${quick("📊","Аналитика","Расход и прогноз","analytics","a-green")}
-      \${quick("🧮","Сводный отчёт","Молоко · консервация · бакалея","summary-report","a-amber")}
-      \${quick("📥","Импорт JSON","Добавить каталог","import-json","a-blue")}
-      \${quick("📦","Открыть склад","Поиск и карточки","stock","a-gray")}
-    </div>\`;
+      ${quick("📊","Аналитика","Расход и прогноз","analytics","a-green")}
+      ${quick("🧮","Сводный отчёт","Молоко · консервация · бакалея","summary-report","a-amber")}
+      ${quick("📥","Импорт JSON","Добавить каталог","import-json","a-blue")}
+      ${quick("📦","Открыть склад","Поиск и карточки","stock","a-gray")}
+    </div>`;
   }
   function mainAction(action,icon,title,sub,cls){return `<button class="main-action ${cls}" data-action="${action}"><span>${icon}</span><div><b>${title}</b><small>${sub}</small></div><i>›</i></button>`}
   function stat(v,l){return `<div class="card stat"><strong>${esc(v)}</strong><span>${esc(l)}</span></div>`}
