@@ -317,11 +317,6 @@
     const low=lowItems.length;
     const today=localDateKey();
     const used=state.ops.filter(o=>o.type==="consumption"&&localDateKey(o.created_at)===today).reduce((s,o)=>s+Number(o.quantity),0);
-    const locations=[...new Set(state.items.map(i=>String(i.location||"").trim()).filter(Boolean))];
-    const locationCards=locations.slice(0,4).map(loc=>{
-      const count=state.items.filter(i=>String(i.location||"").trim()===loc).length;
-      return `<button class="home-zone" data-home-zone="${esc(loc)}"><span class="home-zone-icon">▦</span><span><b>${esc(loc)}</b><small>${count} позиций</small></span><i>›</i></button>`;
-    }).join("");
     const recent=state.ops.slice(0,4).map(o=>{
       const i=state.items.find(x=>x.id===o.item_id);
       return `<div class="home-move"><span class="home-move-badge ${o.type}">${sign(o.type)}</span><span><b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b><small>${labelType(o.type)} · ${new Date(o.created_at).toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</small></span><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i?.unit||"")}</strong></div>`;
@@ -338,12 +333,10 @@
 
     <div class="home-search">
       <span>⌕</span>
-      <input id="home-search" placeholder="Найти товар или штрихкод" autocomplete="off">
-      <button type="button" data-action="scan" aria-label="Сканировать">▣</button>
+      <input id="home-search" placeholder="Найти товар" autocomplete="off">
     </div>
 
     <div class="home-primary-actions">
-      <button class="home-action scan" data-action="scan"><span>▣</span><b>Сканировать</b><small>Штрихкод товара</small></button>
       <button class="home-action receipt" data-action="receipt"><span>＋</span><b>Приход</b><small>Принять поставку</small></button>
       <button class="home-action consumption" data-action="consumption"><span>−</span><b>Расход</b><small>Выдать продукты</small></button>
       <button class="home-action inventory" data-action="inventory"><span>✓</span><b>Инвентаризация</b><small>Сверить остатки</small></button>
@@ -359,14 +352,12 @@
     ${low?`<div class="home-section-head"><div><span>Требует внимания</span><h3>Низкий остаток</h3></div><button class="link-btn" data-tab="stock">Открыть склад</button></div>
     <div class="home-alert-list">${lowItems.slice(0,4).map(i=>`<button class="home-alert" data-item="${i.id}"><span class="home-alert-dot"></span><span><b>${esc(itemLabel(i))}</b><small>${esc(i.location||i.subcategory||i.category||"Склад")}</small></span><strong>${fmt(i.qty)} ${esc(i.unit)}</strong></button>`).join("")}</div>`:""}
 
-    ${locationCards?`<div class="home-section-head"><div><span>Где что лежит</span><h3>Зоны хранения</h3></div></div><div class="home-zones">${locationCards}</div>`:""}
-
     <div class="home-section-head"><div><span>Последние изменения</span><h3>Движение по складу</h3></div><button class="link-btn" data-tab="history">Вся история</button></div>
     <div class="home-moves">${recent||'<div class="empty small">Операций пока нет</div>'}</div>
 
     <div class="home-secondary-actions">
       ${quick("📊","Аналитика","Расход и прогноз","analytics","a-green")}
-      ${quick("🧮","Сводный отчёт","Молоко · консервация · бакалея","summary-report","a-amber")}
+      ${quick("🧮","Сводный отчёт","Остатки + IMO / FAL","summary-report","a-amber")}
       ${quick("📥","Импорт JSON","Добавить каталог","import-json","a-blue")}
       ${quick("📦","Открыть склад","Поиск и карточки","stock","a-gray")}
     </div>`;
@@ -379,7 +370,7 @@
     const q=state.query.trim().toLowerCase(),f=state.stockFilters;
     let items=state.items.filter(i=>{
       if(state.category!=="Все"&&i.category!==state.category)return false;
-      if(!`${itemLabel(i)} ${i.barcode||""} ${i.subcategory||""} ${i.notes||""}`.toLowerCase().includes(q))return false;
+      if(!`${itemLabel(i)} ${i.subcategory||""} ${i.notes||""}`.toLowerCase().includes(q))return false;
       const groups=groupForItem(i);
       if(f.groups.length&&!f.groups.some(g=>groups.includes(g)))return false;
       if(f.subgroups.length&&!f.subgroups.some(s=>String(i.subcategory||"").toLowerCase()===s.toLowerCase()))return false;
@@ -410,7 +401,7 @@
   }
   function stock(){
     return `<div class="page-head"><div><div class="eyebrow">Каталог</div><h2>Склад</h2></div><button class="secondary compact" data-action="add-item">＋ Товар</button></div>
-      <div class="search"><div class="search-input-wrap"><input id="search" placeholder="Название или штрихкод" value="${esc(state.query)}" autocomplete="off"><button type="button" id="search-clear" class="search-clear" aria-label="Очистить поиск" ${state.query?"":"hidden"}>×</button></div><button class="filter-btn" data-action="scan-search">▣</button></div>
+      <div class="search"><div class="search-input-wrap"><input id="search" placeholder="Название товара" value="${esc(state.query)}" autocomplete="off"><button type="button" id="search-clear" class="search-clear" aria-label="Очистить поиск" ${state.query?"":"hidden"}>×</button></div></div>
       <div class="stock-toolbar"><button class="secondary compact ${activeFilterCount()?"active-filter":""}" data-action="stock-filter">⚙ Фильтр${activeFilterCount()?` · ${activeFilterCount()}`:""}</button><button class="secondary compact" data-action="stock-sort">↕ ${sortLabel()}</button></div>
       ${activeFilterCount()?`<div class="active-filter-bar"><span>Фильтры включены · найдено ${filteredStockItems().length}</span><button data-action="stock-filter-reset">Сбросить</button></div>`:""}
       <div class="chips">${["Все",...CATEGORIES].map(c=>`<button class="chip ${state.category===c?"active":""}" data-category="${c}">${c}</button>`).join("")}</div>
@@ -453,7 +444,6 @@
     };
     const clear=$("#search-clear");if(clear)clear.onclick=()=>{state.query="";s.value="";clear.hidden=true;const list=$("#stock-list");if(list){list.innerHTML=stockListHtml();bindStockItems(list)}s.focus()};
     const hs=$("#home-search");if(hs){const go=()=>{const q=hs.value.trim();if(!q)return;state.query=q;state.tab="stock";render()};hs.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();go()}}}
-    document.querySelectorAll("[data-home-zone]").forEach(b=>b.onclick=()=>{state.query=b.dataset.homeZone;state.tab="stock";render()});
   }
   function handle(a){
     if(a==="add-item") itemForm();
@@ -463,7 +453,6 @@
     else if(a==="stock"){state.tab="stock";render()}
     else if(a==="consumption"||a==="receipt") openBasket(a);
     else if(a==="import-json") importJson();
-    else if(a==="scan"||a==="scan-search") scanBarcode(a==="scan-search"?"search":"quick");
     else if(a==="analytics") analytics();
     else if(a==="summary-report") summaryReport();
     else if(a==="force-update") forceUpdateApp();
@@ -580,7 +569,7 @@
     const isEdit=Boolean(item?.id);
     const el=modal(isEdit?"Изменить товар":"Новый товар",`<form class="form" id="item-form">
       <div class="field"><label>Название</label><input name="name" required value="${esc(item?.name||"")}"></div>
-      <div class="row"><div class="field"><label>Бренд</label><input name="brand" value="${esc(item?.brand||"")}"></div><div class="field"><label>Штрихкод</label><input name="barcode" inputmode="numeric" value="${esc(item?.barcode||"")}"></div></div>
+      <div class="field"><label>Бренд</label><input name="brand" value="${esc(item?.brand||"")}"></div>
       <div class="row"><div class="field"><label>Категория</label><select name="category">${CATEGORIES.map(c=>`<option ${item?.category===c?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label>Подкатегория</label><input name="subcategory" value="${esc(item?.subcategory||"")}"></div></div>
       <div class="row"><div class="field"><label>Фасовка</label><input name="volume" type="number" step="0.001" value="${esc(item?.volume??item?.weight??"")}"></div><div class="field"><label>Ед. фасовки</label><input name="package_unit" placeholder="мл, г, шт." value="${esc(item?.package_unit||"")}"></div></div>
       <div class="row"><div class="field"><label>Учитывать в</label><select name="unit">${UNITS.map(u=>`<option ${item?.unit===u?"selected":""}>${u}</option>`).join("")}</select></div><div class="field"><label>Минимум</label><input name="min_qty" type="number" step="0.001" value="${esc(item?.min_qty??0)}"></div></div>
@@ -588,8 +577,7 @@
       <div class="field"><label>Примечание</label><textarea name="notes">${esc(item?.notes||"")}</textarea></div>
       <button class="primary" type="submit">Сохранить</button>
     </form>`);
-    el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const payload={name:f.name.trim(),brand:f.brand.trim()||null,barcode:normalizeBarcode(f.barcode)||null,category:f.category,subcategory:f.subcategory.trim()||null,volume:f.volume?Number(f.volume):null,package_unit:f.package_unit.trim()||null,unit:f.unit,min_qty:Number(f.min_qty||0),location:f.location.trim()||"Основной склад",notes:f.notes.trim()||null,updated_at:now()};
-      if(payload.barcode){const dup=state.items.find(x=>x.barcode===payload.barcode&&x.id!==(isEdit?item.id:null));if(dup){toast("Такой штрихкод уже есть");return}}
+    el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const payload={name:f.name.trim(),brand:f.brand.trim()||null,barcode:item?.barcode||null,category:f.category,subcategory:f.subcategory.trim()||null,volume:f.volume?Number(f.volume):null,package_unit:f.package_unit.trim()||null,unit:f.unit,min_qty:Number(f.min_qty||0),location:f.location.trim()||"Основной склад",notes:f.notes.trim()||null,updated_at:now()};
       try{
         let saved;
         if(isEdit){Object.assign(item,payload);saved=item}else{saved={id:uid(),qty:0,...payload};state.items.push(saved)}
@@ -608,17 +596,17 @@
     const history=itemOps.slice(0,8).map(o=>`<div class="mini-history"><span><b>${labelType(o.type)}</b><small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}</small></span><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i.unit)}</strong></div>`).join("")||'<div class="empty small">По товару ещё нет операций</div>';
     const pending=pendingForItem(i.id),rv=reportAmountFromStock(i);
     const reportHint=rv?`<div class="detail-report-hint">В сводный отчёт: <b>${fmt(rv.kg??rv.l)} ${rv.kg!=null?"кг":"л"}</b></div>`:"";
-    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty ${pending?"pending-qty":""}">${fmt(i.qty)} <span>${esc(i.unit)}</span>${pending?'<span class="pending-clock big">◷</span>':""}</div>${reportHint}${pending?'<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>':""}<div class="detail-grid"><div><small>Расход сегодня</small><b>${fmt(usedToday)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div><div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="secondary" data-op="adjustment">Исправить остаток</button></div><h3>Последние операции</h3><div>${history}</div><button class="secondary full" data-edit-item>Изменить товар</button>`);
+    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty ${pending?"pending-qty":""}">${fmt(i.qty)} <span>${esc(i.unit)}</span>${pending?'<span class="pending-clock big">◷</span>':""}</div>${reportHint}${pending?'<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>':""}<div class="detail-grid"><div><small>Расход сегодня</small><b>${fmt(usedToday)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Место хранения</small><b>${esc(i.location||"—")}</b></div></div></div><div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="secondary" data-op="adjustment">Исправить остаток</button></div><h3>Последние операции</h3><div>${history}</div><button class="secondary full" data-edit-item>Изменить товар</button>`);
     el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>singleOperation(i,b.dataset.op));
     el.querySelector("[data-edit-item]").onclick=()=>{el.remove();itemForm(i)};
   }
   function openBasket(type){
     state.basket={type,lines:[]};
     const title=type==="consumption"?"Быстрый расход":"Массовое поступление";
-    const el=modal(title,`<div class="basket-tools"><div class="search basket-search"><input id="basket-search" placeholder="Название или штрихкод"><button type="button" id="basket-scan" class="filter-btn">▣</button></div><div id="basket-results" class="search-results"></div></div><div id="basket-lines"></div><div class="basket-footer"><div><small>Позиций</small><b id="basket-count">0</b></div><button class="primary" id="basket-save" disabled>${type==="consumption"?"Списать всё":"Принять всё"}</button></div>`,true);
+    const el=modal(title,`<div class="basket-tools"><div class="search basket-search"><input id="basket-search" placeholder="Название товара"></div><div id="basket-results" class="search-results"></div></div><div id="basket-lines"></div><div class="basket-footer"><div><small>Позиций</small><b id="basket-count">0</b></div><button class="primary" id="basket-save" disabled>${type==="consumption"?"Списать всё":"Принять всё"}</button></div>`,true);
     const input=el.querySelector("#basket-search"),results=el.querySelector("#basket-results");
-    const drawResults=()=>{const q=input.value.trim().toLowerCase();if(!q){results.innerHTML="";return}const list=state.items.filter(i=>`${itemLabel(i)} ${i.barcode||""}`.toLowerCase().includes(q)).slice(0,8);results.innerHTML=list.map(i=>`<button data-add="${i.id}"><span>${esc(itemLabel(i))}</span><b>${fmt(i.qty)} ${esc(i.unit)}</b></button>`).join("")||'<div class="empty small">Не найдено</div>';results.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{addBasketLine(b.dataset.add);input.value="";results.innerHTML="";drawBasket(el)})};
-    input.oninput=drawResults;el.querySelector("#basket-scan").onclick=()=>scanBarcodeToBasket(el);
+    const drawResults=()=>{const q=input.value.trim().toLowerCase();if(!q){results.innerHTML="";return}const list=state.items.filter(i=>itemLabel(i).toLowerCase().includes(q)).slice(0,8);results.innerHTML=list.map(i=>`<button data-add="${i.id}"><span>${esc(itemLabel(i))}</span><b>${fmt(i.qty)} ${esc(i.unit)}</b></button>`).join("")||'<div class="empty small">Не найдено</div>';results.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{addBasketLine(b.dataset.add);input.value="";results.innerHTML="";drawBasket(el)})};
+    input.oninput=drawResults;
     el.querySelector("#basket-save").onclick=()=>commitBasket(el);
     setTimeout(()=>input.focus(),100);
   }
@@ -792,10 +780,27 @@
     const r=buildSummaryReport();
     const rows=REPORT_GROUPS.map(g=>`<button class="report-row" data-report-group="${g.id}"><span><b>${esc(g.name)}</b><small>${r.details[g.id].length} позиций</small></span><strong>${fmt(r.totals[g.id])} ${g.unit}</strong><i>›</i></button>`).join("");
     const warning=r.unresolved.length?`<button class="report-warning" id="show-unresolved-report"><span><b>⚠️ Не удалось пересчитать: ${r.unresolved.length}</b><small>Нажми, чтобы увидеть товары и исправить фасовку.</small></span><i>›</i></button>`:"";
-    const el=modal("Пробный сводный отчёт",`<div class="report-date">Остатки на ${new Date().toLocaleString("ru-RU")}</div><div class="report-list">${rows}</div>${warning}<div class="report-note">Растительное масло временно пересчитывается по коэффициенту <b>0,92 кг/л</b>.</div><button class="primary full" id="copy-summary-report">Скопировать отчёт</button>`);
+    const imo=window.KAMBUZ_IMO_REPORT?.build?.();
+    const imoGroups=[
+      ["frozen_meat_fish","Frozen foods, meat, fish, chicken"],
+      ["fresh_produce","Fresh vegetables, fruits"],
+      ["grocery","Grocery"],
+      ["dairy","Dairy products"],
+      ["canned","Canned goods"]
+    ];
+    const imoRows=imo?`<div class="report-subhead"><span>IMO / FAL Form 3</span><h3>Provision Stores</h3></div><div class="report-list report-imo-list">${imoGroups.map(([id,label])=>`<div class="report-row static"><span><b>${esc(label)}</b><small>итог для формы</small></span><strong>${Math.round(imo.groups?.[id]?.total||0)} Kgs</strong></div>`).join("")}</div>${imo.unresolved?.length?`<div class="report-warning static"><span><b>⚠️ IMO не рассчитано: ${imo.unresolved.length}</b><small>Нужно заполнить фасовку у отдельных товаров.</small></span></div>`:""}<button class="secondary full" id="open-imo-report">Открыть полный IMO / FAL отчёт</button>`:"";
+
+    const el=modal("Сводный отчёт",`<div class="report-date">Остатки на ${new Date().toLocaleString("ru-RU")}</div>
+      <div class="report-subhead"><span>Склад</span><h3>Краткая сводка</h3></div>
+      <div class="report-list">${rows}</div>
+      ${warning}
+      ${imoRows}
+      <div class="report-note">Растительное масло временно пересчитывается по коэффициенту <b>0,92 кг/л</b>.</div>
+      <button class="primary full" id="copy-summary-report">Скопировать сводку</button>`);
     el.querySelectorAll("[data-report-group]").forEach(b=>b.onclick=()=>{const id=b.dataset.reportGroup,g=REPORT_GROUPS.find(x=>x.id===id);modal(g.name,`<div class="analytics-list">${r.details[id].map(x=>`<div><span>${esc(itemLabel(x.item))}<small>${fmt(x.item.qty)} ${esc(x.item.unit)}${packLabel(x.item)?` · ${packLabel(x.item)}`:""}</small></span><b>${fmt(x.amount)} ${g.unit}</b></div>`).join("")||'<div class="empty">Подходящих товаров пока нет</div>'}</div>`)});
     el.querySelector("#show-unresolved-report")?.addEventListener("click",()=>showUnresolvedReportItems(r.unresolved));
-    el.querySelector("#copy-summary-report").onclick=async()=>{const text=[`Сводный остаток на ${new Date().toLocaleDateString("ru-RU")}`,...REPORT_GROUPS.map(g=>`${g.name} — ${fmt(r.totals[g.id])} ${g.unit}`)].join("\n");try{await navigator.clipboard.writeText(text);toast("Отчёт скопирован")}catch{toast("Не удалось скопировать")}};
+    el.querySelector("#open-imo-report")?.addEventListener("click",()=>window.KAMBUZ_IMO_REPORT?.open?.());
+    el.querySelector("#copy-summary-report").onclick=async()=>{const text=[`Сводный остаток на ${new Date().toLocaleDateString("ru-RU")}`,...REPORT_GROUPS.map(g=>`${g.name} — ${fmt(r.totals[g.id])} ${g.unit}`),...(imo?["","IMO / FAL — PROVISION STORES:",...imoGroups.map(([id,label])=>`${label} — ${Math.round(imo.groups?.[id]?.total||0)} Kgs`)]:[])].join("\n");try{await navigator.clipboard.writeText(text);toast("Сводка скопирована")}catch{toast("Не удалось скопировать")}};
   }
 
   function exportModal(){const el=modal("Экспорт остатков",`<div class="form"><div class="field"><label>Категория</label><select id="export-category"><option>Все</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join("")}</select></div><button class="primary" id="export-pdf">PDF / печать</button><button class="secondary" id="export-doc">Word (.doc)</button></div>`);el.querySelector("#export-pdf").onclick=()=>exportPdf(el.querySelector("#export-category").value);el.querySelector("#export-doc").onclick=()=>exportDoc(el.querySelector("#export-category").value)}
