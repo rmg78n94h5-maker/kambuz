@@ -313,27 +313,63 @@
   }
 
   function home(){
-    const low=state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0)).length;
+    const lowItems=state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0));
+    const low=lowItems.length;
     const today=localDateKey();
     const used=state.ops.filter(o=>o.type==="consumption"&&localDateKey(o.created_at)===today).reduce((s,o)=>s+Number(o.quantity),0);
-    return `<div class="hero">
-      <div><div class="eyebrow">Быстрый учёт</div><h2>Что делаем сейчас?</h2></div>
-      <button class="scan-round" data-action="scan">▣</button>
+    const locations=[...new Set(state.items.map(i=>String(i.location||"").trim()).filter(Boolean))];
+    const locationCards=locations.slice(0,4).map(loc=>{
+      const count=state.items.filter(i=>String(i.location||"").trim()===loc).length;
+      return \`<button class="home-zone" data-home-zone="\${esc(loc)}"><span class="home-zone-icon">▦</span><span><b>\${esc(loc)}</b><small>\${count} позиций</small></span><i>›</i></button>\`;
+    }).join("");
+    const recent=state.ops.slice(0,4).map(o=>{
+      const i=state.items.find(x=>x.id===o.item_id);
+      return \`<div class="home-move"><span class="home-move-badge \${o.type}">\${sign(o.type)}</span><span><b>\${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b><small>\${labelType(o.type)} · \${new Date(o.created_at).toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</small></span><strong>\${sign(o.type)}\${fmt(o.quantity)} \${esc(o.unit||i?.unit||"")}</strong></div>\`;
+    }).join("");
+
+    return \`<section class="home-hero-card">
+      <div class="home-hero-copy">
+        <div class="eyebrow">Судовой склад</div>
+        <h2>Камбуз под контролем</h2>
+        <p>Остатки, приход, расход и инвентаризация — без лишней беготни.</p>
+      </div>
+      <div class="home-hero-mark" aria-hidden="true">⚓</div>
+    </section>
+
+    <div class="home-search">
+      <span>⌕</span>
+      <input id="home-search" placeholder="Найти товар или штрихкод" autocomplete="off">
+      <button type="button" data-action="scan" aria-label="Сканировать">▣</button>
     </div>
-    <div class="main-actions">
-      ${mainAction("consumption","−","Расход","Взял несколько товаров","green")}
-      ${mainAction("receipt","+","Поступление","Принял и разложил","blue")}
+
+    <div class="home-primary-actions">
+      <button class="home-action scan" data-action="scan"><span>▣</span><b>Сканировать</b><small>Штрихкод товара</small></button>
+      <button class="home-action receipt" data-action="receipt"><span>＋</span><b>Приход</b><small>Принять поставку</small></button>
+      <button class="home-action consumption" data-action="consumption"><span>−</span><b>Расход</b><small>Выдать продукты</small></button>
+      <button class="home-action inventory" data-action="inventory"><span>✓</span><b>Инвентаризация</b><small>Сверить остатки</small></button>
     </div>
-    <div class="grid stats">${stat(state.items.length,"Позиций")}${stat(low,"Заканчивается")}${stat(fmt(used),"Расход сегодня")}${stat(state.ops.length,"Операций")}</div>
-    <div class="section-title"><h2>Рабочие действия</h2></div>
-    <div class="grid quick-actions">
-      ${quick("🧾","Инвентаризация","Сверить остатки","inventory","a-amber")}
-      ${quick("📦","Открыть склад","Поиск и карточки","stock","a-gray")}
-      ${quick("📥","Импорт JSON","Добавить каталог","import-json","a-blue")}
-      ${quick("📊","Аналитика","Расход и прогноз","analytics","a-green")}
-      ${quick("🧮","Сводный отчёт","Молоко · консервация · бакалея","summary-report","a-amber")}
+
+    <div class="home-stats">
+      \${stat(state.items.length,"Позиций")}
+      \${stat(low,"Заканчивается")}
+      \${stat(fmt(used),"Расход сегодня")}
+      \${stat(state.ops.length,"Операций")}
     </div>
-    ${low?`<div class="section-title"><h2>Заканчивается</h2><button class="link-btn" data-tab="stock">Все</button></div><div class="card">${state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0)).slice(0,5).map(itemRow).join("")}</div>`:""}`;
+
+    \${low?\`<div class="home-section-head"><div><span>Требует внимания</span><h3>Низкий остаток</h3></div><button class="link-btn" data-tab="stock">Открыть склад</button></div>
+    <div class="home-alert-list">\${lowItems.slice(0,4).map(i=>\`<button class="home-alert" data-item="\${i.id}"><span class="home-alert-dot"></span><span><b>\${esc(itemLabel(i))}</b><small>\${esc(i.location||i.subcategory||i.category||"Склад")}</small></span><strong>\${fmt(i.qty)} \${esc(i.unit)}</strong></button>\`).join("")}</div>\`:""}
+
+    \${locationCards?\`<div class="home-section-head"><div><span>Где что лежит</span><h3>Зоны хранения</h3></div></div><div class="home-zones">\${locationCards}</div>\`:""}
+
+    <div class="home-section-head"><div><span>Последние изменения</span><h3>Движение по складу</h3></div><button class="link-btn" data-tab="history">Вся история</button></div>
+    <div class="home-moves">\${recent||'<div class="empty small">Операций пока нет</div>'}</div>
+
+    <div class="home-secondary-actions">
+      \${quick("📊","Аналитика","Расход и прогноз","analytics","a-green")}
+      \${quick("🧮","Сводный отчёт","Молоко · консервация · бакалея","summary-report","a-amber")}
+      \${quick("📥","Импорт JSON","Добавить каталог","import-json","a-blue")}
+      \${quick("📦","Открыть склад","Поиск и карточки","stock","a-gray")}
+    </div>\`;
   }
   function mainAction(action,icon,title,sub,cls){return `<button class="main-action ${cls}" data-action="${action}"><span>${icon}</span><div><b>${title}</b><small>${sub}</small></div><i>›</i></button>`}
   function stat(v,l){return `<div class="card stat"><strong>${esc(v)}</strong><span>${esc(l)}</span></div>`}
@@ -416,6 +452,8 @@
       }
     };
     const clear=$("#search-clear");if(clear)clear.onclick=()=>{state.query="";s.value="";clear.hidden=true;const list=$("#stock-list");if(list){list.innerHTML=stockListHtml();bindStockItems(list)}s.focus()};
+    const hs=$("#home-search");if(hs){const go=()=>{const q=hs.value.trim();if(!q)return;state.query=q;state.tab="stock";render()};hs.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();go()}}}
+    document.querySelectorAll("[data-home-zone]").forEach(b=>b.onclick=()=>{state.query=b.dataset.homeZone;state.tab="stock";render()});
   }
   function handle(a){
     if(a==="add-item") itemForm();
