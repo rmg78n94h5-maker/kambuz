@@ -910,3 +910,35 @@ body .ic-delete{
   .home-action small{display:none}
   .home-action{min-height:78px}
 }
+
+
+/* Phase 4 — mobile fit fixes */
+.bottom-nav{
+  grid-template-columns:repeat(5,minmax(0,1fr));
+}
+.bottom-nav .nav-btn{
+  min-width:0;
+  padding:0 2px;
+  font-size:10px;
+}
+.home-primary-actions{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.home-action{
+  min-width:0;
+}
+@media(max-width:520px){
+  .home-action b{
+    font-size:12px;
+    line-height:1.05;
+    letter-spacing:-.02em;
+  }
+  .home-action.inventory b{
+    font-size:11px;
+  }
+}
+@media(max-width:390px){
+  .home-action.inventory b{
+    font-size:10.5px;
+  }
+}
