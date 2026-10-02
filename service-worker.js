@@ -1,9 +1,9 @@
-const VERSION = '2.2.3-preview-1';
+const VERSION = '2.2.3-preview-2';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
 const SHELL = [
-  './','./index.html','./styles.css?v=1.2.6','./maritime-theme.css?v=0.1.0','./preview-seed.js?v=0.1.0','./app.js?v=1.2.7','./config.js?v=1.2.4',
+  './','./index.html','./styles.css?v=1.2.6','./maritime-theme.css?v=0.2.0','./preview-seed.js?v=0.1.0','./app.js?v=1.2.8','./config.js?v=1.2.4',
   './auth-addon.js?v=2.1.1','./merge-tombstone-addon.js?v=2.0.2','./local-ops-sanitizer.js?v=1.9.1',
   './classification-addon.js?v=1.8.0','./sync-resilience-addon.js?v=1.2.2',
   './offline-receipt-addon.js?v=1.3.2','./inventory-addon.js?v=1.4.0',
