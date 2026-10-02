@@ -595,11 +595,42 @@
     const lastReceipt=itemOps.find(o=>o.type==="receipt"),lastUse=itemOps.find(o=>o.type==="consumption");
     const history=itemOps.slice(0,8).map(o=>`<div class="mini-history"><span><b>${labelType(o.type)}</b><small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}</small></span><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i.unit)}</strong></div>`).join("")||'<div class="empty small">По товару ещё нет операций</div>';
     const pending=pendingForItem(i.id),rv=reportAmountFromStock(i);
-    const reportHint=rv?`<div class="detail-report-hint">В сводный отчёт: <b>${fmt(rv.kg??rv.l)} ${rv.kg!=null?"кг":"л"}</b></div>`:"";
-    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty ${pending?"pending-qty":""}">${fmt(i.qty)} <span>${esc(i.unit)}</span>${pending?'<span class="pending-clock big">◷</span>':""}</div>${reportHint}${pending?'<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>':""}<div class="detail-grid"><div><small>Расход сегодня</small><b>${fmt(usedToday)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Место хранения</small><b>${esc(i.location||"—")}</b></div></div></div><div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="secondary" data-op="adjustment">Исправить остаток</button></div><h3>Последние операции</h3><div>${history}</div><button class="secondary full" data-edit-item>Изменить товар</button>`);
+    const low=Number(i.qty)<=Number(i.min_qty||0);
+    const stockLabel=Number(i.qty)<=0?"Нет в наличии":low?"Низкий остаток":"В наличии";
+    const stockClass=Number(i.qty)<=0?"out":low?"low":"ok";
+    const reportHint=rv?`<div class="product-report-chip">IMO / сводка · <b>${fmt(rv.kg??rv.l)} ${rv.kg!=null?"кг":"л"}</b></div>`:"";
+    const el=modal(itemLabel(i),`<div class="detail-card product-detail-card">
+      <div class="product-card-top">
+        <div class="product-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div>
+        <div class="product-card-title"><span>${esc(i.category||"Товар")}${i.subcategory?` · ${esc(i.subcategory)}`:""}</span><b>${esc(itemLabel(i))}</b></div>
+        <span class="product-stock-pill ${stockClass}">${stockLabel}</span>
+      </div>
+      <div class="product-balance">
+        <small>Текущий остаток</small>
+        <div class="big-qty ${pending?"pending-qty":""}">${fmt(i.qty)} <span>${esc(i.unit)}</span>${pending?'<span class="pending-clock big">◷</span>':""}</div>
+        <div class="product-balance-meta"><span>Минимум: <b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></span><span>${esc(i.location||"Основной склад")}</span></div>
+      </div>
+      ${reportHint}
+      ${pending?'<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>':""}
+      <div class="detail-grid product-detail-grid">
+        <div><small>Расход сегодня</small><b>${fmt(usedToday)} ${esc(i.unit)}</b></div>
+        <div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div>
+        <div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div>
+        <div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div>
+      </div>
+    </div>
+    <div class="detail-actions product-actions">
+      <button class="consumption" data-op="consumption"><span>−</span>Расход</button>
+      <button class="receipt" data-op="receipt"><span>＋</span>Приход</button>
+      <button class="writeoff" data-op="writeoff"><span>×</span>Списание</button>
+      <button class="secondary" data-op="adjustment"><span>≡</span>Остаток</button>
+    </div>
+    <h3>Последние операции</h3><div>${history}</div>
+    <button class="secondary full product-edit-button" data-edit-item>Изменить товар</button>`);
     el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>singleOperation(i,b.dataset.op));
     el.querySelector("[data-edit-item]").onclick=()=>{el.remove();itemForm(i)};
   }
+
   function openBasket(type){
     state.basket={type,lines:[]};
     const title=type==="consumption"?"Быстрый расход":"Массовое поступление";
@@ -612,7 +643,7 @@
   }
   function addBasketLine(id){const found=state.basket.lines.find(x=>x.item_id===id);if(found)found.quantity+=1;else state.basket.lines.push({item_id:id,quantity:1})}
   function drawBasket(el){
-    const box=el.querySelector("#basket-lines");box.innerHTML=state.basket.lines.length?`<div class="basket-list">${state.basket.lines.map((l,n)=>{const i=state.items.find(x=>x.id===l.item_id);return `<div class="basket-line"><div><b>${esc(itemLabel(i))}</b><small>Остаток: ${fmt(i.qty)} ${esc(i.unit)}</small></div><div class="stepper"><button data-minus="${n}">−</button><input data-qty="${n}" type="number" min="0.001" step="0.001" value="${l.quantity}"><button data-plus="${n}">＋</button></div><button class="remove" data-remove="${n}">✕</button></div>`}).join("")}</div>`:'<div class="empty">Добавь товары через поиск или сканер</div>';
+    const box=el.querySelector("#basket-lines");box.innerHTML=state.basket.lines.length?`<div class="basket-list">${state.basket.lines.map((l,n)=>{const i=state.items.find(x=>x.id===l.item_id);return `<div class="basket-line"><div><b>${esc(itemLabel(i))}</b><small>Остаток: ${fmt(i.qty)} ${esc(i.unit)}</small></div><div class="stepper"><button data-minus="${n}">−</button><input data-qty="${n}" type="number" min="0.001" step="0.001" value="${l.quantity}"><button data-plus="${n}">＋</button></div><button class="remove" data-remove="${n}">✕</button></div>`}).join("")}</div>`:'<div class="empty">Добавь товары через поиск</div>';
     box.querySelectorAll("[data-minus]").forEach(b=>b.onclick=()=>{const l=state.basket.lines[+b.dataset.minus];l.quantity=Math.max(.001,Number(l.quantity)-1);drawBasket(el)});
     box.querySelectorAll("[data-plus]").forEach(b=>b.onclick=()=>{state.basket.lines[+b.dataset.plus].quantity=Number(state.basket.lines[+b.dataset.plus].quantity)+1;drawBasket(el)});
     box.querySelectorAll("[data-qty]").forEach(inp=>inp.onchange=()=>{state.basket.lines[+inp.dataset.qty].quantity=Math.max(.001,Number(inp.value)||1);drawBasket(el)});
