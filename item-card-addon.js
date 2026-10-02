@@ -131,7 +131,7 @@
       <div><small>IMO/FAL группа</small><b>${esc(imo)}</b></div>
       <div><small>В IMO сейчас</small><b>${esc(imoAmount)}</b></div>
       <div><small>Минимум</small><b>${fmt(item.min_qty||0)} ${esc(item.unit||'')}</b></div>
-      <div><small>Штрихкод</small><b>${esc(item.barcode||'—')}</b></div>
+      <div><small>Место хранения</small><b>${esc(item.location||'—')}</b></div>
     </div>`;
   }
 
