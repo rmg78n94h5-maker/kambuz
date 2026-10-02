@@ -303,9 +303,18 @@
       ${content}
       ${state.tab==="stock"?'<button class="fab" data-action="add-item">＋</button>':''}
     </div>
-    <nav class="bottom-nav">${navBtn("home","🏠","Главная")}${navBtn("stock","📦","Склад")}${navBtn("history","🧾","История")}${navBtn("more","•••","Ещё")}</nav>`;
+    <nav class="bottom-nav">${navBtn("home","Главная")}${navBtn("stock","Склад")}${navBtn("history","История")}${navBtn("more","Ещё")}</nav>`;
   }
-  function navBtn(tab,icon,label){return `<button class="nav-btn ${state.tab===tab?"active":""}" data-tab="${tab}"><span>${icon}</span>${label}</button>`}
+  function navIcon(tab){
+    const icons={
+      home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.5 12 3.5l8.5 7v9a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg>',
+      stock:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 7 8-4 8 4-8 4z"/><path d="m4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg>',
+      history:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v16H4z"/><path d="M8 3v4M16 3v4M8 11h8M8 15h5"/></svg>',
+      more:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>'
+    };
+    return icons[tab]||icons.more;
+  }
+  function navBtn(tab,label){return `<button class="nav-btn ${state.tab===tab?"active":""}" data-tab="${tab}"><span class="nav-icon">${navIcon(tab)}</span><em>${label}</em></button>`}
   function render(){
     const root=$("#app");
     const views={home,stock,history,more};
