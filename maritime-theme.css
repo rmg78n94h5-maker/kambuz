@@ -1409,3 +1409,53 @@ body .ic-delete{
     margin-top:4px;
   }
 }
+
+
+/* Hotfix — reliable modal scrolling on iPhone/Safari */
+.modal-backdrop{
+  overflow:hidden;
+  overscroll-behavior:contain;
+}
+.modal{
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  max-height:calc(100dvh - env(safe-area-inset-top) - 10px);
+  min-height:0;
+  overflow:hidden;
+}
+.modal-head{
+  flex:none;
+  gap:10px;
+  margin-bottom:10px;
+  padding-top:2px;
+}
+.modal-head h3{
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.modal-head .close{
+  flex:none;
+}
+.modal-scroll{
+  min-height:0;
+  flex:1 1 auto;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  touch-action:pan-y;
+  padding-bottom:2px;
+}
+@supports not (height:100dvh){
+  .modal{
+    max-height:calc(100vh - env(safe-area-inset-top) - 10px);
+  }
+}
+@media(min-width:760px){
+  .modal{
+    max-height:90dvh;
+  }
+}
