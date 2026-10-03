@@ -1,15 +1,15 @@
-const VERSION = '2.2.3';
+const VERSION = '2.2.3-maritime-8';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
 const SHELL = [
-  './','./index.html','./styles.css?v=1.2.6','./app.js?v=1.2.7','./config.js?v=1.2.4',
+  './','./index.html','./styles.css?v=1.2.6','./maritime-theme.css?v=0.6.0','./app.js?v=1.3.1','./config.js?v=1.2.4',
   './auth-addon.js?v=2.1.1','./merge-tombstone-addon.js?v=2.0.2','./local-ops-sanitizer.js?v=1.9.1',
   './classification-addon.js?v=1.8.0','./sync-resilience-addon.js?v=1.2.2',
   './offline-receipt-addon.js?v=1.3.2','./inventory-addon.js?v=1.4.0',
   './duplicate-cleanup-addon.js?v=1.5.0','./bulk-writeoff-addon.js?v=1.6.0',
-  './imo-report-addon.js?v=1.8.0','./item-card-addon.js?v=1.9.7',
-  './food-cost-addon.js?v=2.2.0',
+  './imo-report-addon.js?v=1.8.1','./item-card-addon.js?v=1.9.8',
+  './food-cost-addon.js?v=2.3.1',
   './sync-queue-ui-addon.js?v=1.2.4','./version-addon.js?v=2.2.3',
   './manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'
 ].map(url);

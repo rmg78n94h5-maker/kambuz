@@ -303,9 +303,18 @@
       ${content}
       ${state.tab==="stock"?'<button class="fab" data-action="add-item">＋</button>':''}
     </div>
-    <nav class="bottom-nav">${navBtn("home","🏠","Главная")}${navBtn("stock","📦","Склад")}${navBtn("history","🧾","История")}${navBtn("more","•••","Ещё")}</nav>`;
+    <nav class="bottom-nav">${navBtn("home","Главная")}${navBtn("stock","Склад")}${navBtn("history","История")}${navBtn("more","Ещё")}</nav>`;
   }
-  function navBtn(tab,icon,label){return `<button class="nav-btn ${state.tab===tab?"active":""}" data-tab="${tab}"><span>${icon}</span>${label}</button>`}
+  function navIcon(tab){
+    const icons={
+      home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.5 12 3.5l8.5 7v9a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg>',
+      stock:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 7 8-4 8 4-8 4z"/><path d="m4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg>',
+      history:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v16H4z"/><path d="M8 3v4M16 3v4M8 11h8M8 15h5"/></svg>',
+      more:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>'
+    };
+    return icons[tab]||icons.more;
+  }
+  function navBtn(tab,label){return `<button class="nav-btn ${state.tab===tab?"active":""}" data-tab="${tab}"><span class="nav-icon">${navIcon(tab)}</span><em>${label}</em></button>`}
   function render(){
     const root=$("#app");
     const views={home,stock,history,more};
@@ -313,27 +322,52 @@
   }
 
   function home(){
-    const low=state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0)).length;
+    const lowItems=state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0));
+    const low=lowItems.length;
     const today=localDateKey();
     const used=state.ops.filter(o=>o.type==="consumption"&&localDateKey(o.created_at)===today).reduce((s,o)=>s+Number(o.quantity),0);
-    return `<div class="hero">
-      <div><div class="eyebrow">Быстрый учёт</div><h2>Что делаем сейчас?</h2></div>
-      <button class="scan-round" data-action="scan">▣</button>
+    const recent=state.ops.slice(0,4).map(o=>{
+      const i=state.items.find(x=>x.id===o.item_id);
+      return `<div class="home-move"><span class="home-move-badge ${o.type}">${sign(o.type)}</span><span><b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b><small>${labelType(o.type)} · ${new Date(o.created_at).toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</small></span><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i?.unit||"")}</strong></div>`;
+    }).join("");
+
+    return `<section class="home-hero-card">
+      <div class="home-hero-copy">
+        <div class="eyebrow">Судовой склад</div>
+        <h2>Камбуз под контролем</h2>
+        <p>Остатки, приход, расход и инвентаризация — без лишней беготни.</p>
+      </div>
+      <div class="home-hero-mark" aria-hidden="true">⚓</div>
+    </section>
+
+    <div class="home-search">
+      <span>⌕</span>
+      <input id="home-search" placeholder="Найти товар" autocomplete="off">
     </div>
-    <div class="main-actions">
-      ${mainAction("consumption","−","Расход","Взял несколько товаров","green")}
-      ${mainAction("receipt","+","Поступление","Принял и разложил","blue")}
+
+    <div class="home-primary-actions">
+      <button class="home-action receipt" data-action="receipt"><span>＋</span><b>Приход</b><small>Принять поставку</small></button>
+      <button class="home-action consumption" data-action="consumption"><span>−</span><b>Расход</b><small>Выдать продукты</small></button>
+      <button class="home-action inventory" data-action="inventory"><span>✓</span><b>Инвентаризация</b><small>Сверить остатки</small></button>
     </div>
-    <div class="grid stats">${stat(state.items.length,"Позиций")}${stat(low,"Заканчивается")}${stat(fmt(used),"Расход сегодня")}${stat(state.ops.length,"Операций")}</div>
-    <div class="section-title"><h2>Рабочие действия</h2></div>
-    <div class="grid quick-actions">
-      ${quick("🧾","Инвентаризация","Сверить остатки","inventory","a-amber")}
-      ${quick("📦","Открыть склад","Поиск и карточки","stock","a-gray")}
-      ${quick("📥","Импорт JSON","Добавить каталог","import-json","a-blue")}
-      ${quick("📊","Аналитика","Расход и прогноз","analytics","a-green")}
-      ${quick("🧮","Сводный отчёт","Молоко · консервация · бакалея","summary-report","a-amber")}
+
+    <div class="home-stats">
+      ${stat(state.items.length,"Позиций")}
+      ${stat(low,"Заканчивается")}
+      ${stat(fmt(used),"Расход сегодня")}
+      ${stat(state.ops.length,"Операций")}
     </div>
-    ${low?`<div class="section-title"><h2>Заканчивается</h2><button class="link-btn" data-tab="stock">Все</button></div><div class="card">${state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0)).slice(0,5).map(itemRow).join("")}</div>`:""}`;
+
+    ${low?`<div class="home-section-head"><div><span>Требует внимания</span><h3>Низкий остаток</h3></div><button class="link-btn" data-tab="stock">Открыть склад</button></div>
+    <div class="home-alert-list">${lowItems.slice(0,4).map(i=>`<button class="home-alert" data-item="${i.id}"><span class="home-alert-dot"></span><span><b>${esc(itemLabel(i))}</b><small>${esc(i.location||i.subcategory||i.category||"Склад")}</small></span><strong>${fmt(i.qty)} ${esc(i.unit)}</strong></button>`).join("")}</div>`:""}
+
+    <div class="home-section-head"><div><span>Последние изменения</span><h3>Движение по складу</h3></div><button class="link-btn" data-tab="history">Вся история</button></div>
+    <div class="home-moves">${recent||'<div class="empty small">Операций пока нет</div>'}</div>
+
+    <div class="home-secondary-actions compact-two">
+      ${quick("⌁","Аналитика","Расход и прогноз","analytics","a-green")}
+      ${quick("≣","Сводный отчёт","Остатки + IMO / FAL","summary-report","a-amber")}
+    </div>`;
   }
   function mainAction(action,icon,title,sub,cls){return `<button class="main-action ${cls}" data-action="${action}"><span>${icon}</span><div><b>${title}</b><small>${sub}</small></div><i>›</i></button>`}
   function stat(v,l){return `<div class="card stat"><strong>${esc(v)}</strong><span>${esc(l)}</span></div>`}
@@ -343,7 +377,7 @@
     const q=state.query.trim().toLowerCase(),f=state.stockFilters;
     let items=state.items.filter(i=>{
       if(state.category!=="Все"&&i.category!==state.category)return false;
-      if(!`${itemLabel(i)} ${i.barcode||""} ${i.subcategory||""} ${i.notes||""}`.toLowerCase().includes(q))return false;
+      if(!`${itemLabel(i)} ${i.subcategory||""} ${i.notes||""}`.toLowerCase().includes(q))return false;
       const groups=groupForItem(i);
       if(f.groups.length&&!f.groups.some(g=>groups.includes(g)))return false;
       if(f.subgroups.length&&!f.subgroups.some(s=>String(i.subcategory||"").toLowerCase()===s.toLowerCase()))return false;
@@ -373,32 +407,83 @@
     scope.querySelectorAll("[data-item]").forEach(b=>b.onclick=()=>openItem(b.dataset.item));
   }
   function stock(){
-    return `<div class="page-head"><div><div class="eyebrow">Каталог</div><h2>Склад</h2></div><button class="secondary compact" data-action="add-item">＋ Товар</button></div>
-      <div class="search"><div class="search-input-wrap"><input id="search" placeholder="Название или штрихкод" value="${esc(state.query)}" autocomplete="off"><button type="button" id="search-clear" class="search-clear" aria-label="Очистить поиск" ${state.query?"":"hidden"}>×</button></div><button class="filter-btn" data-action="scan-search">▣</button></div>
-      <div class="stock-toolbar"><button class="secondary compact ${activeFilterCount()?"active-filter":""}" data-action="stock-filter">⚙ Фильтр${activeFilterCount()?` · ${activeFilterCount()}`:""}</button><button class="secondary compact" data-action="stock-sort">↕ ${sortLabel()}</button></div>
-      ${activeFilterCount()?`<div class="active-filter-bar"><span>Фильтры включены · найдено ${filteredStockItems().length}</span><button data-action="stock-filter-reset">Сбросить</button></div>`:""}
-      <div class="chips">${["Все",...CATEGORIES].map(c=>`<button class="chip ${state.category===c?"active":""}" data-category="${c}">${c}</button>`).join("")}</div>
-      <div id="stock-list" class="card list-card">${stockListHtml()}</div>`;
+    const filtered=filteredStockItems();
+    const low=state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0)).length;
+    return `<div class="page-head maritime-page-head"><div><div class="eyebrow">Каталог</div><h2>Склад</h2><p>${state.items.length} позиций · ${low} требуют внимания</p></div><button class="secondary compact maritime-add" data-action="add-item"><span>＋</span>Товар</button></div>
+      <div class="stock-search-card">
+        <div class="search"><div class="search-input-wrap"><span class="stock-search-icon">⌕</span><input id="search" placeholder="Название товара" value="${esc(state.query)}" autocomplete="off"><button type="button" id="search-clear" class="search-clear" aria-label="Очистить поиск" ${state.query?"":"hidden"}>×</button></div></div>
+        <div class="stock-toolbar"><button class="secondary compact ${activeFilterCount()?"active-filter":""}" data-action="stock-filter"><span>☷</span>Фильтр${activeFilterCount()?` · ${activeFilterCount()}`:""}</button><button class="secondary compact" data-action="stock-sort"><span>↕</span>${sortLabel()}</button></div>
+        ${activeFilterCount()?`<div class="active-filter-bar"><span>Фильтры включены · найдено ${filtered.length}</span><button data-action="stock-filter-reset">Сбросить</button></div>`:""}
+        <div class="chips">${["Все",...CATEGORIES].map(cat=>`<button class="chip ${state.category===cat?"active":""}" data-category="${cat}">${cat}</button>`).join("")}</div>
+      </div>
+      <div class="stock-list-head"><span>Найдено</span><b>${filtered.length}</b></div>
+      <div id="stock-list" class="card list-card maritime-stock-list">${stockListHtml()}</div>`;
   }
   function itemRow(i){
     const low=Number(i.qty)<=Number(i.min_qty||0);
+    const empty=Number(i.qty)<=0;
     const pending=pendingForItem(i.id);
     const qtyText=`${fmt(i.qty)} ${esc(i.unit)}`;
-    return `<button class="item" data-item="${i.id}"><div class="item-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div><div class="item-main"><div class="item-title">${esc(itemLabel(i))}</div><div class="item-meta">${esc(i.subcategory||i.category)}${packLabel(i)?` · ${packLabel(i)}`:""}</div></div><div class="qty-wrap"><div class="qty ${pending?"pending-qty":low?"low":""}">${qtyText}${pending?'<span class="pending-clock" aria-label="Ожидает синхронизации">◷</span>':""}</div><div class="item-meta ${pending?"pending-text":""}">${pending?`ожидает · ${pending}`:`мин. ${fmt(i.min_qty||0)}`}</div></div></button>`;
+    const status=pending?"Ожидает":empty?"Нет":low?"Мало":"В наличии";
+    const statusClass=pending?"pending":empty?"out":low?"low":"ok";
+    return `<button class="item maritime-item" data-item="${i.id}">
+      <div class="item-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div>
+      <div class="item-main">
+        <div class="item-title">${esc(itemLabel(i))}</div>
+        <div class="item-meta">${esc(i.subcategory||i.category)}${packLabel(i)?` · ${packLabel(i)}`:""}</div>
+        <span class="stock-status ${statusClass}">${status}</span>
+      </div>
+      <div class="qty-wrap">
+        <div class="qty ${pending?"pending-qty":low?"low":""}">${qtyText}${pending?'<span class="pending-clock" aria-label="Ожидает синхронизации">◷</span>':""}</div>
+        <div class="item-meta ${pending?"pending-text":""}">${pending?`ожидает · ${pending}`:`мин. ${fmt(i.min_qty||0)}`}</div>
+      </div>
+      <i class="item-chevron">›</i>
+    </button>`;
   }
 
   function history(){
-    const rows=state.ops.map(o=>{const i=state.items.find(x=>x.id===o.item_id);const canDelete=o.type==="consumption"||o.type==="writeoff";return `<div class="history-entry ${o.pending?"history-pending":""}"><div class="history-top"><div><span class="badge b-${o.type}">${labelType(o.type)}</span> <b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b>${o.pending?'<span class="pending-pill">◷ Ожидает</span>':""}</div><b>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i?.unit||"")}</b></div><div class="history-bottom"><div class="item-meta">${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}${o.reason?` · ${esc(o.reason)}`:""}${o.comment?` · ${esc(o.comment)}`:""}</div>${canDelete?`<button class="history-delete" type="button" data-op-delete="${o.id}">Удалить</button>`:""}</div></div>`}).join("");
-    return `<div class="page-head"><div><div class="eyebrow">Журнал</div><h2>История операций</h2></div></div><div class="card">${rows||'<div class="empty">Операций пока нет</div>'}</div>`;
+    const today=localDateKey();
+    const todayCount=state.ops.filter(o=>localDateKey(o.created_at)===today).length;
+    const pendingCount=state.ops.filter(o=>o.pending).length;
+    const rows=state.ops.map(o=>{
+      const i=state.items.find(x=>x.id===o.item_id);
+      const canDelete=o.type==="consumption"||o.type==="writeoff";
+      return `<div class="history-entry maritime-history ${o.pending?"history-pending":""}">
+        <div class="history-icon b-${o.type}">${sign(o.type)}</div>
+        <div class="history-body">
+          <div class="history-title-row"><b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i?.unit||"")}</strong></div>
+          <div class="history-meta-row"><span class="badge b-${o.type}">${labelType(o.type)}</span>${o.pending?'<span class="pending-pill">◷ Ожидает</span>':""}<small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}${o.reason?` · ${esc(o.reason)}`:""}${o.comment?` · ${esc(o.comment)}`:""}</small></div>
+        </div>
+        ${canDelete?`<button class="history-delete" type="button" data-op-delete="${o.id}">Удалить</button>`:""}
+      </div>`;
+    }).join("");
+    return `<div class="page-head maritime-page-head"><div><div class="eyebrow">Журнал</div><h2>История операций</h2><p>Сегодня ${todayCount} · в очереди ${pendingCount}</p></div></div>
+      <div class="history-summary">
+        <div><small>Всего операций</small><b>${state.ops.length}</b></div>
+        <div><small>Сегодня</small><b>${todayCount}</b></div>
+        <div><small>Ожидает</small><b>${pendingCount}</b></div>
+      </div>
+      <div class="card maritime-history-list">${rows||'<div class="empty">Операций пока нет</div>'}</div>`;
   }
-  function more(){return `<div class="page-head"><div><div class="eyebrow">Настройки и отчёты</div><h2>Ещё</h2></div></div>
-    <div class="menu-list">
-      <button data-action="export"><span>⬇️</span><div><b>Экспорт остатков</b><small>PDF и Word</small></div><i>›</i></button>
-      <button data-action="import-json"><span>📥</span><div><b>Импорт каталога</b><small>JSON без дублей</small></div><i>›</i></button>
-      <button data-action="analytics"><span>📊</span><div><b>Аналитика</b><small>Расход за период</small></div><i>›</i></button>
-      <button data-action="force-update"><span>🔄</span><div><b>Обновить Камбуз</b><small>Проверить новую версию и перезапустить</small></div><i>›</i></button>
-      <button data-action="profile"><span>👤</span><div><b>Пользователь</b><small>${esc(state.user)}</small></div><i>›</i></button>
-    </div>`}
+
+  function more(){
+    return `<div class="page-head maritime-page-head"><div><div class="eyebrow">Сервис</div><h2>Ещё</h2><p>Отчёты, данные и настройки Камбуза</p></div></div>
+      <div class="more-section-title"><span>Отчёты</span></div>
+      <div class="menu-list maritime-menu">
+        <button data-action="summary-report"><span class="menu-icon">≣</span><div><b>Сводный отчёт</b><small>Остатки + IMO / FAL</small></div><i>›</i></button>
+        <button data-action="analytics"><span class="menu-icon">⌁</span><div><b>Аналитика</b><small>Расход и динамика</small></div><i>›</i></button>
+        <button data-action="export"><span class="menu-icon">⇩</span><div><b>Экспорт остатков</b><small>PDF и Word</small></div><i>›</i></button>
+      </div>
+      <div class="more-section-title"><span>Данные и приложение</span></div>
+      <div class="menu-list maritime-menu">
+        <button data-action="import-json"><span class="menu-icon">⇧</span><div><b>Импорт каталога</b><small>JSON без дублей</small></div><i>›</i></button>
+        <button data-action="force-update"><span class="menu-icon">↻</span><div><b>Обновить Камбуз</b><small>Проверить новую версию</small></div><i>›</i></button>
+      </div>
+      <div class="more-section-title"><span>Аккаунт</span></div>
+      <div class="menu-list maritime-menu">
+        <button data-action="profile"><span class="menu-icon">●</span><div><b>Пользователь</b><small>${esc(state.user)}</small></div><i>›</i></button>
+      </div>`;
+  }
 
   function bind(){
     document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;render()});
@@ -416,6 +501,7 @@
       }
     };
     const clear=$("#search-clear");if(clear)clear.onclick=()=>{state.query="";s.value="";clear.hidden=true;const list=$("#stock-list");if(list){list.innerHTML=stockListHtml();bindStockItems(list)}s.focus()};
+    const hs=$("#home-search");if(hs){const go=()=>{const q=hs.value.trim();if(!q)return;state.query=q;state.tab="stock";render()};hs.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();go()}}}
   }
   function handle(a){
     if(a==="add-item") itemForm();
@@ -425,7 +511,6 @@
     else if(a==="stock"){state.tab="stock";render()}
     else if(a==="consumption"||a==="receipt") openBasket(a);
     else if(a==="import-json") importJson();
-    else if(a==="scan"||a==="scan-search") scanBarcode(a==="scan-search"?"search":"quick");
     else if(a==="analytics") analytics();
     else if(a==="summary-report") summaryReport();
     else if(a==="force-update") forceUpdateApp();
@@ -542,7 +627,7 @@
     const isEdit=Boolean(item?.id);
     const el=modal(isEdit?"Изменить товар":"Новый товар",`<form class="form" id="item-form">
       <div class="field"><label>Название</label><input name="name" required value="${esc(item?.name||"")}"></div>
-      <div class="row"><div class="field"><label>Бренд</label><input name="brand" value="${esc(item?.brand||"")}"></div><div class="field"><label>Штрихкод</label><input name="barcode" inputmode="numeric" value="${esc(item?.barcode||"")}"></div></div>
+      <div class="field"><label>Бренд</label><input name="brand" value="${esc(item?.brand||"")}"></div>
       <div class="row"><div class="field"><label>Категория</label><select name="category">${CATEGORIES.map(c=>`<option ${item?.category===c?"selected":""}>${c}</option>`).join("")}</select></div><div class="field"><label>Подкатегория</label><input name="subcategory" value="${esc(item?.subcategory||"")}"></div></div>
       <div class="row"><div class="field"><label>Фасовка</label><input name="volume" type="number" step="0.001" value="${esc(item?.volume??item?.weight??"")}"></div><div class="field"><label>Ед. фасовки</label><input name="package_unit" placeholder="мл, г, шт." value="${esc(item?.package_unit||"")}"></div></div>
       <div class="row"><div class="field"><label>Учитывать в</label><select name="unit">${UNITS.map(u=>`<option ${item?.unit===u?"selected":""}>${u}</option>`).join("")}</select></div><div class="field"><label>Минимум</label><input name="min_qty" type="number" step="0.001" value="${esc(item?.min_qty??0)}"></div></div>
@@ -550,8 +635,7 @@
       <div class="field"><label>Примечание</label><textarea name="notes">${esc(item?.notes||"")}</textarea></div>
       <button class="primary" type="submit">Сохранить</button>
     </form>`);
-    el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const payload={name:f.name.trim(),brand:f.brand.trim()||null,barcode:normalizeBarcode(f.barcode)||null,category:f.category,subcategory:f.subcategory.trim()||null,volume:f.volume?Number(f.volume):null,package_unit:f.package_unit.trim()||null,unit:f.unit,min_qty:Number(f.min_qty||0),location:f.location.trim()||"Основной склад",notes:f.notes.trim()||null,updated_at:now()};
-      if(payload.barcode){const dup=state.items.find(x=>x.barcode===payload.barcode&&x.id!==(isEdit?item.id:null));if(dup){toast("Такой штрихкод уже есть");return}}
+    el.querySelector("form").onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));const payload={name:f.name.trim(),brand:f.brand.trim()||null,barcode:item?.barcode||null,category:f.category,subcategory:f.subcategory.trim()||null,volume:f.volume?Number(f.volume):null,package_unit:f.package_unit.trim()||null,unit:f.unit,min_qty:Number(f.min_qty||0),location:f.location.trim()||"Основной склад",notes:f.notes.trim()||null,updated_at:now()};
       try{
         let saved;
         if(isEdit){Object.assign(item,payload);saved=item}else{saved={id:uid(),qty:0,...payload};state.items.push(saved)}
@@ -569,24 +653,55 @@
     const lastReceipt=itemOps.find(o=>o.type==="receipt"),lastUse=itemOps.find(o=>o.type==="consumption");
     const history=itemOps.slice(0,8).map(o=>`<div class="mini-history"><span><b>${labelType(o.type)}</b><small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}</small></span><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i.unit)}</strong></div>`).join("")||'<div class="empty small">По товару ещё нет операций</div>';
     const pending=pendingForItem(i.id),rv=reportAmountFromStock(i);
-    const reportHint=rv?`<div class="detail-report-hint">В сводный отчёт: <b>${fmt(rv.kg??rv.l)} ${rv.kg!=null?"кг":"л"}</b></div>`:"";
-    const el=modal(itemLabel(i),`<div class="detail-card"><div class="big-qty ${pending?"pending-qty":""}">${fmt(i.qty)} <span>${esc(i.unit)}</span>${pending?'<span class="pending-clock big">◷</span>':""}</div>${reportHint}${pending?'<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>':""}<div class="detail-grid"><div><small>Расход сегодня</small><b>${fmt(usedToday)} ${esc(i.unit)}</b></div><div><small>Минимальный остаток</small><b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></div><div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div><div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div><div><small>Штрихкод</small><b>${esc(i.barcode||"—")}</b></div></div></div><div class="detail-actions"><button class="consumption" data-op="consumption">− Расход</button><button class="receipt" data-op="receipt">＋ Поступление</button><button class="writeoff" data-op="writeoff">Списание</button><button class="secondary" data-op="adjustment">Исправить остаток</button></div><h3>Последние операции</h3><div>${history}</div><button class="secondary full" data-edit-item>Изменить товар</button>`);
+    const low=Number(i.qty)<=Number(i.min_qty||0);
+    const stockLabel=Number(i.qty)<=0?"Нет в наличии":low?"Низкий остаток":"В наличии";
+    const stockClass=Number(i.qty)<=0?"out":low?"low":"ok";
+    const reportHint=rv?`<div class="product-report-chip">IMO / сводка · <b>${fmt(rv.kg??rv.l)} ${rv.kg!=null?"кг":"л"}</b></div>`:"";
+    const el=modal(itemLabel(i),`<div class="detail-card product-detail-card">
+      <div class="product-card-top">
+        <div class="product-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div>
+        <div class="product-card-title"><span>${esc(i.category||"Товар")}${i.subcategory?` · ${esc(i.subcategory)}`:""}</span><b>${esc(itemLabel(i))}</b></div>
+        <span class="product-stock-pill ${stockClass}">${stockLabel}</span>
+      </div>
+      <div class="product-balance">
+        <small>Текущий остаток</small>
+        <div class="big-qty ${pending?"pending-qty":""}">${fmt(i.qty)} <span>${esc(i.unit)}</span>${pending?'<span class="pending-clock big">◷</span>':""}</div>
+        <div class="product-balance-meta"><span>Минимум: <b>${fmt(i.min_qty||0)} ${esc(i.unit)}</b></span><span>${esc(i.location||"Основной склад")}</span></div>
+      </div>
+      ${reportHint}
+      ${pending?'<div class="detail-pending">◷ Изменение сохранено на телефоне и ожидает синхронизации</div>':""}
+      <div class="detail-grid product-detail-grid">
+        <div><small>Расход сегодня</small><b>${fmt(usedToday)} ${esc(i.unit)}</b></div>
+        <div><small>Фасовка</small><b>${packLabel(i)||"—"}</b></div>
+        <div><small>Последний расход</small><b>${lastUse?new Date(lastUse.created_at).toLocaleDateString("ru-RU"):"—"}</b></div>
+        <div><small>Последнее поступление</small><b>${lastReceipt?new Date(lastReceipt.created_at).toLocaleDateString("ru-RU"):"—"}</b></div>
+      </div>
+    </div>
+    <div class="detail-actions product-actions">
+      <button class="consumption" data-op="consumption"><span>−</span>Расход</button>
+      <button class="receipt" data-op="receipt"><span>＋</span>Приход</button>
+      <button class="writeoff" data-op="writeoff"><span>×</span>Списание</button>
+      <button class="secondary" data-op="adjustment"><span>≡</span>Остаток</button>
+    </div>
+    <h3>Последние операции</h3><div>${history}</div>
+    <button class="secondary full product-edit-button" data-edit-item>Изменить товар</button>`);
     el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>singleOperation(i,b.dataset.op));
     el.querySelector("[data-edit-item]").onclick=()=>{el.remove();itemForm(i)};
   }
+
   function openBasket(type){
     state.basket={type,lines:[]};
     const title=type==="consumption"?"Быстрый расход":"Массовое поступление";
-    const el=modal(title,`<div class="basket-tools"><div class="search basket-search"><input id="basket-search" placeholder="Название или штрихкод"><button type="button" id="basket-scan" class="filter-btn">▣</button></div><div id="basket-results" class="search-results"></div></div><div id="basket-lines"></div><div class="basket-footer"><div><small>Позиций</small><b id="basket-count">0</b></div><button class="primary" id="basket-save" disabled>${type==="consumption"?"Списать всё":"Принять всё"}</button></div>`,true);
+    const el=modal(title,`<div class="basket-tools"><div class="search basket-search"><input id="basket-search" placeholder="Название товара"></div><div id="basket-results" class="search-results"></div></div><div id="basket-lines"></div><div class="basket-footer"><div><small>Позиций</small><b id="basket-count">0</b></div><button class="primary" id="basket-save" disabled>${type==="consumption"?"Списать всё":"Принять всё"}</button></div>`,true);
     const input=el.querySelector("#basket-search"),results=el.querySelector("#basket-results");
-    const drawResults=()=>{const q=input.value.trim().toLowerCase();if(!q){results.innerHTML="";return}const list=state.items.filter(i=>`${itemLabel(i)} ${i.barcode||""}`.toLowerCase().includes(q)).slice(0,8);results.innerHTML=list.map(i=>`<button data-add="${i.id}"><span>${esc(itemLabel(i))}</span><b>${fmt(i.qty)} ${esc(i.unit)}</b></button>`).join("")||'<div class="empty small">Не найдено</div>';results.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{addBasketLine(b.dataset.add);input.value="";results.innerHTML="";drawBasket(el)})};
-    input.oninput=drawResults;el.querySelector("#basket-scan").onclick=()=>scanBarcodeToBasket(el);
+    const drawResults=()=>{const q=input.value.trim().toLowerCase();if(!q){results.innerHTML="";return}const list=state.items.filter(i=>itemLabel(i).toLowerCase().includes(q)).slice(0,8);results.innerHTML=list.map(i=>`<button data-add="${i.id}"><span>${esc(itemLabel(i))}</span><b>${fmt(i.qty)} ${esc(i.unit)}</b></button>`).join("")||'<div class="empty small">Не найдено</div>';results.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{addBasketLine(b.dataset.add);input.value="";results.innerHTML="";drawBasket(el)})};
+    input.oninput=drawResults;
     el.querySelector("#basket-save").onclick=()=>commitBasket(el);
     setTimeout(()=>input.focus(),100);
   }
   function addBasketLine(id){const found=state.basket.lines.find(x=>x.item_id===id);if(found)found.quantity+=1;else state.basket.lines.push({item_id:id,quantity:1})}
   function drawBasket(el){
-    const box=el.querySelector("#basket-lines");box.innerHTML=state.basket.lines.length?`<div class="basket-list">${state.basket.lines.map((l,n)=>{const i=state.items.find(x=>x.id===l.item_id);return `<div class="basket-line"><div><b>${esc(itemLabel(i))}</b><small>Остаток: ${fmt(i.qty)} ${esc(i.unit)}</small></div><div class="stepper"><button data-minus="${n}">−</button><input data-qty="${n}" type="number" min="0.001" step="0.001" value="${l.quantity}"><button data-plus="${n}">＋</button></div><button class="remove" data-remove="${n}">✕</button></div>`}).join("")}</div>`:'<div class="empty">Добавь товары через поиск или сканер</div>';
+    const box=el.querySelector("#basket-lines");box.innerHTML=state.basket.lines.length?`<div class="basket-list">${state.basket.lines.map((l,n)=>{const i=state.items.find(x=>x.id===l.item_id);return `<div class="basket-line"><div><b>${esc(itemLabel(i))}</b><small>Остаток: ${fmt(i.qty)} ${esc(i.unit)}</small></div><div class="stepper"><button data-minus="${n}">−</button><input data-qty="${n}" type="number" min="0.001" step="0.001" value="${l.quantity}"><button data-plus="${n}">＋</button></div><button class="remove" data-remove="${n}">✕</button></div>`}).join("")}</div>`:'<div class="empty">Добавь товары через поиск</div>';
     box.querySelectorAll("[data-minus]").forEach(b=>b.onclick=()=>{const l=state.basket.lines[+b.dataset.minus];l.quantity=Math.max(.001,Number(l.quantity)-1);drawBasket(el)});
     box.querySelectorAll("[data-plus]").forEach(b=>b.onclick=()=>{state.basket.lines[+b.dataset.plus].quantity=Number(state.basket.lines[+b.dataset.plus].quantity)+1;drawBasket(el)});
     box.querySelectorAll("[data-qty]").forEach(inp=>inp.onchange=()=>{state.basket.lines[+inp.dataset.qty].quantity=Math.max(.001,Number(inp.value)||1);drawBasket(el)});
@@ -754,10 +869,27 @@
     const r=buildSummaryReport();
     const rows=REPORT_GROUPS.map(g=>`<button class="report-row" data-report-group="${g.id}"><span><b>${esc(g.name)}</b><small>${r.details[g.id].length} позиций</small></span><strong>${fmt(r.totals[g.id])} ${g.unit}</strong><i>›</i></button>`).join("");
     const warning=r.unresolved.length?`<button class="report-warning" id="show-unresolved-report"><span><b>⚠️ Не удалось пересчитать: ${r.unresolved.length}</b><small>Нажми, чтобы увидеть товары и исправить фасовку.</small></span><i>›</i></button>`:"";
-    const el=modal("Пробный сводный отчёт",`<div class="report-date">Остатки на ${new Date().toLocaleString("ru-RU")}</div><div class="report-list">${rows}</div>${warning}<div class="report-note">Растительное масло временно пересчитывается по коэффициенту <b>0,92 кг/л</b>.</div><button class="primary full" id="copy-summary-report">Скопировать отчёт</button>`);
+    const imo=window.KAMBUZ_IMO_REPORT?.build?.();
+    const imoGroups=[
+      ["frozen_meat_fish","Frozen foods, meat, fish, chicken"],
+      ["fresh_produce","Fresh vegetables, fruits"],
+      ["grocery","Grocery"],
+      ["dairy","Dairy products"],
+      ["canned","Canned goods"]
+    ];
+    const imoRows=imo?`<div class="report-subhead"><span>IMO / FAL Form 3</span><h3>Provision Stores</h3></div><div class="report-list report-imo-list">${imoGroups.map(([id,label])=>`<div class="report-row static"><span><b>${esc(label)}</b><small>итог для формы</small></span><strong>${Math.round(imo.groups?.[id]?.total||0)} Kgs</strong></div>`).join("")}</div>${imo.unresolved?.length?`<div class="report-warning static"><span><b>⚠️ IMO не рассчитано: ${imo.unresolved.length}</b><small>Нужно заполнить фасовку у отдельных товаров.</small></span></div>`:""}<button class="secondary full" id="open-imo-report">Открыть полный IMO / FAL отчёт</button>`:"";
+
+    const el=modal("Сводный отчёт",`<div class="report-date">Остатки на ${new Date().toLocaleString("ru-RU")}</div>
+      <div class="report-subhead"><span>Склад</span><h3>Краткая сводка</h3></div>
+      <div class="report-list">${rows}</div>
+      ${warning}
+      ${imoRows}
+      <div class="report-note">Растительное масло временно пересчитывается по коэффициенту <b>0,92 кг/л</b>.</div>
+      <button class="primary full" id="copy-summary-report">Скопировать сводку</button>`);
     el.querySelectorAll("[data-report-group]").forEach(b=>b.onclick=()=>{const id=b.dataset.reportGroup,g=REPORT_GROUPS.find(x=>x.id===id);modal(g.name,`<div class="analytics-list">${r.details[id].map(x=>`<div><span>${esc(itemLabel(x.item))}<small>${fmt(x.item.qty)} ${esc(x.item.unit)}${packLabel(x.item)?` · ${packLabel(x.item)}`:""}</small></span><b>${fmt(x.amount)} ${g.unit}</b></div>`).join("")||'<div class="empty">Подходящих товаров пока нет</div>'}</div>`)});
     el.querySelector("#show-unresolved-report")?.addEventListener("click",()=>showUnresolvedReportItems(r.unresolved));
-    el.querySelector("#copy-summary-report").onclick=async()=>{const text=[`Сводный остаток на ${new Date().toLocaleDateString("ru-RU")}`,...REPORT_GROUPS.map(g=>`${g.name} — ${fmt(r.totals[g.id])} ${g.unit}`)].join("\n");try{await navigator.clipboard.writeText(text);toast("Отчёт скопирован")}catch{toast("Не удалось скопировать")}};
+    el.querySelector("#open-imo-report")?.addEventListener("click",()=>window.KAMBUZ_IMO_REPORT?.open?.());
+    el.querySelector("#copy-summary-report").onclick=async()=>{const text=[`Сводный остаток на ${new Date().toLocaleDateString("ru-RU")}`,...REPORT_GROUPS.map(g=>`${g.name} — ${fmt(r.totals[g.id])} ${g.unit}`),...(imo?["","IMO / FAL — PROVISION STORES:",...imoGroups.map(([id,label])=>`${label} — ${Math.round(imo.groups?.[id]?.total||0)} Kgs`)]:[])].join("\n");try{await navigator.clipboard.writeText(text);toast("Сводка скопирована")}catch{toast("Не удалось скопировать")}};
   }
 
   function exportModal(){const el=modal("Экспорт остатков",`<div class="form"><div class="field"><label>Категория</label><select id="export-category"><option>Все</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join("")}</select></div><button class="primary" id="export-pdf">PDF / печать</button><button class="secondary" id="export-doc">Word (.doc)</button></div>`);el.querySelector("#export-pdf").onclick=()=>exportPdf(el.querySelector("#export-category").value);el.querySelector("#export-doc").onclick=()=>exportDoc(el.querySelector("#export-category").value)}

@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const VERSION='2.2.0';
+  const VERSION='2.3.1';
   const cfg=window.KAMBUZ_CONFIG||{}; let sb=null;
   const money=n=>Number(n||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₽';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -12,7 +12,247 @@
   const pendingDeleteIds=()=>new Set(read('kambuz_pending_ops',[]).filter(x=>x?.kind==='operation_delete').map(x=>x.operation_id));
   const itemLabel=i=>[i?.brand,i?.name].filter(Boolean).join(' ').replace(/\s+/g,' ').trim()||'Товар';
   async function client(){if(sb)return sb;if(!window.supabase)await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';s.onload=res;s.onerror=rej;document.head.appendChild(s)});sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);return sb}
-  function styles(){if(document.getElementById('fc-style'))return;const s=document.createElement('style');s.id='fc-style';s.textContent=`.fc-pill{position:fixed;z-index:85000;right:12px;top:calc(env(safe-area-inset-top) + 50px);border:0;border-radius:999px;background:#0b5d4b;color:#fff;padding:9px 12px;font:800 12px system-ui;box-shadow:0 3px 14px #0002}.fc-overlay{position:fixed;inset:0;z-index:120000;background:#f4f8f6;font-family:system-ui;color:#17352d;overflow:auto;padding:calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 28px)}.fc-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.fc-head h2{margin:0;font-size:25px}.fc-head-actions{display:flex;gap:8px;align-items:center}.fc-add-top{border:0;border-radius:13px;background:#0b5d4b;color:#fff;padding:10px 12px;font-weight:800}.fc-close{border:0;background:#e6efeb;border-radius:50%;width:42px;height:42px;font-size:22px}.fc-kpi{background:#0b5d4b;color:#fff;border-radius:22px;padding:18px;margin:16px 0}.fc-kpi small{opacity:.8}.fc-kpi strong{display:block;font-size:31px;margin-top:3px}.fc-day{background:#fff;border:1px solid #dfe9e5;border-radius:18px;padding:15px;margin:10px 0}.fc-day-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.fc-day b{font-size:18px}.fc-muted{color:#6b7d76;font-size:13px}.fc-btn{border:0;border-radius:13px;background:#e7f2ee;color:#0b5d4b;font-weight:800;padding:10px 12px}.fc-lines{margin-top:13px;border-top:1px solid #e5ece9;padding-top:8px}.fc-line{display:grid;grid-template-columns:1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid #eef3f1;align-items:center}.fc-line:last-child{border-bottom:0}.fc-line-name{font-weight:700}.fc-line-side{display:flex;flex-direction:column;align-items:flex-end;gap:5px}.fc-delete{border:0;background:#fff0ed;color:#a43a2e;border-radius:9px;padding:6px 8px;font:800 10px system-ui}.fc-expand{border:0;background:#eef4f1;color:#285348;border-radius:9px;padding:6px 8px;font:800 10px system-ui}.fc-subops{grid-column:1/-1;background:#f7faf8;border-radius:12px;padding:6px 9px;margin-top:2px}.fc-subop{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #e7eeeb}.fc-subop:last-child{border-bottom:0}.fc-subop .fc-muted{font-size:11px}.fc-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.fc-actions button{border:0;border-radius:13px;padding:11px;font-weight:800;background:#edf3f0;color:#24463c}.fc-actions .fc-add-day{grid-column:1/-1;background:#dff2ea;color:#075f4b}.fc-warning{background:#fff3d8;color:#79520b;padding:10px 12px;border-radius:13px;margin-top:10px;font-size:13px}.fc-editor{position:fixed;inset:0;z-index:350000;background:rgba(5,20,15,.48);display:flex;align-items:flex-end;font-family:system-ui}.fc-editor-card{width:100%;max-height:92vh;overflow:auto;background:#fff;border-radius:26px 26px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom) + 20px);color:#17352d}.fc-editor-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.fc-editor-head h3{margin:0}.fc-editor-close{border:0;background:#edf2f0;border-radius:11px;width:38px;height:38px;font-size:20px}.fc-field{display:grid;gap:6px;margin:10px 0}.fc-field label{font-size:12px;color:#6b7d76;font-weight:800}.fc-field input{width:100%;border:1px solid #d8e3df;border-radius:13px;padding:12px;font:16px system-ui}.fc-search-results{border:1px solid #e1e9e6;border-radius:14px;overflow:hidden;max-height:260px;overflow:auto}.fc-search-results button{width:100%;border:0;border-bottom:1px solid #e8eeeb;background:#fff;padding:11px 12px;text-align:left;display:flex;justify-content:space-between;gap:8px}.fc-search-results button:last-child{border-bottom:0}.fc-selected{background:#f1f7f4;border-radius:14px;padding:12px;margin:10px 0}.fc-selected b,.fc-selected small{display:block}.fc-selected small{color:#6b7d76;margin-top:4px}.fc-save{width:100%;border:0;background:#0b5d4b;color:#fff;border-radius:14px;padding:14px;font-weight:850;margin-top:12px}.fc-save:disabled{opacity:.45}.fc-future-note{background:#e8f2ff;color:#285b91;padding:10px 12px;border-radius:13px;font-size:12px;margin-top:10px}`;document.head.appendChild(s)}
+  function styles(){
+    if(document.getElementById('fc-style'))return;
+    const s=document.createElement('style');
+    s.id='fc-style';
+    s.textContent=`
+      .fc-pill{}
+      .fc-overlay{
+        position:fixed;inset:0;z-index:120000;
+        overflow:auto;
+        padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 104px);
+        background:
+          radial-gradient(circle at 94% -6%,rgba(22,199,200,.10),transparent 28rem),
+          linear-gradient(180deg,#f8fafb 0%,#f3f6f8 100%);
+        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+        color:#10243a;
+      }
+      .fc-head{
+        max-width:760px;margin:0 auto 12px;
+        display:flex;justify-content:space-between;align-items:flex-end;gap:12px;
+      }
+      .fc-head-copy{min-width:0;flex:1}
+      .fc-eyebrow{
+        margin-bottom:5px;
+        color:#07989a;
+        font-size:10px;
+        font-weight:850;
+        letter-spacing:.1em;
+        text-transform:uppercase;
+      }
+      .fc-head h2{
+        margin:0;
+        color:#08243d;
+        font-size:25px;
+        line-height:1.05;
+        letter-spacing:-.04em;
+      }
+      .fc-head .fc-muted{margin-top:5px;color:#80909d;font-size:12px}
+      .fc-head-actions{display:flex;gap:7px;align-items:center;flex:none}
+      .fc-add-top{
+        min-height:42px;
+        border:0;border-radius:13px;
+        padding:0 12px;
+        background:linear-gradient(145deg,#19ccca,#09a9ad);
+        color:#063a49;
+        font-weight:850;
+        box-shadow:0 8px 20px rgba(11,176,179,.16);
+      }
+      .fc-close{
+        width:42px;height:42px;border:1px solid #e1e9ee;border-radius:13px;
+        background:#fff;color:#5f7383;font-size:20px;
+        box-shadow:0 5px 16px rgba(20,48,73,.05);
+      }
+      .fc-kpi{
+        max-width:760px;margin:12px auto 14px;
+        position:relative;overflow:hidden;
+        border-radius:24px;padding:20px;
+        background:
+          radial-gradient(circle at 92% 8%,rgba(93,246,240,.18),transparent 32%),
+          linear-gradient(145deg,#08243d 0%,#0b3152 72%,#0d4967 100%);
+        color:#fff;
+        box-shadow:0 16px 36px rgba(8,36,61,.16);
+      }
+      .fc-kpi:after{
+        content:'₽';
+        position:absolute;right:-6px;bottom:-34px;
+        font-size:118px;font-weight:900;line-height:1;
+        opacity:.08;
+      }
+      .fc-kpi small{position:relative;z-index:1;color:#9db5c5;font-size:11px}
+      .fc-kpi strong{
+        position:relative;z-index:1;
+        display:block;margin:5px 0 4px;
+        color:#fff;font-size:34px;line-height:1;
+        letter-spacing:-.04em;
+      }
+      .fc-list{max-width:760px;margin:auto}
+      .fc-day{
+        margin:9px 0;
+        padding:14px;
+        border:1px solid #e2eaf0;border-radius:20px;
+        background:#fff;
+        box-shadow:0 7px 22px rgba(20,48,73,.045);
+      }
+      .fc-day-top{display:flex;justify-content:space-between;gap:12px;align-items:center}
+      .fc-day b{color:#17364d;font-size:16px}
+      .fc-muted{color:#84949f;font-size:11px;line-height:1.35}
+      .fc-btn{
+        border:1px solid #cde9e8;border-radius:12px;
+        background:#e7f8f7;color:#087c82;
+        font-weight:850;padding:8px 10px;
+      }
+      .fc-lines{
+        margin-top:12px;padding-top:8px;
+        border-top:1px solid #edf2f5;
+      }
+      .fc-line{
+        display:grid;grid-template-columns:1fr auto;gap:9px;align-items:center;
+        padding:9px 0;border-bottom:1px solid #eef3f5;
+      }
+      .fc-line:last-child{border-bottom:0}
+      .fc-line-name{color:#17364d;font-weight:750;font-size:12px}
+      .fc-line-side{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+      .fc-line-side>b{font-size:13px;color:#17364d}
+      .fc-delete{
+        border:0;border-radius:9px;padding:6px 8px;
+        background:#fff0ef;color:#c83f45;
+        font:800 9px system-ui;
+      }
+      .fc-expand{
+        border:0;border-radius:9px;padding:6px 8px;
+        background:#edf5f7;color:#496677;
+        font:800 9px system-ui;
+      }
+      .fc-subops{
+        grid-column:1/-1;margin-top:2px;padding:6px 9px;
+        border-radius:12px;background:#f6f9fa;
+      }
+      .fc-subop{
+        display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+        padding:7px 0;border-bottom:1px solid #e7edf1;
+      }
+      .fc-subop:last-child{border-bottom:0}
+      .fc-actions{
+        display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;
+      }
+      .fc-actions button{
+        min-height:42px;border:1px solid #e0e8ed;border-radius:12px;
+        padding:9px;background:#f6f9fa;color:#3d5a6d;font-weight:800;
+      }
+      .fc-actions .fc-add-day{
+        grid-column:1/-1;
+        border-color:#cfeae9;background:#e8f8f7;color:#087e84;
+      }
+      .fc-warning{
+        margin-top:10px;padding:10px 12px;border:1px solid #f1dfb9;border-radius:13px;
+        background:#fff6e5;color:#8b651d;font-size:11px;line-height:1.4;
+      }
+
+      .fc-editor{
+        position:fixed;inset:0;z-index:350000;
+        display:flex;align-items:flex-end;
+        background:rgba(5,25,42,.48);
+        backdrop-filter:blur(5px);
+        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      }
+      .fc-editor-card{
+        width:100%;max-height:92vh;overflow:auto;
+        padding:18px 16px calc(env(safe-area-inset-bottom) + 22px);
+        border-radius:28px 28px 0 0;background:#fff;color:#10243a;
+        box-shadow:0 -20px 50px rgba(6,31,52,.18);
+      }
+      .fc-editor-head{
+        display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+        margin-bottom:14px;
+      }
+      .fc-editor-head h3{margin:0;color:#08243d;font-size:20px;letter-spacing:-.02em}
+      .fc-editor-close{
+        width:38px;height:38px;border:0;border-radius:12px;
+        background:#eef3f6;color:#4d6576;font-size:20px;
+      }
+      .fc-field{display:grid;gap:6px;margin:11px 0}
+      .fc-field label{color:#687c8c;font-size:11px;font-weight:800}
+      .fc-field input{
+        width:100%;min-height:47px;
+        border:1px solid #dfe8ee;border-radius:14px;
+        padding:11px 12px;background:#fbfcfd;color:#10243a;font-size:15px;
+      }
+      .fc-field input:focus{
+        outline:none;border-color:#5bd7d5;
+        box-shadow:0 0 0 3px rgba(22,199,200,.11);
+      }
+      .fc-search-results{
+        overflow:auto;max-height:260px;
+        border:1px solid #e1e9ee;border-radius:15px;background:#fff;
+      }
+      .fc-search-results:empty{display:none}
+      .fc-search-results button{
+        width:100%;display:flex;justify-content:space-between;gap:8px;
+        padding:11px 12px;border:0;border-bottom:1px solid #edf2f5;
+        background:#fff;color:#17364d;text-align:left;
+      }
+      .fc-search-results button:last-child{border-bottom:0}
+      .fc-search-results button b{white-space:nowrap}
+      .fc-selected{
+        margin:10px 0;padding:12px;
+        border:1px solid #dcebed;border-radius:14px;
+        background:#f0f9f9;
+      }
+      .fc-selected b,.fc-selected small{display:block}
+      .fc-selected b{color:#17364d}
+      .fc-selected small{margin-top:4px;color:#768b99}
+      .fc-save{
+        width:100%;min-height:49px;margin-top:12px;
+        border:0;border-radius:15px;
+        background:linear-gradient(145deg,#19ccca,#09a9ad);
+        color:#063a49;font-weight:850;
+        box-shadow:0 10px 24px rgba(11,176,179,.18);
+      }
+      .fc-save:disabled{opacity:.42;box-shadow:none}
+      .fc-future-note{
+        margin-top:10px;padding:10px 12px;border-radius:13px;
+        background:#eaf3ff;color:#37658f;font-size:11px;line-height:1.4;
+      }
+
+      @media(min-width:760px){
+        .fc-editor-card{max-width:760px;margin:0 auto}
+      }
+      @media(max-width:520px){
+        .fc-head{
+          display:grid;
+          grid-template-columns:1fr;
+          align-items:start;
+          gap:10px;
+        }
+        .fc-head-copy{width:100%}
+        .fc-head h2{
+          font-size:24px;
+          line-height:1.08;
+          white-space:nowrap;
+        }
+        .fc-head-actions{
+          width:100%;
+          display:grid;
+          grid-template-columns:1fr 44px;
+          gap:8px;
+        }
+        .fc-add-top{width:100%}
+        .fc-close{width:44px}
+      }
+      @media(max-width:390px){
+        .fc-overlay{padding-left:10px;padding-right:10px}
+        .fc-head h2{font-size:22px}
+        .fc-add-top{padding:0 10px;font-size:11px}
+        .fc-kpi strong{font-size:30px}
+        .fc-actions{grid-template-columns:1fr}
+        .fc-actions .fc-add-day{grid-column:auto}
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
   async function loadOps(){
     const deleted=pendingDeleteIds();
     const local=read('kambuz_ops',[]).filter(o=>['consumption','writeoff'].includes(o?.type)&&!deleted.has(o.id));
@@ -50,12 +290,13 @@
     setTimeout(()=>search.focus(),80)
   }
   async function open(){
-    styles();document.querySelector('.fc-overlay')?.remove();const root=document.createElement('div');root.className='fc-overlay';root.innerHTML=`<div class="fc-head"><div><h2>💰 Стоимость питания</h2><div class="fc-muted">Расход по дням · рубли</div></div><div class="fc-head-actions"><button class="fc-add-top">＋ Списание</button><button class="fc-close">×</button></div></div><div class="fc-kpi"><small>Загружаю…</small><strong>—</strong></div><div class="fc-list"></div>`;document.body.appendChild(root);root.querySelector('.fc-close').onclick=()=>root.remove();root.querySelector('.fc-add-top').onclick=()=>openEditor(dateKey(new Date()));
+    styles();document.querySelector('.fc-overlay')?.remove();const navButton=document.querySelector('.fc-pill');navButton?.classList.add('active');const root=document.createElement('div');root.className='fc-overlay';root.innerHTML=`<div class="fc-head"><div class="fc-head-copy"><div class="fc-eyebrow">Расходы</div><h2>💰 Стоимость питания</h2><div class="fc-muted">Расход по дням · рубли</div></div><div class="fc-head-actions"><button class="fc-add-top">＋ Списание</button><button class="fc-close" aria-label="Закрыть">×</button></div></div><div class="fc-kpi"><small>Загружаю…</small><strong>—</strong></div><div class="fc-list"></div>`;document.body.appendChild(root);root.querySelector('.fc-close').onclick=()=>{root.remove();navButton?.classList.remove('active')};root.querySelector('.fc-add-top').onclick=()=>openEditor(dateKey(new Date()));
     try{const ops=await loadOps();const groups={};for(const o of ops)(groups[dateKey(o.created_at)]??=[]).push(o);const days=Object.keys(groups).sort().reverse();const today=dateKey(new Date());const todayOps=groups[today]||[];const todayTotal=todayOps.reduce((s,o)=>s+Number(o.cost_total_rub||0),0);root.querySelector('.fc-kpi').innerHTML=`<small>Сегодня · ${dateLabel(today)}</small><strong>${money(todayTotal)}</strong><small>${todayOps.length} списаний</small>`;root.querySelector('.fc-list').innerHTML=days.length?days.map(day=>{const xs=groups[day],total=xs.reduce((s,o)=>s+Number(o.cost_total_rub||0),0),missing=xs.filter(o=>o.cost_total_rub==null).length;return `<div class="fc-day" data-day="${day}"><div class="fc-day-top"><div><b>${dateLabel(day)}</b><div class="fc-muted">${groupDayOps(xs).length} позиций${xs.length!==groupDayOps(xs).length?` · ${xs.length} списаний`:''}${missing?` · без цены: ${missing}`:''}</div></div><div style="text-align:right"><b>${money(total)}</b><br><button class="fc-btn">Открыть</button></div></div><div class="fc-lines" hidden></div></div>`}).join(''):'<div class="fc-day">Пока нет списаний.</div>';
       root.querySelectorAll('.fc-day[data-day]').forEach(card=>{const day=card.dataset.day,xs=groups[day],lines=card.querySelector('.fc-lines');card.querySelector('.fc-btn').onclick=()=>{if(!lines.hidden){lines.hidden=true;return}lines.hidden=false;const grouped=groupDayOps(xs);lines.innerHTML=grouped.map(g=>{const priceText=g.mixed_prices?'несколько цен':g.unit_price_rub==null?'цена не задана':money(g.unit_price_rub)+' / ед.';const sub=g.ops.length>1?`<div class="fc-subops" data-subops="${esc(g.key)}" hidden>${g.ops.map(o=>`<div class="fc-subop"><div><div class="fc-muted">${new Date(o.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} · ${o.quantity} ${esc(o.unit||'')} · ${o.cost_total_rub==null?'—':money(o.cost_total_rub)}</div></div><button class="fc-delete" type="button" data-fc-delete="${esc(o.id)}">Удалить</button></div>`).join('')}</div>`:'';return `<div class="fc-line"><div><div class="fc-line-name">${esc(g.item_name)}</div><div class="fc-muted">${Number(g.quantity).toLocaleString('ru-RU',{maximumFractionDigits:3})} ${esc(g.unit||'')} · ${priceText}${g.ops.length>1?` · ${g.ops.length} списания`:''}</div></div><div class="fc-line-side"><b>${money(g.cost_total_rub)}</b>${g.ops.length===1?`<button class="fc-delete" type="button" data-fc-delete="${esc(g.ops[0].id)}">Удалить</button>`:`<button class="fc-expand" type="button" data-fc-expand="${esc(g.key)}">Развернуть</button>`}</div>${sub}</div>`}).join('')+`${xs.some(o=>o.cost_total_rub==null)?'<div class="fc-warning">Есть позиции без цены — итог дня пока неполный.</div>':''}<div class="fc-actions"><button class="fc-add-day">＋ Добавить списание на этот день</button><button data-csv>Скачать CSV</button><button data-print>Печать / PDF</button></div>`;lines.querySelector('.fc-add-day').onclick=()=>openEditor(day);lines.querySelector('[data-csv]').onclick=()=>csv(day,xs);lines.querySelector('[data-print]').onclick=()=>printDay(day,xs);lines.querySelectorAll('[data-fc-delete]').forEach(b=>b.onclick=e=>{e.stopPropagation();requestDelete(b.dataset.fcDelete)});lines.querySelectorAll('[data-fc-expand]').forEach(b=>b.onclick=e=>{e.stopPropagation();const box=lines.querySelector(`[data-subops="${CSS.escape(b.dataset.fcExpand)}"]`);if(!box)return;box.hidden=!box.hidden;b.textContent=box.hidden?'Развернуть':'Свернуть'})}})
     }catch(e){root.querySelector('.fc-list').innerHTML=`<div class="fc-warning">Не удалось загрузить расходы: ${esc(e.message||e)}</div>`}
   }
-  function start(){styles();if(document.querySelector('.fc-pill'))return;const b=document.createElement('button');b.className='fc-pill';b.textContent='💰 Питание ₽';b.onclick=open;document.body.appendChild(b);document.addEventListener('kambuz-operation-deleted',()=>{if(document.querySelector('.fc-overlay'))setTimeout(open,80)});document.addEventListener('kambuz-dated-expense-added',()=>{if(document.querySelector('.fc-overlay'))setTimeout(open,80)})}
+  function installNavButton(){const nav=document.querySelector('.bottom-nav');if(!nav||nav.querySelector('.fc-pill'))return;const b=document.createElement('button');b.className='nav-btn fc-pill';b.type='button';b.innerHTML='<span class="nav-icon nav-icon-ruble">₽</span><em>Питание</em>';b.onclick=open;nav.appendChild(b)}
+  function start(){styles();installNavButton();const root=document.getElementById('app');if(root)new MutationObserver(()=>installNavButton()).observe(root,{childList:true,subtree:true});document.addEventListener('kambuz-operation-deleted',()=>{if(document.querySelector('.fc-overlay'))setTimeout(open,80)});document.addEventListener('kambuz-dated-expense-added',()=>{if(document.querySelector('.fc-overlay'))setTimeout(open,80)})}
   window.KAMBUZ_FOOD_COST={version:VERSION,open,openEditor};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
