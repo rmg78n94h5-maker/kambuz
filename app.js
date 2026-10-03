@@ -620,7 +620,14 @@
   }
 
   function modal(title,body,wide=false){
-    const el=document.createElement("div");el.className="modal-backdrop";el.innerHTML=`<div class="modal ${wide?"wide":""}"><div class="modal-head"><h3>${esc(title)}</h3><button class="close">✕</button></div>${body}</div>`;document.body.appendChild(el);el.querySelector(".close").onclick=()=>el.remove();el.onclick=e=>{if(e.target===el)el.remove()};return el;
+    const el=document.createElement("div");
+    el.className="modal-backdrop";
+    el.innerHTML=`<div class="modal ${wide?"wide":""}" role="dialog" aria-modal="true"><div class="modal-head"><h3>${esc(title)}</h3><button class="close" type="button" aria-label="Закрыть">✕</button></div><div class="modal-scroll">${body}</div></div>`;
+    document.body.appendChild(el);
+    const close=()=>el.remove();
+    el.querySelector(".close").onclick=close;
+    el.onclick=e=>{if(e.target===el)close()};
+    return el;
   }
 
   function itemForm(item){
