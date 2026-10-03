@@ -364,11 +364,9 @@
     <div class="home-section-head"><div><span>Последние изменения</span><h3>Движение по складу</h3></div><button class="link-btn" data-tab="history">Вся история</button></div>
     <div class="home-moves">${recent||'<div class="empty small">Операций пока нет</div>'}</div>
 
-    <div class="home-secondary-actions">
-      ${quick("📊","Аналитика","Расход и прогноз","analytics","a-green")}
-      ${quick("🧮","Сводный отчёт","Остатки + IMO / FAL","summary-report","a-amber")}
-      ${quick("📥","Импорт JSON","Добавить каталог","import-json","a-blue")}
-      ${quick("📦","Открыть склад","Поиск и карточки","stock","a-gray")}
+    <div class="home-secondary-actions compact-two">
+      ${quick("⌁","Аналитика","Расход и прогноз","analytics","a-green")}
+      ${quick("≣","Сводный отчёт","Остатки + IMO / FAL","summary-report","a-amber")}
     </div>`;
   }
   function mainAction(action,icon,title,sub,cls){return `<button class="main-action ${cls}" data-action="${action}"><span>${icon}</span><div><b>${title}</b><small>${sub}</small></div><i>›</i></button>`}
@@ -409,32 +407,83 @@
     scope.querySelectorAll("[data-item]").forEach(b=>b.onclick=()=>openItem(b.dataset.item));
   }
   function stock(){
-    return `<div class="page-head"><div><div class="eyebrow">Каталог</div><h2>Склад</h2></div><button class="secondary compact" data-action="add-item">＋ Товар</button></div>
-      <div class="search"><div class="search-input-wrap"><input id="search" placeholder="Название товара" value="${esc(state.query)}" autocomplete="off"><button type="button" id="search-clear" class="search-clear" aria-label="Очистить поиск" ${state.query?"":"hidden"}>×</button></div></div>
-      <div class="stock-toolbar"><button class="secondary compact ${activeFilterCount()?"active-filter":""}" data-action="stock-filter">⚙ Фильтр${activeFilterCount()?` · ${activeFilterCount()}`:""}</button><button class="secondary compact" data-action="stock-sort">↕ ${sortLabel()}</button></div>
-      ${activeFilterCount()?`<div class="active-filter-bar"><span>Фильтры включены · найдено ${filteredStockItems().length}</span><button data-action="stock-filter-reset">Сбросить</button></div>`:""}
-      <div class="chips">${["Все",...CATEGORIES].map(c=>`<button class="chip ${state.category===c?"active":""}" data-category="${c}">${c}</button>`).join("")}</div>
-      <div id="stock-list" class="card list-card">${stockListHtml()}</div>`;
+    const filtered=filteredStockItems();
+    const low=state.items.filter(i=>Number(i.qty)<=Number(i.min_qty||0)).length;
+    return `<div class="page-head maritime-page-head"><div><div class="eyebrow">Каталог</div><h2>Склад</h2><p>${state.items.length} позиций · ${low} требуют внимания</p></div><button class="secondary compact maritime-add" data-action="add-item"><span>＋</span>Товар</button></div>
+      <div class="stock-search-card">
+        <div class="search"><div class="search-input-wrap"><span class="stock-search-icon">⌕</span><input id="search" placeholder="Название товара" value="${esc(state.query)}" autocomplete="off"><button type="button" id="search-clear" class="search-clear" aria-label="Очистить поиск" ${state.query?"":"hidden"}>×</button></div></div>
+        <div class="stock-toolbar"><button class="secondary compact ${activeFilterCount()?"active-filter":""}" data-action="stock-filter"><span>☷</span>Фильтр${activeFilterCount()?` · ${activeFilterCount()}`:""}</button><button class="secondary compact" data-action="stock-sort"><span>↕</span>${sortLabel()}</button></div>
+        ${activeFilterCount()?`<div class="active-filter-bar"><span>Фильтры включены · найдено ${filtered.length}</span><button data-action="stock-filter-reset">Сбросить</button></div>`:""}
+        <div class="chips">${["Все",...CATEGORIES].map(cat=>`<button class="chip ${state.category===cat?"active":""}" data-category="${cat}">${cat}</button>`).join("")}</div>
+      </div>
+      <div class="stock-list-head"><span>Найдено</span><b>${filtered.length}</b></div>
+      <div id="stock-list" class="card list-card maritime-stock-list">${stockListHtml()}</div>`;
   }
   function itemRow(i){
     const low=Number(i.qty)<=Number(i.min_qty||0);
+    const empty=Number(i.qty)<=0;
     const pending=pendingForItem(i.id);
     const qtyText=`${fmt(i.qty)} ${esc(i.unit)}`;
-    return `<button class="item" data-item="${i.id}"><div class="item-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div><div class="item-main"><div class="item-title">${esc(itemLabel(i))}</div><div class="item-meta">${esc(i.subcategory||i.category)}${packLabel(i)?` · ${packLabel(i)}`:""}</div></div><div class="qty-wrap"><div class="qty ${pending?"pending-qty":low?"low":""}">${qtyText}${pending?'<span class="pending-clock" aria-label="Ожидает синхронизации">◷</span>':""}</div><div class="item-meta ${pending?"pending-text":""}">${pending?`ожидает · ${pending}`:`мин. ${fmt(i.min_qty||0)}`}</div></div></button>`;
+    const status=pending?"Ожидает":empty?"Нет":low?"Мало":"В наличии";
+    const statusClass=pending?"pending":empty?"out":low?"low":"ok";
+    return `<button class="item maritime-item" data-item="${i.id}">
+      <div class="item-avatar">${esc((i.brand||i.name||"?").slice(0,1).toUpperCase())}</div>
+      <div class="item-main">
+        <div class="item-title">${esc(itemLabel(i))}</div>
+        <div class="item-meta">${esc(i.subcategory||i.category)}${packLabel(i)?` · ${packLabel(i)}`:""}</div>
+        <span class="stock-status ${statusClass}">${status}</span>
+      </div>
+      <div class="qty-wrap">
+        <div class="qty ${pending?"pending-qty":low?"low":""}">${qtyText}${pending?'<span class="pending-clock" aria-label="Ожидает синхронизации">◷</span>':""}</div>
+        <div class="item-meta ${pending?"pending-text":""}">${pending?`ожидает · ${pending}`:`мин. ${fmt(i.min_qty||0)}`}</div>
+      </div>
+      <i class="item-chevron">›</i>
+    </button>`;
   }
 
   function history(){
-    const rows=state.ops.map(o=>{const i=state.items.find(x=>x.id===o.item_id);const canDelete=o.type==="consumption"||o.type==="writeoff";return `<div class="history-entry ${o.pending?"history-pending":""}"><div class="history-top"><div><span class="badge b-${o.type}">${labelType(o.type)}</span> <b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b>${o.pending?'<span class="pending-pill">◷ Ожидает</span>':""}</div><b>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i?.unit||"")}</b></div><div class="history-bottom"><div class="item-meta">${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}${o.reason?` · ${esc(o.reason)}`:""}${o.comment?` · ${esc(o.comment)}`:""}</div>${canDelete?`<button class="history-delete" type="button" data-op-delete="${o.id}">Удалить</button>`:""}</div></div>`}).join("");
-    return `<div class="page-head"><div><div class="eyebrow">Журнал</div><h2>История операций</h2></div></div><div class="card">${rows||'<div class="empty">Операций пока нет</div>'}</div>`;
+    const today=localDateKey();
+    const todayCount=state.ops.filter(o=>localDateKey(o.created_at)===today).length;
+    const pendingCount=state.ops.filter(o=>o.pending).length;
+    const rows=state.ops.map(o=>{
+      const i=state.items.find(x=>x.id===o.item_id);
+      const canDelete=o.type==="consumption"||o.type==="writeoff";
+      return `<div class="history-entry maritime-history ${o.pending?"history-pending":""}">
+        <div class="history-icon b-${o.type}">${sign(o.type)}</div>
+        <div class="history-body">
+          <div class="history-title-row"><b>${esc(i?itemLabel(i):(o.item_name||"Товар"))}</b><strong>${sign(o.type)}${fmt(o.quantity)} ${esc(o.unit||i?.unit||"")}</strong></div>
+          <div class="history-meta-row"><span class="badge b-${o.type}">${labelType(o.type)}</span>${o.pending?'<span class="pending-pill">◷ Ожидает</span>':""}<small>${new Date(o.created_at).toLocaleString("ru-RU")} · ${esc(o.user_name||"Пользователь")}${o.reason?` · ${esc(o.reason)}`:""}${o.comment?` · ${esc(o.comment)}`:""}</small></div>
+        </div>
+        ${canDelete?`<button class="history-delete" type="button" data-op-delete="${o.id}">Удалить</button>`:""}
+      </div>`;
+    }).join("");
+    return `<div class="page-head maritime-page-head"><div><div class="eyebrow">Журнал</div><h2>История операций</h2><p>Сегодня ${todayCount} · в очереди ${pendingCount}</p></div></div>
+      <div class="history-summary">
+        <div><small>Всего операций</small><b>${state.ops.length}</b></div>
+        <div><small>Сегодня</small><b>${todayCount}</b></div>
+        <div><small>Ожидает</small><b>${pendingCount}</b></div>
+      </div>
+      <div class="card maritime-history-list">${rows||'<div class="empty">Операций пока нет</div>'}</div>`;
   }
-  function more(){return `<div class="page-head"><div><div class="eyebrow">Настройки и отчёты</div><h2>Ещё</h2></div></div>
-    <div class="menu-list">
-      <button data-action="export"><span>⬇️</span><div><b>Экспорт остатков</b><small>PDF и Word</small></div><i>›</i></button>
-      <button data-action="import-json"><span>📥</span><div><b>Импорт каталога</b><small>JSON без дублей</small></div><i>›</i></button>
-      <button data-action="analytics"><span>📊</span><div><b>Аналитика</b><small>Расход за период</small></div><i>›</i></button>
-      <button data-action="force-update"><span>🔄</span><div><b>Обновить Камбуз</b><small>Проверить новую версию и перезапустить</small></div><i>›</i></button>
-      <button data-action="profile"><span>👤</span><div><b>Пользователь</b><small>${esc(state.user)}</small></div><i>›</i></button>
-    </div>`}
+
+  function more(){
+    return `<div class="page-head maritime-page-head"><div><div class="eyebrow">Сервис</div><h2>Ещё</h2><p>Отчёты, данные и настройки Камбуза</p></div></div>
+      <div class="more-section-title"><span>Отчёты</span></div>
+      <div class="menu-list maritime-menu">
+        <button data-action="summary-report"><span class="menu-icon">≣</span><div><b>Сводный отчёт</b><small>Остатки + IMO / FAL</small></div><i>›</i></button>
+        <button data-action="analytics"><span class="menu-icon">⌁</span><div><b>Аналитика</b><small>Расход и динамика</small></div><i>›</i></button>
+        <button data-action="export"><span class="menu-icon">⇩</span><div><b>Экспорт остатков</b><small>PDF и Word</small></div><i>›</i></button>
+      </div>
+      <div class="more-section-title"><span>Данные и приложение</span></div>
+      <div class="menu-list maritime-menu">
+        <button data-action="import-json"><span class="menu-icon">⇧</span><div><b>Импорт каталога</b><small>JSON без дублей</small></div><i>›</i></button>
+        <button data-action="force-update"><span class="menu-icon">↻</span><div><b>Обновить Камбуз</b><small>Проверить новую версию</small></div><i>›</i></button>
+      </div>
+      <div class="more-section-title"><span>Аккаунт</span></div>
+      <div class="menu-list maritime-menu">
+        <button data-action="profile"><span class="menu-icon">●</span><div><b>Пользователь</b><small>${esc(state.user)}</small></div><i>›</i></button>
+      </div>`;
+  }
 
   function bind(){
     document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;render()});
