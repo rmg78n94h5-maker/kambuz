@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "2.1.5";
+  const APP_VERSION = "2.3.1";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -579,16 +579,31 @@
   }
 
   async function forceUpdateApp(){
-    if(!navigator.onLine){toast("Для проверки обновления нужен интернет");return}
-    toast("Проверяю обновление…");
+    if(!navigator.onLine){toast("Для обновления нужен интернет");return}
+    toast("Загружаю новую версию…");
     try{
       if(!("serviceWorker" in navigator)){location.reload();return}
       const reg=await navigator.serviceWorker.getRegistration("./");
       if(reg){
         await reg.update();
-        if(reg.waiting)reg.waiting.postMessage({type:"SKIP_WAITING"});
+        const candidate=reg.waiting||reg.installing;
+        if(candidate&&candidate.state!=="installed"&&candidate.state!=="activated"){
+          await new Promise(resolve=>{
+            const done=()=>{if(["installed","activated","redundant"].includes(candidate.state))resolve()};
+            candidate.addEventListener("statechange",done);
+            setTimeout(resolve,7000);
+          });
+        }
+        const waiting=reg.waiting||(candidate?.state==="installed"?candidate:null);
+        if(waiting){
+          const changed=new Promise(resolve=>{
+            navigator.serviceWorker.addEventListener("controllerchange",resolve,{once:true});
+            setTimeout(resolve,4000);
+          });
+          waiting.postMessage({type:"SKIP_WAITING"});
+          await changed;
+        }
       }
-      await new Promise(r=>setTimeout(r,900));
       location.reload();
     }catch(e){
       console.error(e);
@@ -1010,7 +1025,7 @@
   window.KAMBUZ_OPERATIONS={deleteOperation};
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=2.3.0", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=2.3.1", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();
