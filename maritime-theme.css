@@ -1066,3 +1066,346 @@ body .ic-delete{
     height:17px;
   }
 }
+
+
+/* Phase 6 — stock, history and service screens */
+.maritime-page-head{
+  margin-top:12px;
+  align-items:flex-end;
+}
+.maritime-page-head h2{
+  margin-top:3px;
+}
+.maritime-page-head p{
+  margin:5px 0 0;
+  color:#8494a1;
+  font-size:12px;
+}
+.maritime-add{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  min-height:40px;
+  padding:0 12px;
+  border-radius:13px;
+  color:#087f86;
+  border-color:#cfe9e9;
+  background:#ecf9f8;
+}
+.maritime-add span{
+  font-size:18px;
+  line-height:1;
+}
+
+.stock-search-card{
+  padding:10px;
+  border:1px solid #e2eaf0;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 8px 24px rgba(20,48,73,.05);
+}
+.stock-search-card .search{
+  position:static;
+  padding:0;
+  background:none;
+}
+.stock-search-card .search-input-wrap{
+  position:relative;
+  flex:1;
+}
+.stock-search-card .search input{
+  width:100%;
+  min-height:48px;
+  padding-left:41px;
+  border-radius:15px;
+  box-shadow:none;
+  background:#f7fafb;
+}
+.stock-search-icon{
+  position:absolute;
+  left:14px;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:1;
+  color:#8294a1;
+  font-size:22px;
+  pointer-events:none;
+}
+.stock-search-card .search-clear{
+  top:50%;
+  right:9px;
+  transform:translateY(-50%);
+}
+.stock-search-card .stock-toolbar{
+  margin-top:8px;
+  gap:7px;
+}
+.stock-search-card .stock-toolbar .secondary{
+  flex:1;
+  min-height:38px;
+  border-radius:12px;
+  background:#f5f8fa;
+  border-color:#e4ebef;
+  color:#496174;
+  font-size:11px;
+}
+.stock-search-card .stock-toolbar .active-filter{
+  background:#e6f8f7;
+  border-color:#cbeaea;
+  color:#087e84;
+}
+.stock-search-card .chips{
+  margin:9px -2px -2px;
+  padding:0 2px 2px;
+}
+.stock-search-card .chip{
+  padding:8px 11px;
+  font-size:11px;
+}
+.stock-list-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:14px 3px 7px;
+  color:#8695a2;
+  font-size:11px;
+  font-weight:700;
+}
+.stock-list-head b{
+  color:#15354b;
+  font-size:13px;
+}
+.maritime-stock-list{
+  padding:0 12px;
+}
+.maritime-item{
+  position:relative;
+  min-height:82px;
+  padding:12px 24px 12px 0;
+}
+.maritime-item .item-avatar{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  background:linear-gradient(145deg,#e8f7f7,#dfeef2);
+  color:#0b737a;
+}
+.maritime-item .item-main{
+  padding-right:4px;
+}
+.maritime-item .item-title{
+  color:#17364d;
+}
+.maritime-item .item-meta{
+  font-size:10px;
+}
+.stock-status{
+  display:inline-flex;
+  align-items:center;
+  margin-top:6px;
+  padding:3px 7px;
+  border-radius:999px;
+  font-size:9px;
+  font-weight:850;
+}
+.stock-status.ok{background:#e8f8f5;color:#087e7e}
+.stock-status.low{background:#fff4df;color:#a56d00}
+.stock-status.out{background:#fff0ef;color:#c83f45}
+.stock-status.pending{background:#fff3cf;color:#936200}
+.maritime-item .qty{
+  font-size:15px;
+}
+.item-chevron{
+  position:absolute;
+  right:4px;
+  top:50%;
+  transform:translateY(-50%);
+  color:#a6b3bc;
+  font-style:normal;
+  font-size:20px;
+}
+
+.history-summary{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-bottom:10px;
+}
+.history-summary>div{
+  padding:12px;
+  border:1px solid #e2eaf0;
+  border-radius:17px;
+  background:#fff;
+  box-shadow:0 6px 18px rgba(20,48,73,.04);
+}
+.history-summary small{
+  display:block;
+  color:#8998a4;
+  font-size:9px;
+}
+.history-summary b{
+  display:block;
+  margin-top:3px;
+  color:#17364d;
+  font-size:21px;
+  letter-spacing:-.03em;
+}
+.maritime-history-list{
+  padding:0;
+  overflow:hidden;
+}
+.maritime-history{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:10px;
+  align-items:start;
+  padding:13px;
+  border-bottom:1px solid #edf2f5;
+}
+.maritime-history:last-child{border-bottom:0}
+.history-icon{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  font-size:16px;
+  font-weight:900;
+}
+.history-icon.b-receipt{background:#e8f1fe;color:#1769d2}
+.history-icon.b-consumption{background:#e5f8f5;color:#078b84}
+.history-icon.b-writeoff{background:#fff0ef;color:#cf3e43}
+.history-icon.b-adjustment{background:#fff4df;color:#a86e00}
+.history-body{min-width:0}
+.history-title-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+.history-title-row b{
+  min-width:0;
+  overflow:hidden;
+  color:#17364d;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  font-size:13px;
+}
+.history-title-row strong{
+  color:#17364d;
+  white-space:nowrap;
+  font-size:12px;
+}
+.history-meta-row{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:6px;
+}
+.history-meta-row small{
+  width:100%;
+  color:#8796a2;
+  font-size:10px;
+  line-height:1.35;
+}
+.maritime-history .badge{
+  padding:3px 6px;
+  font-size:8px;
+}
+.maritime-history .pending-pill{
+  font-size:8px;
+  padding:3px 6px;
+}
+.maritime-history .history-delete{
+  align-self:center;
+  margin:0;
+  padding:6px 7px;
+  border-radius:9px;
+  font-size:9px;
+}
+
+.more-section-title{
+  margin:18px 3px 7px;
+}
+.more-section-title span{
+  color:#8a98a5;
+  font-size:10px;
+  font-weight:850;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.maritime-menu{
+  overflow:hidden;
+  border:1px solid #e2eaf0;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 8px 24px rgba(20,48,73,.05);
+}
+.maritime-menu button{
+  min-height:68px;
+  padding:11px 13px;
+  border:0;
+  border-bottom:1px solid #edf2f5;
+  border-radius:0;
+  background:#fff;
+  box-shadow:none;
+}
+.maritime-menu button:last-child{border-bottom:0}
+.maritime-menu button>div{
+  min-width:0;
+  flex:1;
+}
+.maritime-menu button b{
+  display:block;
+  color:#17364d;
+  font-size:13px;
+}
+.maritime-menu button small{
+  display:block;
+  margin-top:3px;
+  color:#8998a4;
+  font-size:10px;
+}
+.maritime-menu button>i{
+  color:#a4b1ba;
+  font-style:normal;
+  font-size:20px;
+}
+.menu-icon{
+  width:36px;
+  height:36px;
+  display:grid;
+  place-items:center;
+  flex:none;
+  border-radius:12px;
+  background:#e8f7f7;
+  color:#087f86;
+  font-size:18px;
+  font-weight:800;
+}
+
+.home-secondary-actions.compact-two{
+  grid-template-columns:1fr 1fr;
+}
+.home-secondary-actions.compact-two .action{
+  min-height:82px;
+}
+
+@media(max-width:390px){
+  .maritime-history{
+    grid-template-columns:auto 1fr;
+  }
+  .maritime-history .history-delete{
+    grid-column:2;
+    justify-self:start;
+    margin-top:-2px;
+  }
+  .history-title-row{
+    display:block;
+  }
+  .history-title-row strong{
+    display:block;
+    margin-top:4px;
+  }
+}
