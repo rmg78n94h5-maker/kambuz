@@ -366,7 +366,7 @@
 
     <div class="home-secondary-actions compact-two">
       ${quick("⌁","Аналитика","Расход и прогноз","analytics","a-green")}
-      ${quick("≣","Сводный отчёт","Остатки + IMO / FAL","summary-report","a-amber")}
+      ${quick("≣","IMO / FAL","Provision Stores","summary-report","a-amber")}
     </div>`;
   }
   function mainAction(action,icon,title,sub,cls){return `<button class="main-action ${cls}" data-action="${action}"><span>${icon}</span><div><b>${title}</b><small>${sub}</small></div><i>›</i></button>`}
@@ -470,7 +470,8 @@
     return `<div class="page-head maritime-page-head"><div><div class="eyebrow">Сервис</div><h2>Ещё</h2><p>Отчёты, данные и настройки Камбуза</p></div></div>
       <div class="more-section-title"><span>Отчёты</span></div>
       <div class="menu-list maritime-menu">
-        <button data-action="summary-report"><span class="menu-icon">≣</span><div><b>Сводный отчёт</b><small>Остатки + IMO / FAL</small></div><i>›</i></button>
+        <button data-action="summary-report"><span class="menu-icon">≣</span><div><b>IMO / FAL отчёт</b><small>Provision Stores · текущие остатки</small></div><i>›</i></button>
+        <button data-action="period-reports"><span class="menu-icon">▤</span><div><b>Отчёты за период</b><small>Неделя и месяц · PDF / DOC</small></div><i>›</i></button>
         <button data-action="analytics"><span class="menu-icon">⌁</span><div><b>Аналитика</b><small>Расход и динамика</small></div><i>›</i></button>
         <button data-action="export"><span class="menu-icon">⇩</span><div><b>Экспорт остатков</b><small>PDF и Word</small></div><i>›</i></button>
       </div>
@@ -513,6 +514,7 @@
     else if(a==="import-json") importJson();
     else if(a==="analytics") analytics();
     else if(a==="summary-report") summaryReport();
+    else if(a==="period-reports") periodReports();
     else if(a==="force-update") forceUpdateApp();
     else if(a==="stock-filter") stockFilterModal();
     else if(a==="stock-sort") stockSortModal();
@@ -873,30 +875,125 @@
     problemModal.querySelectorAll("[data-fix-report-item]").forEach(b=>b.onclick=()=>{const item=state.items.find(i=>i.id===b.dataset.fixReportItem);if(!item)return;problemModal.remove();itemForm(item)});
   }
   function summaryReport(){
-    const r=buildSummaryReport();
-    const rows=REPORT_GROUPS.map(g=>`<button class="report-row" data-report-group="${g.id}"><span><b>${esc(g.name)}</b><small>${r.details[g.id].length} позиций</small></span><strong>${fmt(r.totals[g.id])} ${g.unit}</strong><i>›</i></button>`).join("");
-    const warning=r.unresolved.length?`<button class="report-warning" id="show-unresolved-report"><span><b>⚠️ Не удалось пересчитать: ${r.unresolved.length}</b><small>Нажми, чтобы увидеть товары и исправить фасовку.</small></span><i>›</i></button>`:"";
-    const imo=window.KAMBUZ_IMO_REPORT?.build?.();
-    const imoGroups=[
-      ["frozen_meat_fish","Frozen foods, meat, fish, chicken"],
-      ["fresh_produce","Fresh vegetables, fruits"],
-      ["grocery","Grocery"],
-      ["dairy","Dairy products"],
-      ["canned","Canned goods"]
-    ];
-    const imoRows=imo?`<div class="report-subhead"><span>IMO / FAL Form 3</span><h3>Provision Stores</h3></div><div class="report-list report-imo-list">${imoGroups.map(([id,label])=>`<div class="report-row static"><span><b>${esc(label)}</b><small>итог для формы</small></span><strong>${Math.round(imo.groups?.[id]?.total||0)} Kgs</strong></div>`).join("")}</div>${imo.unresolved?.length?`<div class="report-warning static"><span><b>⚠️ IMO не рассчитано: ${imo.unresolved.length}</b><small>Нужно заполнить фасовку у отдельных товаров.</small></span></div>`:""}<button class="secondary full" id="open-imo-report">Открыть полный IMO / FAL отчёт</button>`:"";
+    if(window.KAMBUZ_IMO_REPORT?.open){window.KAMBUZ_IMO_REPORT.open();return}
+    toast("IMO / FAL отчёт пока недоступен — обнови Камбуз");
+  }
 
-    const el=modal("Сводный отчёт",`<div class="report-date">Остатки на ${new Date().toLocaleString("ru-RU")}</div>
-      <div class="report-subhead"><span>Склад</span><h3>Краткая сводка</h3></div>
-      <div class="report-list">${rows}</div>
-      ${warning}
-      ${imoRows}
-      <div class="report-note">Растительное масло временно пересчитывается по коэффициенту <b>0,92 кг/л</b>.</div>
-      <button class="primary full" id="copy-summary-report">Скопировать сводку</button>`);
-    el.querySelectorAll("[data-report-group]").forEach(b=>b.onclick=()=>{const id=b.dataset.reportGroup,g=REPORT_GROUPS.find(x=>x.id===id);modal(g.name,`<div class="analytics-list">${r.details[id].map(x=>`<div><span>${esc(itemLabel(x.item))}<small>${fmt(x.item.qty)} ${esc(x.item.unit)}${packLabel(x.item)?` · ${packLabel(x.item)}`:""}</small></span><b>${fmt(x.amount)} ${g.unit}</b></div>`).join("")||'<div class="empty">Подходящих товаров пока нет</div>'}</div>`)});
-    el.querySelector("#show-unresolved-report")?.addEventListener("click",()=>showUnresolvedReportItems(r.unresolved));
-    el.querySelector("#open-imo-report")?.addEventListener("click",()=>window.KAMBUZ_IMO_REPORT?.open?.());
-    el.querySelector("#copy-summary-report").onclick=async()=>{const text=[`Сводный остаток на ${new Date().toLocaleDateString("ru-RU")}`,...REPORT_GROUPS.map(g=>`${g.name} — ${fmt(r.totals[g.id])} ${g.unit}`),...(imo?["","IMO / FAL — PROVISION STORES:",...imoGroups.map(([id,label])=>`${label} — ${Math.round(imo.groups?.[id]?.total||0)} Kgs`)]:[])].join("\n");try{await navigator.clipboard.writeText(text);toast("Сводка скопирована")}catch{toast("Не удалось скопировать")}};
+  function periodBounds(kind){
+    const end=new Date();end.setHours(23,59,59,999);
+    const days=kind==="week"?7:30;
+    const start=new Date(end);start.setDate(start.getDate()-(days-1));start.setHours(0,0,0,0);
+    return {kind,days,start,end,label:kind==="week"?"За 7 дней":"За 30 дней"};
+  }
+  function reportDate(d){return d.toLocaleDateString("ru-RU",{day:"2-digit",month:"2-digit",year:"numeric"})}
+  function reportFileDate(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+  function periodReportData(kind){
+    const p=periodBounds(kind);
+    const ops=state.ops.filter(o=>{const t=new Date(o.created_at).getTime();return Number.isFinite(t)&&t>=p.start.getTime()&&t<=p.end.getTime()}).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+    const byItem=new Map();
+    let cost=0,missingCost=0;
+    const counts={receipt:0,consumption:0,writeoff:0,adjustment:0};
+    for(const o of ops){
+      const item=state.items.find(i=>i.id===o.item_id);
+      const key=o.item_id||`${o.item_name||"Товар"}|${o.unit||""}`;
+      if(!byItem.has(key))byItem.set(key,{name:item?itemLabel(item):(o.item_name||"Товар"),unit:o.unit||item?.unit||"",receipt:0,consumption:0,writeoff:0,adjustment:0,ops:0});
+      const row=byItem.get(key),q=Number(o.quantity||0);
+      if(o.type in counts){counts[o.type]++;row[o.type]+=q}
+      row.ops++;
+      if(["consumption","writeoff"].includes(o.type)){
+        if(o.cost_total_rub==null)missingCost++;
+        else cost+=Number(o.cost_total_rub||0);
+      }
+    }
+    const items=[...byItem.values()].sort((a,b)=>a.name.localeCompare(b.name,"ru"));
+    return {...p,ops,items,counts,cost,missingCost};
+  }
+  function periodReportName(d){
+    return `Камбуз · ${d.label.toLowerCase()} · ${reportDate(d.start)} — ${reportDate(d.end)}`;
+  }
+  function periodReportTableRows(d){
+    return d.items.map((x,n)=>[
+      String(n+1),x.name,x.unit||"—",
+      x.receipt?fmt(x.receipt):"—",
+      x.consumption?fmt(x.consumption):"—",
+      x.writeoff?fmt(x.writeoff):"—",
+      x.adjustment?fmt(x.adjustment):"—"
+    ]);
+  }
+  function periodReports(){
+    const week=periodReportData("week"),month=periodReportData("month");
+    const card=d=>`<div class="period-report-card">
+      <div class="period-report-head"><div><span>${d.label}</span><b>${reportDate(d.start)} — ${reportDate(d.end)}</b></div><strong>${d.ops.length}</strong></div>
+      <div class="period-report-meta"><span>Приход: <b>${d.counts.receipt}</b></span><span>Расход: <b>${d.counts.consumption}</b></span><span>Списание: <b>${d.counts.writeoff}</b></span></div>
+      <div class="period-report-actions">
+        <button class="secondary" data-period-preview="${d.kind}">Открыть</button>
+        <button class="primary" data-period-pdf="${d.kind}">Скачать PDF</button>
+        <button class="secondary" data-period-doc="${d.kind}">Скачать DOC</button>
+      </div>
+    </div>`;
+    const el=modal("Отчёты за период",`<div class="period-report-intro">Отчёт по движению запасов: приход, расход, списание и корректировки. PDF и DOC формируются прямо из данных Камбуза.</div>${card(week)}${card(month)}`,true);
+    el.querySelectorAll("[data-period-preview]").forEach(b=>b.onclick=()=>previewPeriodReport(b.dataset.periodPreview));
+    el.querySelectorAll("[data-period-pdf]").forEach(b=>b.onclick=()=>downloadPeriodPdf(b.dataset.periodPdf,b));
+    el.querySelectorAll("[data-period-doc]").forEach(b=>b.onclick=()=>downloadPeriodDoc(b.dataset.periodDoc));
+  }
+  function previewPeriodReport(kind){
+    const d=periodReportData(kind);
+    const rows=d.items.map(x=>`<div class="period-preview-row"><div><b>${esc(x.name)}</b><small>${esc(x.unit||"")} · ${x.ops} операций</small></div><div><span class="in">+${fmt(x.receipt)}</span><span class="out">−${fmt(x.consumption)}</span><span class="write">×${fmt(x.writeoff)}</span></div></div>`).join("")||'<div class="empty">За период операций нет</div>';
+    modal(periodReportName(d),`<div class="period-preview-kpis"><div><small>Приход</small><b>${d.counts.receipt}</b></div><div><small>Расход</small><b>${d.counts.consumption}</b></div><div><small>Списания</small><b>${d.counts.writeoff}</b></div><div><small>Стоимость</small><b>${moneyReport(d.cost)}</b></div></div>${d.missingCost?`<div class="report-warning static"><span><b>Без цены: ${d.missingCost}</b><small>Стоимость периода рассчитана не полностью.</small></span></div>`:""}<div class="period-preview-list">${rows}</div>`,true);
+  }
+  function moneyReport(n){return Number(n||0).toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₽"}
+  function periodReportHtml(d){
+    const opRows=d.ops.map((o,n)=>{const item=state.items.find(i=>i.id===o.item_id);return `<tr><td>${n+1}</td><td>${new Date(o.created_at).toLocaleString("ru-RU")}</td><td>${esc(labelType(o.type))}</td><td>${esc(item?itemLabel(item):(o.item_name||"Товар"))}</td><td>${fmt(o.quantity)} ${esc(o.unit||item?.unit||"")}</td><td>${esc(o.user_name||"")}</td><td>${esc(o.reason||o.comment||"")}</td></tr>`}).join("");
+    const sumRows=d.items.map((x,n)=>`<tr><td>${n+1}</td><td>${esc(x.name)}</td><td>${esc(x.unit||"")}</td><td>${x.receipt?fmt(x.receipt):"—"}</td><td>${x.consumption?fmt(x.consumption):"—"}</td><td>${x.writeoff?fmt(x.writeoff):"—"}</td><td>${x.adjustment?fmt(x.adjustment):"—"}</td></tr>`).join("");
+    return `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;color:#162f43;padding:24px}h1{font-size:22px;margin:0 0 6px}h2{font-size:16px;margin:24px 0 8px}.muted{color:#697b88;font-size:12px}.kpis{display:flex;gap:18px;margin:14px 0}.kpis b{font-size:18px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #aebcc5;padding:6px;vertical-align:top}th{background:#eef4f6;text-align:left}.warn{margin:10px 0;padding:8px;background:#fff4dd}</style></head><body><h1>${esc(periodReportName(d))}</h1><div class="muted">Сформировано: ${new Date().toLocaleString("ru-RU")}</div><div class="kpis"><span>Приход: <b>${d.counts.receipt}</b></span><span>Расход: <b>${d.counts.consumption}</b></span><span>Списания: <b>${d.counts.writeoff}</b></span><span>Стоимость: <b>${moneyReport(d.cost)}</b></span></div>${d.missingCost?`<div class="warn">Без цены: ${d.missingCost}. Стоимость периода рассчитана не полностью.</div>`:""}<h2>Движение по товарам</h2><table><thead><tr><th>№</th><th>Товар</th><th>Ед.</th><th>Приход</th><th>Расход</th><th>Списание</th><th>Корр.</th></tr></thead><tbody>${sumRows||'<tr><td colspan="7">Нет операций</td></tr>'}</tbody></table><h2>Журнал операций</h2><table><thead><tr><th>№</th><th>Дата</th><th>Тип</th><th>Товар</th><th>Кол-во</th><th>Пользователь</th><th>Комментарий</th></tr></thead><tbody>${opRows||'<tr><td colspan="7">Нет операций</td></tr>'}</tbody></table></body></html>`;
+  }
+  function downloadPeriodDoc(kind){
+    const d=periodReportData(kind),html=periodReportHtml(d);
+    download(new Blob(["\ufeff",html],{type:"application/msword;charset=utf-8"}),`kambuz-report-${d.kind}-${reportFileDate()}.doc`);
+    toast("DOC сформирован");
+  }
+  async function ensurePdfMake(){
+    if(window.pdfMake?.createPdf)return true;
+    toast("Загружаю модуль PDF…");
+    const load=src=>new Promise((resolve,reject)=>{const s=document.createElement("script");s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});
+    try{
+      if(!window.pdfMake)await load("https://cdn.jsdelivr.net/npm/pdfmake@0.2.23/build/pdfmake.min.js");
+      if(!window.pdfMake?.vfs)await load("https://cdn.jsdelivr.net/npm/pdfmake@0.2.23/build/vfs_fonts.js");
+      return Boolean(window.pdfMake?.createPdf);
+    }catch(e){console.error(e);return false}
+  }
+  async function downloadPeriodPdf(kind,button){
+    const d=periodReportData(kind);
+    const old=button?.textContent;if(button){button.disabled=true;button.textContent="Формирую…"}
+    try{
+      if(!(await ensurePdfMake())){toast("Не удалось загрузить PDF-модуль");return}
+      const tableBody=[["№","Товар","Ед.","Приход","Расход","Списание","Корр."],...periodReportTableRows(d)];
+      const logBody=[["Дата","Тип","Товар","Количество","Пользователь"],...d.ops.map(o=>{const i=state.items.find(x=>x.id===o.item_id);return [new Date(o.created_at).toLocaleString("ru-RU"),labelType(o.type),i?itemLabel(i):(o.item_name||"Товар"),`${fmt(o.quantity)} ${o.unit||i?.unit||""}`,o.user_name||""]})];
+      const doc={
+        pageSize:"A4",pageOrientation:"landscape",pageMargins:[28,32,28,32],
+        defaultStyle:{font:"Roboto",fontSize:8,color:"#17364d"},
+        content:[
+          {text:periodReportName(d),fontSize:18,bold:true,color:"#08243d",margin:[0,0,0,4]},
+          {text:`Сформировано: ${new Date().toLocaleString("ru-RU")}`,color:"#718195",margin:[0,0,0,12]},
+          {columns:[
+            {text:[{text:"Приход\n",color:"#718195"},{text:String(d.counts.receipt),fontSize:16,bold:true}]},
+            {text:[{text:"Расход\n",color:"#718195"},{text:String(d.counts.consumption),fontSize:16,bold:true}]},
+            {text:[{text:"Списания\n",color:"#718195"},{text:String(d.counts.writeoff),fontSize:16,bold:true}]},
+            {text:[{text:"Стоимость\n",color:"#718195"},{text:moneyReport(d.cost),fontSize:16,bold:true}]}
+          ],margin:[0,0,0,12]},
+          ...(d.missingCost?[{text:`Без цены: ${d.missingCost}. Стоимость периода рассчитана не полностью.`,color:"#8a5d00",fillColor:"#fff4dd",margin:[0,0,0,10]}]:[]),
+          {text:"Движение по товарам",fontSize:12,bold:true,margin:[0,6,0,5]},
+          {table:{headerRows:1,widths:[18,"*",34,44,44,44,44],body:tableBody},layout:"lightHorizontalLines"},
+          {text:"Журнал операций",fontSize:12,bold:true,margin:[0,16,0,5]},
+          {table:{headerRows:1,widths:[90,55,"*",65,70],body:logBody},layout:"lightHorizontalLines"}
+        ],
+        styles:{}
+      };
+      window.pdfMake.createPdf(doc).download(`kambuz-report-${d.kind}-${reportFileDate()}.pdf`);
+      toast("PDF сформирован");
+    }finally{
+      if(button){button.disabled=false;button.textContent=old}
+    }
   }
 
   function exportModal(){const el=modal("Экспорт остатков",`<div class="form"><div class="field"><label>Категория</label><select id="export-category"><option>Все</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join("")}</select></div><button class="primary" id="export-pdf">PDF / печать</button><button class="secondary" id="export-doc">Word (.doc)</button></div>`);el.querySelector("#export-pdf").onclick=()=>exportPdf(el.querySelector("#export-category").value);el.querySelector("#export-doc").onclick=()=>exportDoc(el.querySelector("#export-category").value)}
@@ -913,7 +1010,7 @@
   window.KAMBUZ_OPERATIONS={deleteOperation};
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=2.1.5", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=2.3.0", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();

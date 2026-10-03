@@ -1459,3 +1459,160 @@ body .ic-delete{
     max-height:90dvh;
   }
 }
+
+
+/* Phase 7 — period reports */
+.period-report-intro{
+  margin-bottom:12px;
+  padding:12px 14px;
+  border:1px solid #dce9ee;
+  border-radius:16px;
+  background:#f3f8fa;
+  color:#607687;
+  font-size:11px;
+  line-height:1.45;
+}
+.period-report-card{
+  margin:10px 0;
+  padding:15px;
+  border:1px solid #e1eaf0;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 8px 24px rgba(20,48,73,.05);
+}
+.period-report-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.period-report-head span{
+  display:block;
+  color:#07989a;
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.period-report-head b{
+  display:block;
+  margin-top:4px;
+  color:#17364d;
+  font-size:14px;
+}
+.period-report-head strong{
+  min-width:40px;
+  height:40px;
+  display:grid;
+  place-items:center;
+  border-radius:13px;
+  background:#e8f8f7;
+  color:#087f86;
+  font-size:17px;
+}
+.period-report-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:12px;
+}
+.period-report-meta span{
+  padding:5px 8px;
+  border-radius:999px;
+  background:#f4f7f9;
+  color:#738696;
+  font-size:9px;
+}
+.period-report-meta b{color:#17364d}
+.period-report-actions{
+  display:grid;
+  grid-template-columns:.8fr 1.15fr 1.15fr;
+  gap:7px;
+  margin-top:12px;
+}
+.period-report-actions button{
+  min-height:42px;
+  margin:0;
+  padding:8px;
+  border-radius:12px;
+  font-size:10px;
+}
+.period-preview-kpis{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  margin-bottom:12px;
+}
+.period-preview-kpis>div{
+  padding:11px;
+  border:1px solid #e3eaf0;
+  border-radius:15px;
+  background:#f8fafb;
+}
+.period-preview-kpis small{
+  display:block;
+  color:#8797a4;
+  font-size:9px;
+}
+.period-preview-kpis b{
+  display:block;
+  margin-top:3px;
+  color:#17364d;
+  font-size:15px;
+}
+.period-preview-list{
+  overflow:hidden;
+  border:1px solid #e2eaf0;
+  border-radius:17px;
+  background:#fff;
+}
+.period-preview-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:center;
+  padding:11px 12px;
+  border-bottom:1px solid #edf2f5;
+}
+.period-preview-row:last-child{border-bottom:0}
+.period-preview-row>div:first-child{min-width:0}
+.period-preview-row b{
+  display:block;
+  overflow:hidden;
+  color:#17364d;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  font-size:12px;
+}
+.period-preview-row small{
+  display:block;
+  margin-top:3px;
+  color:#8a99a4;
+  font-size:9px;
+}
+.period-preview-row>div:last-child{
+  display:flex;
+  gap:4px;
+  white-space:nowrap;
+}
+.period-preview-row>div:last-child span{
+  padding:4px 6px;
+  border-radius:8px;
+  font-size:9px;
+  font-weight:800;
+}
+.period-preview-row .in{background:#e8f1fe;color:#1769d2}
+.period-preview-row .out{background:#e5f8f5;color:#078b84}
+.period-preview-row .write{background:#fff0ef;color:#cf3e43}
+
+@media(max-width:430px){
+  .period-report-actions{
+    grid-template-columns:1fr 1fr;
+  }
+  .period-report-actions button:first-child{
+    grid-column:1/-1;
+  }
+  .period-preview-kpis{
+    grid-template-columns:1fr 1fr;
+  }
+}
