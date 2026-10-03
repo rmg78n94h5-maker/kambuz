@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const VERSION='2.3.0';
+  const VERSION='2.3.1';
   const cfg=window.KAMBUZ_CONFIG||{}; let sb=null;
   const money=n=>Number(n||0).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₽';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -32,21 +32,24 @@
         max-width:760px;margin:0 auto 12px;
         display:flex;justify-content:space-between;align-items:flex-end;gap:12px;
       }
+      .fc-head-copy{min-width:0;flex:1}
+      .fc-eyebrow{
+        margin-bottom:5px;
+        color:#07989a;
+        font-size:10px;
+        font-weight:850;
+        letter-spacing:.1em;
+        text-transform:uppercase;
+      }
       .fc-head h2{
-        margin:2px 0 0;
+        margin:0;
         color:#08243d;
         font-size:25px;
         line-height:1.05;
         letter-spacing:-.04em;
       }
-      .fc-head:before{
-        content:'РАСХОДЫ';
-        display:block;position:absolute;
-        color:#07989a;font-size:10px;font-weight:850;letter-spacing:.1em;
-        transform:translateY(-20px);
-      }
       .fc-head .fc-muted{margin-top:5px;color:#80909d;font-size:12px}
-      .fc-head-actions{display:flex;gap:7px;align-items:center}
+      .fc-head-actions{display:flex;gap:7px;align-items:center;flex:none}
       .fc-add-top{
         min-height:42px;
         border:0;border-radius:13px;
@@ -216,6 +219,28 @@
       @media(min-width:760px){
         .fc-editor-card{max-width:760px;margin:0 auto}
       }
+      @media(max-width:520px){
+        .fc-head{
+          display:grid;
+          grid-template-columns:1fr;
+          align-items:start;
+          gap:10px;
+        }
+        .fc-head-copy{width:100%}
+        .fc-head h2{
+          font-size:24px;
+          line-height:1.08;
+          white-space:nowrap;
+        }
+        .fc-head-actions{
+          width:100%;
+          display:grid;
+          grid-template-columns:1fr 44px;
+          gap:8px;
+        }
+        .fc-add-top{width:100%}
+        .fc-close{width:44px}
+      }
       @media(max-width:390px){
         .fc-overlay{padding-left:10px;padding-right:10px}
         .fc-head h2{font-size:22px}
@@ -265,7 +290,7 @@
     setTimeout(()=>search.focus(),80)
   }
   async function open(){
-    styles();document.querySelector('.fc-overlay')?.remove();const navButton=document.querySelector('.fc-pill');navButton?.classList.add('active');const root=document.createElement('div');root.className='fc-overlay';root.innerHTML=`<div class="fc-head"><div><h2>💰 Стоимость питания</h2><div class="fc-muted">Расход по дням · рубли</div></div><div class="fc-head-actions"><button class="fc-add-top">＋ Списание</button><button class="fc-close">×</button></div></div><div class="fc-kpi"><small>Загружаю…</small><strong>—</strong></div><div class="fc-list"></div>`;document.body.appendChild(root);root.querySelector('.fc-close').onclick=()=>{root.remove();navButton?.classList.remove('active')};root.querySelector('.fc-add-top').onclick=()=>openEditor(dateKey(new Date()));
+    styles();document.querySelector('.fc-overlay')?.remove();const navButton=document.querySelector('.fc-pill');navButton?.classList.add('active');const root=document.createElement('div');root.className='fc-overlay';root.innerHTML=`<div class="fc-head"><div class="fc-head-copy"><div class="fc-eyebrow">Расходы</div><h2>💰 Стоимость питания</h2><div class="fc-muted">Расход по дням · рубли</div></div><div class="fc-head-actions"><button class="fc-add-top">＋ Списание</button><button class="fc-close" aria-label="Закрыть">×</button></div></div><div class="fc-kpi"><small>Загружаю…</small><strong>—</strong></div><div class="fc-list"></div>`;document.body.appendChild(root);root.querySelector('.fc-close').onclick=()=>{root.remove();navButton?.classList.remove('active')};root.querySelector('.fc-add-top').onclick=()=>openEditor(dateKey(new Date()));
     try{const ops=await loadOps();const groups={};for(const o of ops)(groups[dateKey(o.created_at)]??=[]).push(o);const days=Object.keys(groups).sort().reverse();const today=dateKey(new Date());const todayOps=groups[today]||[];const todayTotal=todayOps.reduce((s,o)=>s+Number(o.cost_total_rub||0),0);root.querySelector('.fc-kpi').innerHTML=`<small>Сегодня · ${dateLabel(today)}</small><strong>${money(todayTotal)}</strong><small>${todayOps.length} списаний</small>`;root.querySelector('.fc-list').innerHTML=days.length?days.map(day=>{const xs=groups[day],total=xs.reduce((s,o)=>s+Number(o.cost_total_rub||0),0),missing=xs.filter(o=>o.cost_total_rub==null).length;return `<div class="fc-day" data-day="${day}"><div class="fc-day-top"><div><b>${dateLabel(day)}</b><div class="fc-muted">${groupDayOps(xs).length} позиций${xs.length!==groupDayOps(xs).length?` · ${xs.length} списаний`:''}${missing?` · без цены: ${missing}`:''}</div></div><div style="text-align:right"><b>${money(total)}</b><br><button class="fc-btn">Открыть</button></div></div><div class="fc-lines" hidden></div></div>`}).join(''):'<div class="fc-day">Пока нет списаний.</div>';
       root.querySelectorAll('.fc-day[data-day]').forEach(card=>{const day=card.dataset.day,xs=groups[day],lines=card.querySelector('.fc-lines');card.querySelector('.fc-btn').onclick=()=>{if(!lines.hidden){lines.hidden=true;return}lines.hidden=false;const grouped=groupDayOps(xs);lines.innerHTML=grouped.map(g=>{const priceText=g.mixed_prices?'несколько цен':g.unit_price_rub==null?'цена не задана':money(g.unit_price_rub)+' / ед.';const sub=g.ops.length>1?`<div class="fc-subops" data-subops="${esc(g.key)}" hidden>${g.ops.map(o=>`<div class="fc-subop"><div><div class="fc-muted">${new Date(o.created_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} · ${o.quantity} ${esc(o.unit||'')} · ${o.cost_total_rub==null?'—':money(o.cost_total_rub)}</div></div><button class="fc-delete" type="button" data-fc-delete="${esc(o.id)}">Удалить</button></div>`).join('')}</div>`:'';return `<div class="fc-line"><div><div class="fc-line-name">${esc(g.item_name)}</div><div class="fc-muted">${Number(g.quantity).toLocaleString('ru-RU',{maximumFractionDigits:3})} ${esc(g.unit||'')} · ${priceText}${g.ops.length>1?` · ${g.ops.length} списания`:''}</div></div><div class="fc-line-side"><b>${money(g.cost_total_rub)}</b>${g.ops.length===1?`<button class="fc-delete" type="button" data-fc-delete="${esc(g.ops[0].id)}">Удалить</button>`:`<button class="fc-expand" type="button" data-fc-expand="${esc(g.key)}">Развернуть</button>`}</div>${sub}</div>`}).join('')+`${xs.some(o=>o.cost_total_rub==null)?'<div class="fc-warning">Есть позиции без цены — итог дня пока неполный.</div>':''}<div class="fc-actions"><button class="fc-add-day">＋ Добавить списание на этот день</button><button data-csv>Скачать CSV</button><button data-print>Печать / PDF</button></div>`;lines.querySelector('.fc-add-day').onclick=()=>openEditor(day);lines.querySelector('[data-csv]').onclick=()=>csv(day,xs);lines.querySelector('[data-print]').onclick=()=>printDay(day,xs);lines.querySelectorAll('[data-fc-delete]').forEach(b=>b.onclick=e=>{e.stopPropagation();requestDelete(b.dataset.fcDelete)});lines.querySelectorAll('[data-fc-expand]').forEach(b=>b.onclick=e=>{e.stopPropagation();const box=lines.querySelector(`[data-subops="${CSS.escape(b.dataset.fcExpand)}"]`);if(!box)return;box.hidden=!box.hidden;b.textContent=box.hidden?'Развернуть':'Свернуть'})}})
     }catch(e){root.querySelector('.fc-list').innerHTML=`<div class="fc-warning">Не удалось загрузить расходы: ${esc(e.message||e)}</div>`}
