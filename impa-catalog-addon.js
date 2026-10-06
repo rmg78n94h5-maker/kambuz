@@ -24,7 +24,14 @@
   function saveFavs(set){write(KEY_FAV,[...set]);render()}
   function lineCount(){return draft().length}
   function totalQty(){return draft().reduce((s,x)=>s+Number(x.qty||0),0)}
-  function itemSearchBlob(i){return norm([i.code,i.name,i.ru,i.category,i.section,...(i.aliases||[])].join(" "))}
+  const SEARCH_CACHE=new WeakMap();
+  function itemSearchBlob(i){
+    let v=SEARCH_CACHE.get(i);
+    if(v!==undefined)return v;
+    v=norm([i.code,i.name,i.ru,i.category,i.section,...(i.aliases||[])].join(" "));
+    SEARCH_CACHE.set(i,v);
+    return v;
+  }
   function filteredItems(){
     const q=norm(state.query);
     const f=favs();
