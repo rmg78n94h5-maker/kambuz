@@ -12,7 +12,7 @@
   const norm=s=>String(s||"").toLowerCase().replace(/ё/g,"е").replace(/×/g,"x").replace(/[^a-zа-я0-9]+/gi," ").trim();
   const today=()=>new Date().toISOString().slice(0,10);
   const fileDate=()=>today();
-  const iconOf=i=>({"Продукты":"🍎","Техника":"⚙","Камбуз":"🍳","Сервировка":"🍽","Уборка":"🧽","Химия":"🧴","Бельё":"🛏","Каюты":"🛋","Одежда":"👕","Расходники":"▦"})[i.category]||"⚓";
+  const iconOf=i=>({"Продукты":"🍎","Техника":"⚙","Камбуз":"🍳","Сервировка":"🍽","Уборка":"🧽","Химия":"🧴","Бельё":"🛏","Каюты":"🛋","Расходники":"▦"})[i.category]||"⚓";
   const labelSection=s=>DATA.sections?.[s]||("Section "+s);
   let root=null;
   const PAGE_SIZE=120;
@@ -81,7 +81,7 @@
           <button type="button" data-impa-clear ${state.query?"":"hidden"}>✕</button>
         </div>
         <div class="impa-chips">
-          ${["Все","Продукты","Камбуз","Сервировка","Техника","Каюты","Бельё","Уборка","Химия","Одежда","Расходники","Избранное"].map(c=>`<button class="impa-chip ${state.category===c?"active":""}" type="button" data-impa-cat="${esc(c)}">${esc(c)}</button>`).join("")}
+          ${["Все","Продукты","Камбуз","Сервировка","Техника","Каюты","Бельё","Уборка","Химия","Расходники","Избранное"].map(c=>`<button class="impa-chip ${state.category===c?"active":""}" type="button" data-impa-cat="${esc(c)}">${esc(c)}</button>`).join("")}
         </div>
       </div>
       <div class="impa-body" id="impa-body"></div>
