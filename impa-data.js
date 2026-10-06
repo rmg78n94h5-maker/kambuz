@@ -1987,3 +1987,28 @@ window.KAMBUZ_IMPA_DATA={
   data.version="0.4.1";
   data.image_version="0.4.1";
 })();
+
+
+/* Prefer exact-code IMPA illustrations v0.4.2 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const exact=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  for(const item of data.items){
+    if(item.image_kind!=="impa-series-illustration")continue;
+    if(!/^https:\/\/www\.shipserv\.com\/Shipserv\/pages\/profiles\/231092\/images\/\d+\.JPG$/i.test(item.image||""))continue;
+    const wanted=exact(item.code);
+    if(item.image===wanted){
+      item.image_kind="impa-illustration";
+      item.image_label="Иллюстрация IMPA · код "+item.code;
+      continue;
+    }
+    const old=item.image;
+    item.image=wanted;
+    item.image_fallback=item.image_fallback||old;
+    item.image_kind="impa-illustration";
+    item.image_label="Иллюстрация IMPA · код "+item.code;
+    item.visual_note=item.visual_note||"Если для конкретного кода у ShipServ нет отдельного скана, приложение автоматически покажет иллюстрацию серии.";
+  }
+  data.version="0.4.2";
+  data.image_version="0.4.2";
+})();
