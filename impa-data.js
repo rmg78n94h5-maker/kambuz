@@ -1236,3 +1236,97 @@ window.KAMBUZ_IMPA_DATA={
   data.items.sort((a,b)=>a.code.localeCompare(b.code));
   data.version="0.3.2";
 })();
+
+
+/* Curated IMPA catalogue expansion v0.3.3 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const seen=new Set(data.items.map(x=>x.code));
+  const shipservImg=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  const visual=(imageCode,label,url)=>({image:shipservImg(imageCode),image_kind:"impa-series-illustration",image_label:"Иллюстрация IMPA · "+label,image_source:"ShipServ / IMPA",image_source_url:url});
+  const add=(code,name,ru,uom="PCS",category="Техника",aliases=[],v=null)=>{
+    if(seen.has(code))return;
+    const item={code,name,ru,uom,section:"17",category,aliases:[...new Set([ru,...aliases])]};
+    if(v)Object.assign(item,v);
+    data.items.push(item);seen.add(code);
+  };
+
+  const hotV=visual("174501","электрические плитки","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/hot-plates-electric");
+  [
+    ["174501","ELECTRIC HOT PLATE, ELEMENT COVERED 600W 110V","Электроплитка закрытого типа 600 Вт, 110 В"],
+    ["174502","ELECTRIC HOT PLATE, ELEMENT COVERED 1200W 100/110V","Электроплитка закрытого типа 1200 Вт, 100/110 В"],
+    ["174503","ELECTRIC HOT PLATE, ELEMENT COVERED 1200W 220V","Электроплитка закрытого типа 1200 Вт, 220 В"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","Техника",["hot plate","электроплитка"],hotV));
+
+  const coffeeV=visual("174516","электрические кофеварки","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/coffee-makers-electric");
+  [
+    ["174516","COFFEE MAKER ELECTRIC, FOR 5CUPS 110V","Кофеварка электрическая на 5 чашек, 110 В"],
+    ["174517","COFFEE MAKER ELECTRIC, FOR 6CUPS 110V","Кофеварка электрическая на 6 чашек, 110 В"],
+    ["174518","COFFEE MAKER ELECTRIC, FOR 10CUPS 110V","Кофеварка электрическая на 10 чашек, 110 В"],
+    ["174519","COFFEE MAKER ELECTRIC, FOR 40CUPS 110V","Кофеварка электрическая на 40 чашек, 110 В"],
+    ["174531","COFFEE MAKER ELECTRIC, FOR 4CUPS 110V","Кофеварка электрическая на 4 чашки, 110 В"],
+    ["174532","COFFEE MAKER ELECTRIC, FOR 8CUPS 110V","Кофеварка электрическая на 8 чашек, 110 В"],
+    ["174533","COFFEE MAKER ELECTRIC, FOR 12CUPS 110V","Кофеварка электрическая на 12 чашек, 110 В"],
+    ["174534","COFFEE MAKER ELECTRIC, FOR 4CUPS 220V","Кофеварка электрическая на 4 чашки, 220 В"],
+    ["174535","COFFEE MAKER ELECTRIC, FOR 8CUPS 220V","Кофеварка электрическая на 8 чашек, 220 В"],
+    ["174536","COFFEE MAKER ELECTRIC, FOR 12CUPS 220V","Кофеварка электрическая на 12 чашек, 220 В"],
+    ["174537","COFFEE MAKER ELECTRIC, FOR 5CUPS 220V","Кофеварка электрическая на 5 чашек, 220 В"],
+    ["174538","COFFEE MAKER ELECTRIC, FOR 6CUPS 220V","Кофеварка электрическая на 6 чашек, 220 В"],
+    ["174539","COFFEE MAKER ELECTRIC, FOR 10CUPS 220V","Кофеварка электрическая на 10 чашек, 220 В"],
+    ["174540","COFFEE MAKER ELECTRIC, FOR 40CUPS 220V","Кофеварка электрическая на 40 чашек, 220 В"]
+  ].forEach(x=>add(x[0],x[1],x[2],"SET","Техника",["coffee maker","кофеварка"],coffeeV));
+
+  const toastV=visual("174551","автоматические тостеры","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/toasters-auto-elect");
+  [
+    ["174551","TOASTER AUTO 2-SLICES 100V","Тостер автоматический на 2 ломтика, 100 В"],
+    ["174552","TOASTER AUTO 4-SLICES 110V","Тостер автоматический на 4 ломтика, 110 В"],
+    ["174553","TOASTER AUTO 2-SLICES 220V","Тостер автоматический на 2 ломтика, 220 В"],
+    ["174554","TOASTER AUTO 4-SLICES 220V","Тостер автоматический на 4 ломтика, 220 В"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","Техника",["toaster","тостер"],toastV));
+
+  const ovenToastV=visual("174555","мини-печи / oven toaster","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/oven-toasters-electric");
+  [
+    ["174555","OVEN TOASTER ELECTRIC, 850W 110V","Мини-печь тостерная 850 Вт, 110 В"],
+    ["174556","OVEN TOASTER ELECTRIC, 1000W 110V","Мини-печь тостерная 1000 Вт, 110 В"],
+    ["174557","OVEN TOASTER ELECTRIC, 850W 220V","Мини-печь тостерная 850 Вт, 220 В"],
+    ["174558","OVEN TOASTER ELECTRIC, 1000W 220V","Мини-печь тостерная 1000 Вт, 220 В"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","Техника",["oven toaster","мини печь"],ovenToastV));
+
+  const mixerV=visual("174576","универсальные кухонные миксеры","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/mixers-portable-universal-cooking");
+  [
+    ["174576","UNIVERSAL COOKING MIXER, PORTABLE 7LTR 100V","Универсальный переносной кухонный миксер 7 л, 100 В"],
+    ["174577","UNIVERSAL COOKING MIXER, PORTABLE 7LTR 220V","Универсальный переносной кухонный миксер 7 л, 220 В"]
+  ].forEach(x=>add(x[0],x[1],x[2],"SET","Техника",["mixer","миксер"],mixerV));
+
+  const grillV=visual("174593","электрические сковороды-гриль","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/grill-pans-electric");
+  [
+    ["174593","GRILL PAN ELECTRIC W/GLASS LID, 110V","Электрическая сковорода-гриль со стеклянной крышкой, 110 В"],
+    ["174594","GRILL PAN ELECTRIC W/GLASS LID, 220V","Электрическая сковорода-гриль со стеклянной крышкой, 220 В"]
+  ].forEach(x=>add(x[0],x[1],x[2],"SET","Техника",["grill pan","electric pan","электросковорода"],grillV));
+
+  const riceV=visual("174621","рисоварки с подогревом","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/rice-cookers-warmers-elect");
+  [
+    ["174621","RICE COOKER/WARMER 1.0LTR 110V","Рисоварка с подогревом 1,0 л, 110 В"],
+    ["174622","RICE COOKER/WARMER 1.8LTR 110V","Рисоварка с подогревом 1,8 л, 110 В"],
+    ["174623","RICE COOKER/WARMER 2.2LTR 110V","Рисоварка с подогревом 2,2 л, 110 В"],
+    ["174624","RICE COOKER/WARMER 1.0LTR 220V","Рисоварка с подогревом 1,0 л, 220 В"],
+    ["174625","RICE COOKER/WARMER 1.8LTR 220V","Рисоварка с подогревом 1,8 л, 220 В"],
+    ["174626","RICE COOKER/WARMER 2.2LTR 220V","Рисоварка с подогревом 2,2 л, 220 В"],
+    ["174627","RICE COOKER/WARMER ELECTRIC, 3.6LTR 110V","Рисоварка с подогревом 3,6 л, 110 В"],
+    ["174628","RICE COOKER/WARMER ELECTRIC, 3.6LTR 220V","Рисоварка с подогревом 3,6 л, 220 В"],
+    ["174629","RICE COOKER/WARMER ELECTRIC, 2.7LTR 110V","Рисоварка с подогревом 2,7 л, 110 В"],
+    ["174630","RICE COOKER/WARMER ELECTRIC, 2.7LTR 220V","Рисоварка с подогревом 2,7 л, 220 В"]
+  ].forEach(x=>add(x[0],x[1],x[2],"SET","Техника",["rice cooker","рисоварка"],riceV));
+
+  const scaleV=visual("174016","цифровые кухонные весы","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/measuring-scales/scale-portable-with-digital-display");
+  [["174016",1],["174017",2],["174018",5],["174019",10],["174020",20],["174023",30]]
+    .forEach(([code,kg])=>add(code,`SCALE PORTABLE DIGITAL, CAPACITY ${kg}.0KGS`,`Весы цифровые переносные до ${kg} кг`,"PCS","Техника",["digital scale","весы"],scaleV));
+
+  // Microwave family from current IMPA listing.
+  const microV=visual("175095","микроволновые печи","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/cooking-machines/microwave-ovens");
+  [["175095",17],["175096",20],["175097",23],["175098",28],["175099",34]]
+    .forEach(([code,l])=>add(code,`MICROWAVE OVEN ${l}LTR 220V`,`Микроволновая печь ${l} л, 220 В`,"PCS","Техника",["microwave","свч"],microV));
+
+  data.items.sort((a,b)=>a.code.localeCompare(b.code));
+  data.version="0.3.3";
+})();
