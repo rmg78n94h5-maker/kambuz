@@ -1905,3 +1905,85 @@ window.KAMBUZ_IMPA_DATA={
   data.version="0.4.0";
   data.image_version="0.4.0";
 })();
+
+
+/* Galley workwear expansion v0.4.1 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const seen=new Set(data.items.map(x=>x.code));
+  const img=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  const add=(code,name,ru,uom="PCS",aliases=[])=>{
+    if(seen.has(code))return;
+    data.items.push({
+      code,name,ru,uom,section:"15",category:"Камбуз",
+      aliases:[...new Set([ru,"cook steward wear","galley uniform",...aliases])],
+      image:img(code),
+      image_kind:"impa-illustration",
+      image_label:"Иллюстрация IMPA · код "+code,
+      image_source:"ShipServ / IMPA",
+      image_source_url:"https://impa-catalogue.shipserv.com/15-cloth-linen-products/cook-steward-wear"
+    });
+    seen.add(code);
+  };
+
+  [
+    ["150401","COAT CLOSED COLLAR WHITE, SANFORIZED M","Китель закрытый ворот, белый, M"],
+    ["150402","COAT CLOSED COLLAR WHITE, SANFORIZED L","Китель закрытый ворот, белый, L"],
+    ["150403","COAT CLOSED COLLAR WHITE, SANFORIZED LL","Китель закрытый ворот, белый, LL"],
+    ["150404","COAT CLOSED COLLAR WHITE, SANFORIZED S","Китель закрытый ворот, белый, S"],
+    ["150406","COAT REGULAR FINISH WHITE, SANFORIZED M","Китель обычный белый, M"],
+    ["150407","COAT REGULAR FINISH WHITE, SANFORIZED L","Китель обычный белый, L"],
+    ["150408","COAT REGULAR FINISH WHITE, SANFORIZED LL","Китель обычный белый, LL"],
+    ["150409","COAT REGULAR FINISH WHITE, SANFORIZED S","Китель обычный белый, S"],
+    ["150411","COAT COOKS DOUBLE BREASTED, WHITE SANFORIZED M","Китель поварской двубортный белый, M"],
+    ["150412","COAT COOKS DOUBLE BREASTED, WHITE SANFORIZED L","Китель поварской двубортный белый, L"],
+    ["150413","COAT COOKS DOUBLE BREASTED, WHITE SANFORIZED LL","Китель поварской двубортный белый, LL"],
+    ["150414","COAT COOKS DOUBLE BREASTED, WHITE SANFORIZED S","Китель поварской двубортный белый, S"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS",["chef coat","китель"]));
+
+  [
+    ["150421","TROUSERS COTTON WHITE, SANFORIZED M","Брюки поварские хлопковые белые, M"],
+    ["150422","TROUSERS COTTON WHITE, SANFORIZED L","Брюки поварские хлопковые белые, L"],
+    ["150423","TROUSERS COTTON WHITE, SANFORIZED LL","Брюки поварские хлопковые белые, LL"],
+    ["150424","TROUSERS COTTON WHITE, SANFORIZED S","Брюки поварские хлопковые белые, S"],
+    ["150426","TROUSERS POLYESTER BLACK, M","Брюки поварские полиэстер чёрные, M"],
+    ["150427","TROUSERS POLYESTER BLACK, L","Брюки поварские полиэстер чёрные, L"],
+    ["150428","TROUSERS POLYESTER BLACK, LL","Брюки поварские полиэстер чёрные, LL"],
+    ["150429","TROUSERS POLYESTER BLACK, S","Брюки поварские полиэстер чёрные, S"],
+    ["150431","TROUSERS COTTON&POLYESTER, STRIPED M","Брюки поварские хлопок/полиэстер полосатые, M"],
+    ["150432","TROUSERS COTTON&POLYESTER, STRIPED L","Брюки поварские хлопок/полиэстер полосатые, L"],
+    ["150433","TROUSERS COTTON&POLYESTER, STRIPED LL","Брюки поварские хлопок/полиэстер полосатые, LL"],
+    ["150434","TROUSERS COTTON&POLYESTER, STRIPED S","Брюки поварские хлопок/полиэстер полосатые, S"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PRS",["chef trousers","брюки"]));
+
+  [
+    ["150441","SHIRT LONG SLEEVES, COTTON WHITE M","Рубашка белая хлопковая, длинный рукав, M"],
+    ["150442","SHIRT LONG SLEEVES, COTTON WHITE L","Рубашка белая хлопковая, длинный рукав, L"],
+    ["150443","SHIRT LONG SLEEVES, COTTON WHITE LL","Рубашка белая хлопковая, длинный рукав, LL"],
+    ["150444","SHIRT LONG SLEEVES, COTTON WHITE 3L","Рубашка белая хлопковая, длинный рукав, 3L"],
+    ["150446","SHIRT SHORT SLEEVES, COTTON WHITE M","Рубашка белая хлопковая, короткий рукав, M"],
+    ["150447","SHIRT SHORT SLEEVES, COTTON WHITE L","Рубашка белая хлопковая, короткий рукав, L"],
+    ["150448","SHIRT SHORT SLEEVES, COTTON WHITE LL","Рубашка белая хлопковая, короткий рукав, LL"],
+    ["150449","SHIRT SHORT SLEEVES, COTTON WHITE 3L","Рубашка белая хлопковая, короткий рукав, 3L"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS",["shirt","рубашка"]));
+
+  [
+    ["150451","COOK'S CAP PAPER SKULL WHITE","Колпак поварской бумажный низкий, белый"],
+    ["150452","COOK'S CAP PAPER CROWN WHITE","Колпак поварской бумажный высокий, белый"],
+    ["150453","COOK'S CAP COTTON SKULL WHITE","Колпак поварской хлопковый низкий, белый"],
+    ["150454","COOK'S CAP COTTON CROWN WHITE","Колпак поварской хлопковый высокий, белый"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS",["cook cap","колпак"]));
+
+  [
+    ["150461","APRON COTTON WHITE WAIST TYPE","Фартук хлопковый белый поясной"],
+    ["150462","APRON COTTON WHITE BIB TYPE","Фартук хлопковый белый нагрудный"],
+    ["150463","APRON VINYL COLOR WAIST TYPE","Фартук виниловый цветной поясной"],
+    ["150464","APRON VINYL COLOR BIB TYPE","Фартук виниловый цветной нагрудный"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS",["apron","фартук"]));
+
+  add("150471","BOW TIE BLACK","Галстук-бабочка чёрный","PRS",["bow tie","бабочка"]);
+
+  data.items.sort((a,b)=>a.code.localeCompare(b.code));
+  data.version="0.4.1";
+  data.image_version="0.4.1";
+})();
