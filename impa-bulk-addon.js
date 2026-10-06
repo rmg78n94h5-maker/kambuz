@@ -141,7 +141,7 @@
   }
   DATA.items.sort((a,b)=>String(a.code).localeCompare(String(b.code)));
   DATA.scope=[...new Set([...(DATA.scope||[]),...(META.sections||[]).filter(s=>s!=="19")])].sort();
-  DATA.version="0.5.2";
-  DATA.image_version="0.5.2";
+  DATA.version="0.5.3";
+  DATA.image_version="0.5.3";
   DATA.bulk_meta=Object.assign({},META,{added,total:DATA.items.length});
 })();
