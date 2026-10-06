@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION="0.2.0";
+  const VERSION="0.3.0";
   const DATA=window.KAMBUZ_IMPA_DATA||{items:[],sections:{}};
   const KEY_DRAFT="kambuz_impa_draft_v1";
   const KEY_FAV="kambuz_impa_favorites_v1";
@@ -15,7 +15,7 @@
   const iconOf=i=>({"Техника":"⚙","Камбуз":"🍳","Сервировка":"🍽","Уборка":"🧽","Химия":"🧴","Бельё":"🛏","Каюты":"🛋","Расходники":"▦"})[i.category]||"⚓";
   const labelSection=s=>DATA.sections?.[s]||("Section "+s);
   let root=null;
-  const state={view:"catalog",query:"",category:"Все",selected:null};
+  const state={view:"catalog",query:"",category:"Все",selected:null,catalogScroll:0};
 
   function draft(){return read(KEY_DRAFT,[])}
   function favs(){return new Set(read(KEY_FAV,[]))}
@@ -61,7 +61,7 @@
     return `<div class="impa-screen">
       <div class="impa-top">
         <div class="impa-head">
-          <button type="button" data-impa-close aria-label="Назад">‹</button>
+          <button type="button" data-impa-navback aria-label="${state.view==="catalog"?"Закрыть каталог":"Назад в каталог"}">‹</button>
           <div class="impa-head-title"><b>IMPA · Камбуз и быт</b><small>${DATA.items.length} позиций · офлайн-каталог</small></div>
           <button type="button" data-impa-draft aria-label="Заявка">▤</button>
         </div>
@@ -131,6 +131,18 @@
       ${d.length?'<button class="impa-primary" type="button" data-impa-export>Сформировать файл</button><button class="impa-secondary" style="margin-top:8px" type="button" data-impa-clear-draft>Очистить черновик</button>':""}
     `;
   }
+  function rememberCatalogScroll(){
+    const body=$("#impa-body",root);
+    if(state.view==="catalog"&&body)state.catalogScroll=body.scrollTop||0;
+  }
+  function goCatalog({restore=true}={}){
+    state.view="catalog";state.selected=null;state.catalogScroll=0;render();
+    if(restore)requestAnimationFrame(()=>{const body=$("#impa-body",root);if(body)body.scrollTop=state.catalogScroll||0});
+  }
+  function headerBack(){
+    if(state.view==="catalog"){close();return}
+    goCatalog();
+  }
   function render(){
     if(!root)return;
     root.innerHTML=shell();
@@ -140,17 +152,17 @@
   }
   function bind(){
     const search=$("#impa-search",root);
-    if(search)search.oninput=e=>{state.query=e.target.value;const b=$("[data-impa-clear]",root);if(b)b.hidden=!state.query;state.view="catalog";$("#impa-body",root).innerHTML=catalogHtml();bindBody()};
-    $$("[data-impa-close]",root).forEach(b=>b.onclick=close);
-    $$("[data-impa-draft]",root).forEach(b=>b.onclick=()=>{state.view="draft";state.selected=null;render()});
-    $$("[data-impa-cat]",root).forEach(b=>b.onclick=()=>{state.category=b.dataset.impaCat;state.view="catalog";state.selected=null;render()});
-    const clear=$("[data-impa-clear]",root);if(clear)clear.onclick=()=>{state.query="";state.view="catalog";render();setTimeout(()=>$("#impa-search",root)?.focus(),0)};
+    if(search)search.oninput=e=>{state.query=e.target.value;state.catalogScroll=0;const b=$("[data-impa-clear]",root);if(b)b.hidden=!state.query;state.view="catalog";$("#impa-body",root).innerHTML=catalogHtml();bindBody()};
+    $("[data-impa-navback]",root).forEach(b=>b.onclick=headerBack);
+    $("[data-impa-draft]",root).forEach(b=>b.onclick=()=>{rememberCatalogScroll();state.view="draft";state.selected=null;render()});
+    $("[data-impa-cat]",root).forEach(b=>b.onclick=()=>{state.category=b.dataset.impaCat;state.catalogScroll=0;state.view="catalog";state.selected=null;render()});
+    const clear=$("[data-impa-clear]",root);if(clear)clear.onclick=()=>{state.query="";state.catalogScroll=0;state.view="catalog";render();setTimeout(()=>$("#impa-search",root)?.focus(),0)};
     bindBody();
   }
   function bindBody(){
-    $$("[data-impa-item]",root).forEach(el=>el.onclick=e=>{if(e.target.closest("[data-impa-add]"))return;const i=DATA.items.find(x=>x.code===el.dataset.impaItem);if(i){state.selected=i;state.view="product";render()}});
+    $$("[data-impa-item]",root).forEach(el=>el.onclick=e=>{if(e.target.closest("[data-impa-add]"))return;const i=DATA.items.find(x=>x.code===el.dataset.impaItem);if(i){rememberCatalogScroll();state.selected=i;state.view="product";render()}});
     $$("[data-impa-add]",root).forEach(b=>b.onclick=e=>{e.stopPropagation();const i=DATA.items.find(x=>x.code===b.dataset.impaAdd);if(i)editLine(i)});
-    $$("[data-impa-back]",root).forEach(b=>b.onclick=()=>{state.view="catalog";state.selected=null;render()});
+    $("[data-impa-back]",root).forEach(b=>b.onclick=()=>goCatalog());
     $$("[data-impa-fav]",root).forEach(b=>b.onclick=()=>{const f=favs(),code=b.dataset.impaFav;f.has(code)?f.delete(code):f.add(code);saveFavs(f)});
     $$("[data-impa-edit]",root).forEach(b=>b.onclick=()=>{const line=draft().find(x=>x.code===b.dataset.impaEdit),i=DATA.items.find(x=>x.code===b.dataset.impaEdit)||line;if(i)editLine(i,line)});
     $$("[data-impa-remove]",root).forEach(b=>b.onclick=()=>saveDraft(draft().filter(x=>x.code!==b.dataset.impaRemove)));
