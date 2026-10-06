@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION="0.6.0";
+  const VERSION="0.6.1";
   const DATA=window.KAMBUZ_IMPA_DATA||{items:[],sections:{}};
   const KEY_DRAFT="kambuz_impa_draft_v1";
   const KEY_FAV="kambuz_impa_favorites_v1";
