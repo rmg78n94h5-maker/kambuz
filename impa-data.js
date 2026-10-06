@@ -686,7 +686,7 @@ window.KAMBUZ_IMPA_DATA={
       image_source_url:"https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/blenders-electric/blender-electric-14ltr-220v"
     },
     "174763":{
-      image:"https://static.wixstatic.com/media/725c8f_b09cc33cd39b4d369253e7d6085a7e1f~mv2.png/v1/fill/w_1080,h_1080,al_c,q_90/725c8f_b09cc33cd39b4d369253e7d6085a7e1f~mv2.png",
+      image:"https://static.wixstatic.com/media/725c8f_b09cc33cd39b4d369253e7d6085a7e1f~mv2.png/v1/fill/w_1080%2Ch_1080%2Cal_c%2Cq_90%2Cenc_avif%2Cquality_auto/725c8f_b09cc33cd39b4d369253e7d6085a7e1f~mv2.png",
       image_fallback:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/174761.JPG",
       image_kind:"supplier-photo",
       image_label:"Фото поставщика · IMPA 174763",
