@@ -1,7 +1,7 @@
 /* Seed catalog for IMPA module.
    Source: confirmed Kamбuz requisitions. Core expansion will cover 11/15/17/51/53/55. */
 window.KAMBUZ_IMPA_DATA={
-  version:"0.1.0",
+  version:"0.2.0",
   scope:["11","15","17","51","53","55"],
   sections:{
   "11": "Welfare Items",
@@ -654,3 +654,70 @@ window.KAMBUZ_IMPA_DATA={
   }
 ]
 };
+
+
+/* Verified IMPA imagery v0.2.0
+   No generated product images.
+   supplier-photo = a supplier image explicitly tied to the exact IMPA code.
+   impa-illustration = the illustration shown by the current IMPA/ShipServ page.
+   impa-series-illustration = official IMPA illustration shared by the product family. */
+(()=>{
+  const byCode=new Map((window.KAMBUZ_IMPA_DATA?.items||[]).map(x=>[x.code,x]));
+  const images={
+    "174529":{
+      image:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/174521.JPG",
+      image_kind:"impa-series-illustration",
+      image_label:"Иллюстрация IMPA · серия Thermo Pots",
+      image_source:"ShipServ / IMPA",
+      image_source_url:"https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/thermos-pots-electric/thermo-pot-electric-38ltr-220v"
+    },
+    "174554":{
+      image:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/174551.JPG",
+      image_kind:"impa-series-illustration",
+      image_label:"Иллюстрация IMPA · серия Auto Toasters",
+      image_source:"ShipServ / IMPA",
+      image_source_url:"https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/toasters-auto-elect/toaster-auto-4-slices-220v"
+    },
+    "174564":{
+      image:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/174560.JPG",
+      image_kind:"impa-series-illustration",
+      image_label:"Иллюстрация IMPA · серия Electric Blenders",
+      image_source:"ShipServ / IMPA",
+      image_source_url:"https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/blenders-electric/blender-electric-14ltr-220v"
+    },
+    "174763":{
+      image:"https://static.wixstatic.com/media/725c8f_b09cc33cd39b4d369253e7d6085a7e1f~mv2.png/v1/fill/w_1080%2Ch_1080%2Cal_c%2Cq_90%2Cenc_avif%2Cquality_auto/725c8f_b09cc33cd39b4d369253e7d6085a7e1f~mv2.png",
+      image_fallback:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/174761.JPG",
+      image_kind:"supplier-photo",
+      image_label:"Фото поставщика · IMPA 174763",
+      image_source:"Brico Depot Panamá / IMPA 174763",
+      image_source_url:"https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/home-electrical-appliances/fans-cabin/cabin-fan-table-type-220v"
+    },
+    "175099":{
+      image:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/175090.JPG",
+      image_kind:"impa-series-illustration",
+      image_label:"Иллюстрация IMPA · серия Microwave Ovens",
+      image_source:"ShipServ / IMPA",
+      image_source_url:"https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/cooking-machines/microwave-ovens"
+    },
+    "175161":{
+      image:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/175161.JPG",
+      image_kind:"impa-illustration",
+      image_label:"Иллюстрация IMPA · код 175161",
+      image_source:"ShipServ / IMPA",
+      image_source_url:"https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/cooking-machines/fryer-electric/fryer-electric-with-further-detail"
+    },
+    "175181":{
+      image:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/175181.JPG",
+      image_kind:"impa-illustration",
+      image_label:"Иллюстрация IMPA · код 175181",
+      image_source:"ShipServ / IMPA",
+      image_source_url:"https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/cooking-machines/dish-washers/dish-washer-electric"
+    }
+  };
+  for(const [code,meta] of Object.entries(images)){
+    const item=byCode.get(code);
+    if(item)Object.assign(item,meta);
+  }
+  if(window.KAMBUZ_IMPA_DATA)window.KAMBUZ_IMPA_DATA.image_version="0.2.0";
+})();
