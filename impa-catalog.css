@@ -54,3 +54,7 @@
 
 /* v0.3.5 — source-backed / representative visual note */
 .impa-visual-note{margin:8px 2px 14px;padding:10px 12px;border:1px solid #dce8ed;border-radius:12px;background:#f7fafb;color:#5f7484;font-size:11px;line-height:1.35}
+
+
+/* v0.5 — large catalogue paging */
+.impa-load-more{margin:16px 0 28px;width:100%;min-height:54px;font-weight:800}
