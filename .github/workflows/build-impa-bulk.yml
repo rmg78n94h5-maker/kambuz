@@ -1,0 +1,135 @@
+name: Build IMPA bulk catalogue
+
+on:
+  push:
+    branches:
+      - feature/impa-5000
+    paths:
+      - .github/workflows/build-impa-bulk.yml
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/impa-5000
+          fetch-depth: 0
+
+      - name: Install PDF text tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+
+      - name: Download public IMPA product list
+        run: |
+          curl -L --fail --retry 3 --retry-delay 2 \
+            "https://www.shipserv.com/ShipServ/pages/profiles/235788/documents/PRODUCT-LIST.pdf" \
+            -o /tmp/impa-product-list.pdf
+          pdftotext -layout /tmp/impa-product-list.pdf /tmp/impa-product-list.txt
+
+      - name: Build curated bulk data
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, json
+
+          text = Path('/tmp/impa-product-list.txt').read_text(errors='ignore')
+          target = {
+              '00':'Продукты',
+              '11':'Каюты',
+              '15':'Бельё',
+              '17':'Камбуз',
+              '19':'Одежда',
+              '51':'Уборка',
+              '53':'Каюты',
+              '55':'Химия',
+          }
+          uoms = [
+              'C/T','CASE','CTN','DRUM','COIL','RLS','ROLL','SHT','SHE','SET','PRS','PR',
+              'PKT','PACK','BOX','BAG','TIN','CAN','JAR','BTL','BOT','BAR','PCE','PCS','PC',
+              'DOZ','KGS','KG','GRM','LTR','L','ML','MTR','M','BCH','LOV','VOL','PA','EA','PAIR'
+          ]
+          uom_re = re.compile(r'\\s+(' + '|'.join(re.escape(x) for x in sorted(uoms,key=len,reverse=True)) + r')\\s*$', re.I)
+
+          rows = {}
+          for raw in text.splitlines():
+              matches = list(re.finditer(r'(?<!\\d)(\\d{6})\\s+', raw))
+              if not matches:
+                  continue
+              for idx,m in enumerate(matches):
+                  code = m.group(1)
+                  section = code[:2]
+                  if section not in target:
+                      continue
+                  end = matches[idx+1].start() if idx+1 < len(matches) else len(raw)
+                  segment = raw[m.end():end].strip()
+                  if not segment:
+                      continue
+                  um = uom_re.search(segment)
+                  if um:
+                      uom = um.group(1).upper()
+                      name = segment[:um.start()].strip()
+                      # Some supplier rows repeat a unit token twice.
+                      prev = uom_re.search(name)
+                      if prev and not name[:prev.start()].strip().endswith(tuple('0123456789')):
+                          name = name[:prev.start()].strip()
+                  else:
+                      # Keep a source-backed row even when the PDF text layer lost the unit.
+                      uom = 'PCS'
+                      name = segment.strip()
+                  name = re.sub(r'\\s+', ' ', name).strip(' -.;,:')
+                  if len(name) < 3 or not re.search(r'[A-Za-z]', name):
+                      continue
+                  # Reject obvious page/header garbage.
+                  if name.upper() in {'IMPA DESCRIPTION UNIT','DESCRIPTION','UNIT'}:
+                      continue
+                  rows.setdefault(code, [code,name,uom,target[section]])
+
+          # More useful category split inside section 17.
+          tech_words = ('ELECTRIC','ELECTRICAL','MACHINE','MICROWAVE','DISH WASH','DISHWASH',
+                        'TOASTER','BLENDER','MIXER','FRYER','OVEN','COOKER','KETTLE','THERMO POT',
+                        'VACUUM','FAN ','REFRIGERATOR','FREEZER','WASHING MACHINE','DRYER','BOILER')
+          clean_words = ('SPONGE','SCOUR','SCRUB','MOP','SQUEEGEE','BRUSH CLEAN','DUST PAN',
+                         'DUSTPAN','CLEANING','BROOM','WASTE','REFUSE SACK')
+          serve_words = ('PLATE','CUP','MUG','FORK','SPOON','KNIFE TABLE','GLASS ','TUMBLER',
+                         'SAUCER','CHINA','CHINAWARE','TABLEWARE','NAPKIN','JUG','PITCHER','TRAY SERVICE')
+          for row in rows.values():
+              if row[0].startswith('17'):
+                  n=row[1].upper()
+                  if any(w in n for w in tech_words): row[3]='Техника'
+                  elif any(w in n for w in clean_words): row[3]='Уборка'
+                  elif any(w in n for w in serve_words): row[3]='Сервировка'
+
+          data = [rows[k] for k in sorted(rows)]
+          out = []
+          out.append('/* Auto-generated from a public IMPA-coded supplier product list. */')
+          out.append('window.KAMBUZ_IMPA_BULK_META='+json.dumps({
+              'version':'1.0.0',
+              'source':'ShipServ supplier PRODUCT-LIST.pdf',
+              'source_url':'https://www.shipserv.com/ShipServ/pages/profiles/235788/documents/PRODUCT-LIST.pdf',
+              'sections':sorted(target),
+              'count':len(data)
+          },ensure_ascii=False,separators=(',',':'))+';')
+          out.append('window.KAMBUZ_IMPA_BULK='+json.dumps(data,ensure_ascii=False,separators=(',',':'))+';')
+          Path('impa-bulk-data.js').write_text('\\n'.join(out)+'\\n',encoding='utf-8')
+          print('generated rows:',len(data))
+          bysec={}
+          for code,*_ in data: bysec[code[:2]]=bysec.get(code[:2],0)+1
+          print('sections:',bysec)
+          if len(data) < 5000:
+              raise SystemExit(f'Expected >=5000 relevant IMPA rows, got {len(data)}')
+          PY
+
+      - name: Commit generated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add impa-bulk-data.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Generate 5000+ IMPA catalogue rows"
+          git push origin HEAD:feature/impa-5000
