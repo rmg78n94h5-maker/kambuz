@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION="0.5.0";
+  const VERSION="0.6.0";
   const DATA=window.KAMBUZ_IMPA_DATA||{items:[],sections:{}};
   const KEY_DRAFT="kambuz_impa_draft_v1";
   const KEY_FAV="kambuz_impa_favorites_v1";
@@ -12,11 +12,11 @@
   const norm=s=>String(s||"").toLowerCase().replace(/ё/g,"е").replace(/×/g,"x").replace(/[^a-zа-я0-9]+/gi," ").trim();
   const today=()=>new Date().toISOString().slice(0,10);
   const fileDate=()=>today();
-  const iconOf=i=>({"Продукты":"🍎","Техника":"⚙","Камбуз":"🍳","Сервировка":"🍽","Уборка":"🧽","Химия":"🧴","Бельё":"🛏","Каюты":"🛋","Расходники":"▦"})[i.category]||"⚓";
+  const iconOf=i=>({"Кухня":"🍳","Посуда":"🍽","Оборудование":"⚙","Уборка":"🧽","Химия":"🧴","Бельё":"🛏","Санузлы":"🚿","Расходники":"▦"})[i.category]||"⚓";
   const labelSection=s=>DATA.sections?.[s]||("Section "+s);
   let root=null;
   const PAGE_SIZE=120;
-  const state={view:"catalog",query:"",category:"Все",selected:null,catalogScroll:0,limit:PAGE_SIZE};
+  const state={view:"catalog",query:"",category:"Часто нужно",selected:null,catalogScroll:0,limit:PAGE_SIZE};
 
   function draft(){return read(KEY_DRAFT,[])}
   function favs(){return new Set(read(KEY_FAV,[]))}
@@ -36,12 +36,16 @@
     const q=norm(state.query);
     const f=favs();
     return DATA.items.filter(i=>{
-      if(state.category==="Избранное"&&!f.has(i.code))return false;
-      if(state.category!=="Все"&&state.category!=="Избранное"&&i.category!==state.category)return false;
-      if(!q)return true;
-      const words=q.split(/\s+/).filter(Boolean);
-      const blob=itemSearchBlob(i);
-      return words.every(w=>blob.includes(w));
+      // Search is always global. Category chips are for browsing, not a hidden restriction.
+      if(q){
+        const words=q.split(/\s+/).filter(Boolean);
+        const blob=itemSearchBlob(i);
+        return words.every(w=>blob.includes(w));
+      }
+      if(state.category==="Избранное")return f.has(i.code);
+      if(state.category==="Часто нужно")return Boolean(i.curated);
+      if(state.category!=="Все"&&i.category!==state.category)return false;
+      return true;
     });
   }
   function imageHtml(i,cls="impa-thumb"){
@@ -81,7 +85,7 @@
           <button type="button" data-impa-clear ${state.query?"":"hidden"}>✕</button>
         </div>
         <div class="impa-chips">
-          ${["Все","Продукты","Камбуз","Сервировка","Техника","Каюты","Бельё","Уборка","Химия","Расходники","Избранное"].map(c=>`<button class="impa-chip ${state.category===c?"active":""}" type="button" data-impa-cat="${esc(c)}">${esc(c)}</button>`).join("")}
+          ${["Часто нужно","Все","Кухня","Посуда","Оборудование","Расходники","Уборка","Химия","Бельё","Санузлы","Избранное"].map(c=>`<button class="impa-chip ${state.category===c?"active":""}" type="button" data-impa-cat="${esc(c)}">${esc(c)}</button>`).join("")}
         </div>
       </div>
       <div class="impa-body" id="impa-body"></div>
@@ -93,8 +97,8 @@
     const items=all.slice(0,state.limit);
     const left=Math.max(0,all.length-items.length);
     return `
-      <div class="impa-intro"><small>Судовой справочник</small><b>Без PDF-талмуда</b><p>Поиск по IMPA-коду, английскому названию и русским словам. Каталог и черновик заявки работают на телефоне.</p></div>
-      <div class="impa-section-head"><div><b>${state.category==="Все"?"Каталог":esc(state.category)}</b><small>${all.length} найдено · показано ${items.length}</small></div><small>IMPA</small></div>
+      <div class="impa-intro"><small>Судовой справочник</small><b>Только камбуз и быт</b><p>Продукты, одежда, малярка и техническая химия убраны. Поиск по IMPA-коду и названию идёт сразу по всему рабочему каталогу.</p></div>
+      <div class="impa-section-head"><div><b>${state.query?"Поиск":state.category==="Все"?"Каталог":esc(state.category)}</b><small>${all.length} найдено · показано ${items.length}</small></div><small>IMPA</small></div>
       <div class="impa-grid">
       ${items.length?items.map(i=>`<article class="impa-item" data-impa-item="${esc(i.code)}">
         ${thumb(i)}
