@@ -1,17 +1,17 @@
-const VERSION = '2.3.1-atomic-1';
+const VERSION = '2.3.2-header-1';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
 
 const CORE = [
-  './','./index.html','./styles.css?v=1.2.6','./maritime-theme.css?v=0.7.0','./app.js?v=1.4.1','./config.js?v=1.2.4',
-  './auth-addon.js?v=2.1.1','./merge-tombstone-addon.js?v=2.0.2','./local-ops-sanitizer.js?v=1.9.1',
+  './','./index.html','./styles.css?v=1.2.6','./maritime-theme.css?v=0.7.1','./app.js?v=1.4.2','./config.js?v=1.2.4',
+  './auth-addon.js?v=2.1.2','./merge-tombstone-addon.js?v=2.0.2','./local-ops-sanitizer.js?v=1.9.1',
   './classification-addon.js?v=1.8.0','./sync-resilience-addon.js?v=1.2.2',
   './offline-receipt-addon.js?v=1.3.2','./inventory-addon.js?v=1.4.0',
   './duplicate-cleanup-addon.js?v=1.5.0','./bulk-writeoff-addon.js?v=1.6.0',
   './imo-report-addon.js?v=1.8.2','./item-card-addon.js?v=1.9.8',
   './food-cost-addon.js?v=2.3.1','./sync-queue-ui-addon.js?v=1.2.4',
-  './version-addon.js?v=2.3.1','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'
+  './version-addon.js?v=2.3.2','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'
 ].map(url);
 
 const PDF_ASSETS = [
