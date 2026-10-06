@@ -721,3 +721,316 @@ window.KAMBUZ_IMPA_DATA={
   }
   if(window.KAMBUZ_IMPA_DATA)window.KAMBUZ_IMPA_DATA.image_version="0.2.0";
 })();
+
+
+/* Curated IMPA catalogue expansion v0.3.0 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;
+  if(!data?.items)return;
+  const seen=new Set(data.items.map(x=>x.code));
+  const shipservImg=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  const add=(code,name,ru,uom,section,category,aliases=[],visual=null)=>{
+    if(seen.has(code))return;
+    const item={code,name,ru,uom,section,category,aliases:[...new Set([ru,...aliases])]};
+    if(visual)Object.assign(item,visual);
+    data.items.push(item);seen.add(code);
+  };
+  const visual=(imageCode,label,url)=>({
+    image:shipservImg(imageCode),
+    image_kind:"impa-series-illustration",
+    image_label:"Иллюстрация IMPA · "+label,
+    image_source:"ShipServ / IMPA",
+    image_source_url:url
+  });
+
+  // CUTLERY — plain handle
+  const plainVisual=visual("170151","столовые приборы, plain handle","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/cutlery/cutlery-plain-handle");
+  [
+    ["170151","SERVING FORK","Вилка сервировочная"],["170152","SERVING SPOON","Ложка сервировочная"],
+    ["170153","SALAD SERVER FORK","Вилка для салата"],["170154","SALAD SERVER SPOON","Ложка для салата"],
+    ["170155","SAUCE LADLE","Ложка для соуса"],["170156","SUGAR LADLE","Ложка для сахара"],
+    ["170157","SUGAR TONGS","Щипцы для сахара","PRS"],["170158","ICE TONGS","Щипцы для льда","PRS"],
+    ["170159","CAKE TONGS","Щипцы для торта","PRS"],["170160","DINNER KNIFE","Нож столовый"],
+    ["170161","DINNER FORK","Вилка столовая"],["170162","TABLE SPOON","Ложка столовая"],
+    ["170163","SOUP SPOON","Ложка суповая"],["170164","FISH KNIFE","Нож для рыбы"],
+    ["170165","FISH FORK","Вилка для рыбы"],["170166","DESSERT KNIFE","Нож десертный"],
+    ["170167","DESSERT FORK","Вилка десертная"],["170168","DESSERT SPOON","Ложка десертная"],
+    ["170169","FRUIT KNIFE","Нож для фруктов"],["170170","FRUIT FORK","Вилка для фруктов"],
+    ["170171","CAKE FORK","Вилка для торта"],["170172","SMALL FORK","Вилка малая"],
+    ["170173","BUTTER KNIFE","Нож для масла"],["170174","BUTTER SPREADER","Лопатка для масла"],
+    ["170175","MELON SPOON","Ложка для дыни"],["170176","COCKTAIL SPOON","Ложка коктейльная"],
+    ["170177","TEA SPOON","Ложка чайная"],["170178","COFFEE SPOON","Ложка кофейная"],
+    ["170179","ICE-CREAM SPOON","Ложка для мороженого"],["170180","STRAWBERRY SPOON","Ложка для ягод"],
+    ["170181","STEAK KNIFE","Нож для стейка"]
+  ].forEach(([code,base,ru,uom="PCS"])=>add(code,base+" 18-CHROME, STAINLESS STEEL PLAIN HANDLE",ru,uom,"17","Сервировка",["cutlery","stainless steel"],plainVisual));
+
+  // CUTLERY — 18/8 standard grade
+  const stdVisual=visual("170201","столовые приборы, 18/8 standard grade","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/cutlery/cutlery-standard-grade");
+  [
+    ["170201","SERVING FORK","Вилка сервировочная"],["170202","SERVING SPOON","Ложка сервировочная"],
+    ["170203","SALAD SERVER FORK","Вилка для салата"],["170204","SALAD SERVER SPOON","Ложка для салата"],
+    ["170205","SOUP LADLE","Половник"],["170206","SAUCE LADLE","Ложка для соуса"],
+    ["170207","SUGAR LADLE","Ложка для сахара"],["170208","MEAT CARVING KNIFE","Нож разделочный для мяса"],
+    ["170209","MEAT CARVING FORK","Вилка разделочная для мяса"],["170210","FISH CARVING KNIFE","Нож разделочный для рыбы"],
+    ["170211","FISH CARVING FORK","Вилка разделочная для рыбы"],["170212","SUGAR TONGS","Щипцы для сахара","PRS"],
+    ["170213","ICE TONGS","Щипцы для льда","PRS"],["170214","CAKE TONGS","Щипцы для торта","PRS"],
+    ["170215","CAKE SERVER","Лопатка для торта"],["170216","KNIFE STEEL","Нож стальной"],
+    ["170217","DINNER KNIFE","Нож столовый"],["170218","DINNER FORK","Вилка столовая"],
+    ["170219","TABLE SPOON","Ложка столовая"],["170220","SOUP SPOON","Ложка суповая"],
+    ["170221","FISH KNIFE","Нож для рыбы"],["170222","FISH FORK","Вилка для рыбы"],
+    ["170223","DESSERT KNIFE","Нож десертный"],["170224","DESSERT FORK","Вилка десертная"],
+    ["170225","DESSERT SPOON","Ложка десертная"],["170226","FRUIT KNIFE","Нож для фруктов"],
+    ["170227","FRUIT FORK","Вилка для фруктов"],["170228","CAKE FORK","Вилка для торта"],
+    ["170229","SMALL FORK","Вилка малая"],["170230","BUTTER KNIFE","Нож для масла"],
+    ["170231","BUTTER SPREADER","Лопатка для масла"],["170232","MELON SPOON","Ложка для дыни"],
+    ["170233","COCKTAIL SPOON","Ложка коктейльная"],["170234","TEA SPOON","Ложка чайная"],
+    ["170235","COFFEE SPOON","Ложка кофейная"],["170236","ICE-CREAM SPOON","Ложка для мороженого"],
+    ["170237","STRAWBERRY SPOON","Ложка для ягод"],["170238","STEAK KNIFE","Нож для стейка"]
+  ].forEach(([code,base,ru,uom="PCS"])=>add(code,base+" 18-CR 8-NI, STAINLESS STEEL STANDARD GRADE",ru,uom,"17","Сервировка",["cutlery","18/8 stainless"],stdVisual));
+
+  // Disposable plastic cutlery
+  const plasticCutleryVisual=visual("170251","одноразовые пластиковые приборы","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/cutlery/cutlery-plastic");
+  [["170251","KNIFE PLASTIC 175MM","Нож пластиковый 175 мм"],["170252","FORK PLASTIC 144MM","Вилка пластиковая 144 мм"],["170253","SPOON PLASTIC 147MM","Ложка пластиковая 147 мм"],["170254","SPOON COFFEE PLASTIC 80MM","Ложка кофейная пластиковая 80 мм"]]
+    .forEach(x=>add(x[0],x[1],x[2],"PCS","17","Расходники",["disposable cutlery"],plasticCutleryVisual));
+
+  // Marine chinaware
+  const chinaVisual=visual("170301","морская фарфоровая посуда","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/plates-cups/chinaware-standard-quality");
+  [
+    ["170301","OVAL BAKER CHINA, STANDARD QUALITY 270X165MM","Блюдо овальное фарфоровое 270×165 мм"],
+    ["170302","PLATTER OVAL CHINA, STANDARD QUALITY 207X151MM","Блюдо овальное фарфоровое 207×151 мм"],
+    ["170303","PLATTER OVAL CHINA, STANDARD QUALITY 235X172MM","Блюдо овальное фарфоровое 235×172 мм"],
+    ["170304","PLATTER OVAL CHINA, STANDARD QUALITY 258X190MM","Блюдо овальное фарфоровое 258×190 мм"],
+    ["170305","PLATTER OVAL CHINA, STANDARD QUALITY 293X210MM","Блюдо овальное фарфоровое 293×210 мм"],
+    ["170306","PLATTER OVAL CHINA, STANDARD QUALITY 311X230MM","Блюдо овальное фарфоровое 311×230 мм"],
+    ["170307","PLATTER OVAL CHINA, STANDARD QUALITY 360X260MM","Блюдо овальное фарфоровое 360×260 мм"],
+    ["170308","PLATTER OVAL CHINA, STANDARD QUALITY 414X300MM","Блюдо овальное фарфоровое 414×300 мм"],
+    ["170309","EGG CUP WITH STEM CHINA, STANDARD QUALITY 48MM","Подставка для яйца фарфоровая 48 мм"],
+    ["170310","DINNER PLATE CHINA, STANDARD QUALITY 233MM","Тарелка обеденная фарфоровая 233 мм"],
+    ["170311","DINNER PLATE CHINA, STANDARD QUALITY 262MM","Тарелка обеденная фарфоровая 262 мм"],
+    ["170312","RIM SOUP PLATE CHINA, STANDARD QUALITY 205MM","Тарелка суповая фарфоровая 205 мм"],
+    ["170313","RIM SOUP PLATE CHINA, STANDARD QUALITY 233MM","Тарелка суповая фарфоровая 233 мм"],
+    ["170314","DESSERT PLATE CHINA, STANDARD QUALITY 191MM","Тарелка десертная фарфоровая 191 мм"],
+    ["170315","DESSERT PLATE CHINA, STANDARD QUALITY 210MM","Тарелка десертная фарфоровая 210 мм"],
+    ["170316","BREAD PLATE CHINA, STANDARD QUALITY 168MM","Тарелка хлебная фарфоровая 168 мм"],
+    ["170317","MORNING CUP CHINA, STANDARD QUALITY 200CC","Чашка фарфоровая 200 мл"],
+    ["170318","SAUCER FOR MORNING CUP CHINA, STANDARD QUALITY 148MM","Блюдце фарфоровое 148 мм"],
+    ["170319","VEGETABLE DISH OVAL CHINA, STANDARD QUALITY 322X232X70MM","Блюдо овощное овальное 322×232×70 мм"],
+    ["170326","COUPE SOUP PLATE CHINA, MARINE QUALITY 195MM","Тарелка суповая coupe 195 мм"],
+    ["170327","CEREAL BOWL CHINA, MARINE QUALITY 152MM","Миска фарфоровая 152 мм"],
+    ["170328","FRUIT PLATE CHINA, MARINE QUALITY 142MM","Тарелка для фруктов 142 мм"],
+    ["170329","TEA CUP CHINA, MARINE QUALITY 210CC","Чашка чайная фарфоровая 210 мл"],
+    ["170330","SAUCER FOR TEA CUP CHINA, MARINE QUALITY 150MM","Блюдце для чайной чашки 150 мм"],
+    ["170331","COFFEE CUP CHINA, MARINE QUALITY 150CC","Чашка кофейная фарфоровая 150 мл"],
+    ["170332","SAUCER FOR COFFEE CUP CHINA, MARINE QUALITY 150MM","Блюдце для кофейной чашки 150 мм"],
+    ["170333","MOCHA COFFEE CUP CHINA, MARINE QUALITY 120CC","Чашка мокко 120 мл"],
+    ["170334","SAUCER FOR MOCHA COFFEE CUP, CHINA MARINE QUALITY 126MM","Блюдце для чашки мокко 126 мм"],
+    ["170335","AFTER DINNER CUP CHINA, MARINE QUALITY 90CC","Кофейная чашка после ужина 90 мл"],
+    ["170336","SAUCER FOR AFTER DINNER CUP, CHINA MARINE QUALITY 121MM","Блюдце 121 мм"],
+    ["170337","COFFEE MUG CHINA, MARINE QUALITY 290CC","Кружка фарфоровая 290 мл"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","17","Сервировка",["china","marine quality","фарфор"],chinaVisual));
+
+  const servingChinaVisual=visual("170431","сервировочная фарфоровая посуда","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/plates-cups/chinaware-serving-or-table");
+  [
+    ["170431","CREAMER CHINA PLAIN STANDARD, 190CC","Сливочник фарфоровый 190 мл"],["170432","SUGAR BOWL CHINA PLAIN, STANDARD 300CC","Сахарница фарфоровая 300 мл"],
+    ["170433","TEA OR COFFEE POT CHINA PLAIN, STANDARD 450CC","Чайник/кофейник фарфоровый 450 мл"],["170434","TEA OR COFFEE POT CHINA PLAIN, STANDARD 700CC","Чайник/кофейник фарфоровый 700 мл"],
+    ["170435","COFFEE POT CHINA PLAIN, STANDARD 480CC","Кофейник фарфоровый 480 мл"],["170437","SOUP TUREEN CHINA PLAIN, STANDARD 1500CC","Супница фарфоровая 1,5 л"],
+    ["170438","SOUP TUREEN CHINA PLAIN, STANDARD 2500CC","Супница фарфоровая 2,5 л"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","17","Сервировка",["serving china"],servingChinaVisual));
+
+  // Melamine tableware
+  const melamineVisual=visual("170401","меламиновая посуда","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/plates-cups/tableware-melamine");
+  [
+    ["170401","PLATE MEAT MELAMINE 210MM","Тарелка меламиновая 210 мм"],["170402","PLATE MEAT MELAMINE 230MM","Тарелка меламиновая 230 мм"],
+    ["170403","PLATE RICE MELAMINE 190MM","Тарелка для риса меламиновая 190 мм"],["170404","PLATE CAKE MELAMINE 160MM","Тарелка для торта меламиновая 160 мм"],
+    ["170405","PLATE OVAL MELAMINE 230X167MM","Тарелка овальная меламиновая 230×167 мм"],["170406","PLATE OVAL MELAMINE 265X200MM","Тарелка овальная меламиновая 265×200 мм"],
+    ["170407","PLATE OVAL MELAMINE 307X221MM","Тарелка овальная меламиновая 307×221 мм"],["170408","PLATE ROUND COMPARTED MELAMINE, 213MM","Тарелка секционная круглая 213 мм"],
+    ["170409","PLATE ROUND COMPARTED MELAMINE, 250MM","Тарелка секционная круглая 250 мм"],["170410","PLATE OVAL COMPARTED MELAMINE, 232X177MM","Тарелка секционная овальная 232×177 мм"],
+    ["170411","PLATE OVAL COMPARTED MELAMINE, 315X220MM","Тарелка секционная овальная 315×220 мм"],["170412","PLATE SOUP RIM MELAMINE 190MM","Тарелка суповая меламиновая 190 мм"],
+    ["170413","PLATE SOUP RIM MELAMINE 230MM","Тарелка суповая меламиновая 230 мм"],["170414","MILK CUP MELAMINE 200CC","Чашка меламиновая 200 мл"],
+    ["170415","MUG CUP MELAMINE 260CC","Кружка меламиновая 260 мл"],["170416","COFFEE CUP MELAMINE 170CC","Кофейная чашка меламиновая 170 мл"],
+    ["170417","SAUCER MELAMINE FOR COFFEE CUP, 150MM","Блюдце меламиновое 150 мм"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","17","Сервировка",["melamine"],melamineVisual));
+
+  // Disposable cups and plates
+  const cupVisual=visual("170681","одноразовые стаканы","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/plates-cups/cups-disposable");
+  [
+    ["170681","PAPER CUP WITH HANDLE, DISPOSABLE 205CC (7.5OZ)","Стакан бумажный с ручкой 205 мл"],["170682","PAPER CUP DISPOSABLE 205CC (7.5OZ)","Стакан бумажный 205 мл"],
+    ["170683","PLASTIC CUP DISPOSABLE 215CC (7.5OZ)","Стакан пластиковый 215 мл"],["170684","STYROFOAM CUP DISPOSABLE 9OZ","Стакан пенополистирольный 9 oz"],
+    ["170685","PLASTIC CUP DISPOSABLE INSERT 7.9OZ","Вставной пластиковый стакан 7,9 oz"],["170686","PLASTIC CUP HOLDER","Держатель для пластикового стакана"],
+    ["170687","PLASTIC STICK SPOON DISPOSABLE","Пластиковая палочка-ложка"],["170688","PAPER CUP DISPOSABLE 270CC","Стакан бумажный 270 мл"],
+    ["170689","PAPER CUP DISPOSABLE 360CC","Стакан бумажный 360 мл"],["170690","PAPER CUP DISPOSABLE 420CC","Стакан бумажный 420 мл"],
+    ["170691","PAPER CUP DISPOSABLE 545CC","Стакан бумажный 545 мл"],["170692","PLASTIC CUP DISPOSABLE 270CC","Стакан пластиковый 270 мл"],
+    ["170693","PLASTIC CUP DISPOSABLE 340CC","Стакан пластиковый 340 мл"],["170694","PLASTIC CUP DISPOSABLE 400CC","Стакан пластиковый 400 мл"],
+    ["170695","PLASTIC CUP DISPOSABLE 545CC","Стакан пластиковый 545 мл"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","17","Расходники",["disposable cup"],cupVisual));
+  const plateVisual=visual("170486","одноразовые бумажные тарелки","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/plates-cups/paper-plates-disposable");
+  [
+    ["170486","PAPER PLATE ROUND 171MM","Тарелка бумажная круглая 171 мм"],["170487","PAPER PLATE ROUND 222MM","Тарелка бумажная круглая 222 мм"],
+    ["170488","PAPER PLATE COMPARTED 235MM","Тарелка бумажная секционная 235 мм"],["170489","PAPER PLATE OVAL 254X191MM","Тарелка бумажная овальная 254×191 мм"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","17","Расходники",["paper plate"],plateVisual));
+
+  // Pots, bowls, boards, knives
+  const brazierVisual=visual("171961","нержавеющие сотейники / braziers","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/frying-pans-cooking-pots/braziers-stainless-steel");
+  [["171961","2.3"],["171962","3.5"],["171963","5.0"],["171964","6.7"],["171965","9.5"],["171966","12"],["171967","15"],["171968","19"],["171969","23"]]
+    .forEach(([code,l])=>add(code,`BRAZIER STAINLESS STEEL ${l}LTR`,`Сотейник нержавеющий ${l.replace(".",",")} л`,"PCS","17","Камбуз",["brazier","сотейник"],brazierVisual));
+  const bowlVisual=visual("172141","алюминиевые миски для смешивания","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/roast-pans-mixing-bowls-strainers-etc/bowls-mixing-aluminium");
+  [["172141",150],["172142",180],["172143",210],["172144",240],["172145",270],["172146",300],["172147",330],["172148",360],["172149",390],["172150",450]]
+    .forEach(([code,d])=>add(code,`MIXING BOWL ALUM ${d}MM DIA`,`Миска алюминиевая для смешивания Ø${d} мм`,"PCS","17","Камбуз",["mixing bowl"],bowlVisual));
+  const boardVisual=visual("172431","разделочные доски","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/kitchen-utensils/cutting-boards-plastic");
+  [["172431","440X250X15"],["172432","500X270X20"],["172433","600X300X20"],["172434","600X300X30"],["172435","720X330X20"],["172436","840X390X30"],["172437","1200X450X40"],["172438","1500X550X50"]]
+    .forEach(([code,s])=>add(code,`CUTTING BOARD PLASTIC WHITE, ${s}MM`,`Доска разделочная пластиковая белая ${s.replaceAll("X","×")} мм`,"PCS","17","Камбуз",["cutting board","доска"],boardVisual));
+  const cleaverVisual=visual("172315","кухонные тесачки","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/knives/cleavers");
+  [["172315",150],["172316",180],["172317",210],["172318",250]]
+    .forEach(([code,d])=>add(code,`CLEAVER CARBON STEEL, BLADE ${d}MM`,`Тесак кухонный, лезвие ${d} мм`,"PCS","17","Камбуз",["cleaver","тесак"],cleaverVisual));
+
+  // Electric / cabin appliances
+  const kettleVisual=visual("174504","электрические чайники","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/electric-cordless-kettles");
+  [["174504","AC110V 1.5LTR","110 В, 1,5 л"],["174505","AC110V 1.7LTR","110 В, 1,7 л"],["174508","AC220V 1.5LTR","220 В, 1,5 л"],["174509","AC220V 1.7LTR","220 В, 1,7 л"]]
+    .forEach(([code,s,ru])=>add(code,`KETTLE ELECTRIC CORDLESS, ${s}`,`Чайник электрический беспроводной, ${ru}`,"PCS","17","Техника",["kettle","чайник"],kettleVisual));
+  const thermoVisual=visual("174521","электрические термопоты","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/thermos-pots-electric");
+  [["174521","2.2LTR 110V"],["174522","2.4LTR 110V"],["174523","2.2LTR 220V"],["174524","2.4LTR 220V"],["174525","3.0LTR 110V"],["174526","3.0LTR 220V"],["174527","4.0LTR 110V"],["174528","5.0LTR 110V"],["174529","3.8LTR 220V"]]
+    .forEach(([code,s])=>add(code,`THERMO POT ELECTRIC, ${s}`,`Термопот электрический ${s.replace("LTR"," л,").replace("V"," В")}`,"PCS","17","Техника",["thermo pot","термопот"],thermoVisual));
+  const fanVisual=visual("174761","каютные вентиляторы","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/home-electrical-appliances/fans-cabin");
+  [["174761","CABIN FAN TABLE TYPE 110V","Вентилятор каютный настольный 110 В"],["174762","CABIN FAN WALL TYPE 110V","Вентилятор каютный настенный 110 В"],["174763","CABIN FAN TABLE TYPE 220V","Вентилятор каютный настольный 220 В"],["174764","CABIN FAN WALL TYPE 220V","Вентилятор каютный настенный 220 В"]]
+    .forEach(x=>add(x[0],x[1],x[2],"SET","17","Каюты",["fan","вентилятор"],fanVisual));
+  const blenderVisual=visual("174563","электрические блендеры","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/blenders-electric");
+  [["174563","BLENDER ELECTRIC 1.0LTR 220V","Блендер электрический 1,0 л, 220 В"],["174564","BLENDER ELECTRIC 1.4LTR 220V","Блендер электрический 1,4 л, 220 В"],["174565","BLENDER ELECTRIC 1.2LTR 110V","Блендер электрический 1,2 л, 110 В"],["174566","BLENDER ELECTRIC 1.9LTR 110V","Блендер электрический 1,9 л, 110 В"]]
+    .forEach(x=>add(x[0],x[1],x[2],"SET","17","Техника",["blender","блендер"],blenderVisual));
+  [["174666","DISH WASHING MACHINE 110V","Посудомоечная машина 110 В"],["174667","DISH WASHING MACHINE 220V","Посудомоечная машина 220 В"]]
+    .forEach(x=>add(x[0],x[1],x[2],"SET","17","Техника",["dishwasher","посудомойка"],null));
+  [["175521","LAUNDRY EXTRACTOR 110V WITH FURTHER DETAIL","Центрифуга для белья 110 В"],["175523","LAUNDRY EXTRACTOR 220V WITH FURTHER DETAIL","Центрифуга для белья 220 В"]]
+    .forEach(x=>add(x[0],x[1],x[2],"SET","17","Техника",["laundry extractor","центрифуга"],null));
+
+  // Galley/cabin consumables
+  const refuseVisual=visual("174179","мешки для судового мусора","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/buckets-garbage-bags/refuse-sacks-marine");
+  [
+    ["174179","REFUSE SACK MARINE MIDI, 52.5X50CM, 50'S","Мешки для мусора Marine MIDI 52,5×50 см, 50 шт"],
+    ["174180","REFUSE SACK MARINE MAXI, 70X110CM, 50'S","Мешки для мусора Marine MAXI 70×110 см, 50 шт"],
+    ["174189","REFUSE SACK BIODEGRADABLE PLASTIC, 525X500MM, 50'S","Мешки биоразлагаемые 525×500 мм, 50 шт"],
+    ["174190","REFUSE SACK BIODEGRADABLE PLASTIC, 700X1100MM, 50'S","Мешки биоразлагаемые 700×1100 мм, 50 шт"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PKT","17","Расходники",["garbage bag","мусорные мешки"],refuseVisual));
+  const sqVisual=visual("174290","оконные/палубные сквиджи","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/cabin-cleaning-equipment");
+  [["174290","SQUEEGEE REFILL BLADE 330MM","Сменная резинка сквиджа 330 мм"],["174291","SQUEEGEE 330MM","Сквидж 330 мм"],["174292","SQUEEGEE 400MM","Сквидж 400 мм"],["174293","SQUEEGEE 480MM","Сквидж 480 мм"],["174294","SQUEEGEE REFILL BLADE 400MM","Сменная резинка сквиджа 400 мм"],["174295","SQUEEGEE REFILL BLADE 480MM","Сменная резинка сквиджа 480 мм"]]
+    .forEach(x=>add(x[0],x[1],x[2],"PCS","17","Уборка",["squeegee","стеклоочиститель"],sqVisual));
+
+  // Section 15 — bed linen, cabin linen & laundry accessories
+  const bedVisual=visual("150101","постельное бельё","https://impa-catalogue.shipserv.com/15-cloth-linen-products/bed-accessories");
+  const sheets=[
+    ["150101","WHITE","1370X2300"],["150102","WHITE","1370X2500"],["150103","WHITE","1370X2600"],
+    ["150106","WHITE","1500X2300"],["150107","WHITE","1500X2400"],
+    ["150111","WHITE","1600X2500"],["150112","WHITE","1600X2600"],["150113","WHITE","1600X2820"],
+    ["150116","WHITE","1828X2300"],["150117","WHITE","1828X2500"],["150118","WHITE","1828X2600"],
+    ["150121","WHITE","2030X2400"],["150122","WHITE","2030X2500"],["150123","WHITE","2030X2600"],
+    ["150126","WHITE","2286X2400"],["150127","WHITE","2286X2500"],["150128","WHITE","2286X2600"],
+    ["150141","BLUE","1370X2300"],["150142","BLUE","1370X2500"],["150143","BLUE","1370X2600"],
+    ["150146","BLUE","1500X2400"],["150151","BLUE","1600X2820"],
+    ["150156","BLUE","1828X2300"],["150157","BLUE","1828X2500"],["150158","BLUE","1828X2600"],
+    ["150161","BLUE","2030X2400"],["150162","BLUE","2030X2500"],["150163","BLUE","2030X2600"]
+  ];
+  sheets.forEach(([code,col,s])=>add(code,`BED SHEET ${col}, ${s}MM`,`Простыня ${col==="WHITE"?"белая":"синяя"} ${s.replace("X","×")} мм`,"PCS","15","Бельё",["bed sheet","простыня"],bedVisual));
+  [["150281","PILLOW FOAM RUBBER 400X600MM","Подушка поролоновая 400×600 мм"],["150282","PILLOW KAPOK 600X400MM","Подушка капковая 600×400 мм"],
+   ["150286","PILLOW CASE WHITE REGULAR, 750X500X200MM","Наволочка белая 750×500×200 мм"],["150287","PILLOW CASE BLUE REGULAR, 750X500X200MM","Наволочка синяя 750×500×200 мм"],
+   ["150341","BLANKET ACRYLIC 100%, 1400X2000MM CAMEL","Одеяло акриловое 1400×2000 мм, бежевое"],["150342","BLANKET ACRYLIC 100%, 1400X2000MM BLUE","Одеяло акриловое 1400×2000 мм, синее"],["150343","BLANKET ACRYLIC 100%, 1400X2000MM GRAY","Одеяло акриловое 1400×2000 мм, серое"],
+   ["150245","MATTRESS PAD FLAME RETARDANT, 1000X2000X30MM","Наматрасник огнезащитный 1000×2000×30 мм"],["150246","MATTRESS PAD FLAME RETARDANT, 900X1910X80MM","Наматрасник огнезащитный 900×1910×80 мм"]]
+    .forEach(x=>add(x[0],x[1],x[2],"PCS","15","Бельё",["bedding","постель"],bedVisual));
+
+  const towelVisual=visual("150601","полотенца и столовое бельё","https://impa-catalogue.shipserv.com/15-cloth-linen-products/towel-table-linen");
+  [["150601","BATH TOWEL COTTON WHITE, 730X1330MM","Полотенце банное белое 730×1330 мм"],["150602","BATH TOWEL COTTON BLUE, 730X1330MM","Полотенце банное синее 730×1330 мм"],["150603","BATH TOWEL COTTON WHITE, 670X1270MM","Полотенце банное белое 670×1270 мм"]]
+    .forEach(x=>add(x[0],x[1],x[2],"PCS","15","Бельё",["towel","полотенце"],towelVisual));
+  [["150641","TABLECLOTH WITH FURTHER DETAIL","Скатерть с уточнением размера/типа","SET"],["150651","TABLE CLOTHING PLASTIC COTTON, LINED, WIDTH 1200MM","Скатерть ПВХ с тканевой основой, ширина 1200 мм","MTR"],["150652","TABLE CLOTHING PLASTIC COTTON, LINED, WIDTH 1370MM","Скатерть ПВХ с тканевой основой, ширина 1370 мм","MTR"],
+   ["150690","NON SKID SHEET MESH, WIDTH 600MM","Противоскользящая сетка 600 мм","MTR"],["150691","NON SKID SHEET MESH, WIDTH 800MM","Противоскользящая сетка 800 мм","MTR"]]
+    .forEach(x=>add(x[0],x[1],x[2],x[3],"15",x[0].startsWith("15069")?"Камбуз":"Бельё",["table linen","non slip"],towelVisual));
+  const laundryVisual=visual("150511","аксессуары для стирки","https://impa-catalogue.shipserv.com/15-cloth-linen-products/laundry-accessories");
+  [
+    ["150501","LAUNDRY BAG CANVAS #11, D450XH1170MM","Мешок для белья брезентовый Ø450×1170 мм","PCS"],
+    ["150511","LAUNDRY PINCH PLASTIC 10'S","Прищепки пластиковые, 10 шт","PKT"],["150512","LAUNDRY PINCH PLASTIC 20'S","Прищепки пластиковые, 20 шт","PKT"],
+    ["150521","LAUNDRY LINE 5MTR WITH HOOKS","Верёвка бельевая 5 м с крючками","PCS"],["150522","LAUNDRY LINE 200MTR COIL","Верёвка бельевая 200 м","COIL"],
+    ["150526","HANGER CLOTH WOOD","Вешалка деревянная","PCS"],["150527","HANGER CLOTH PLASTIC","Вешалка пластиковая","PCS"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"15","Каюты",["laundry","вешалка","бельё"],laundryVisual));
+
+  // Section 51 — cabin/galley brushes and mats only
+  const brushVisual=visual("510621","щётки для кают и камбуза","https://impa-catalogue.shipserv.com/51-brushes-mats/floor-brushes-hand-brushes");
+  [
+    ["510621","BRUSH SWEEPING SOFT BRISTLE, W200MM WITH LONG HANDLE","Щётка мягкая 200 мм с длинной ручкой"],
+    ["510622","BRUSH SWEEPING SOFT BRISTLE, HEAD ONLY W200MM","Щётка мягкая 200 мм, только головка"],
+    ["510623","BRUSH SWEEPING SOFT BRISTLE, W300MM WITH LONG HANDLE","Щётка мягкая 300 мм с длинной ручкой"],
+    ["510624","BRUSH SWEEPING SOFT BRISTLE, HEAD ONLY W300MM","Щётка мягкая 300 мм, только головка"],
+    ["510636","BRUSH CABIN UNIVERSAL, 300MM WIDTH WITH LONG HANDLE","Щётка универсальная каютная 300 мм с ручкой"],
+    ["510637","BRUSH CABIN UNIVERSAL, HEAD ONLY 300MM WIDTH","Щётка универсальная каютная 300 мм, головка"],
+    ["510638","BRUSH CABIN UNIVERSAL, 450MM WIDTH WITH LONG HANDLE","Щётка универсальная каютная 450 мм с ручкой"],
+    ["510639","BRUSH CABIN UNIVERSAL, HEAD ONLY 450MM WIDTH","Щётка универсальная каютная 450 мм, головка"],
+    ["510646","BRUSH COUNTER BLACK HAIR","Щётка для стола/стойки, чёрная щетина"],
+    ["510651","BRUSH HAND SCRUB COIR SQUARE","Щётка ручная квадратная, койр"],
+    ["510652","BRUSH HAND SCRUB WHITE HAIR, SQUARE","Щётка ручная квадратная, белая щетина"],
+    ["510653","BRUSH HAND SCRUB NYLON SQUARE","Щётка ручная квадратная, нейлон"],
+    ["510656","BRUSH HAND SCRUB COIR POINTED","Щётка ручная заострённая, койр"],
+    ["510657","BRUSH HAND SCRUB WHITE HAIR, POINTED","Щётка ручная заострённая, белая щетина"],
+    ["510845","MOP DUST HANDY ACRYL STRINGS, OVERALL L:330MM","Моп для пыли ручной, акрил, 330 мм"],
+    ["511006","FLOOR CLOTH COTTON","Тряпка для пола хлопковая"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","51","Уборка",["brush","mop","щётка"],brushVisual));
+  const matVisual=visual("511010","коврики для кают и санузлов","https://impa-catalogue.shipserv.com/51-brushes-mats/floor-mats");
+  add("511010","MAT BATH & SHOWER RUBBER, SAFE FOOTING 355X558MM","Коврик противоскользящий для ванны/душа 355×558 мм","SET","51","Каюты",["bath mat","shower mat"],matVisual);
+  [["511021","36X60"],["511022","45X75"],["511023","60X90"],["511024","90X120"],["511025","90X150"],["511026","90X180"]]
+    .forEach(([code,s])=>add(code,`MAT DOOR COIR ${s}CM`,`Коврик дверной кокосовый ${s.replace("X","×")} см`,"SET","51","Каюты",["door mat","coir"],matVisual));
+  [["511041","36X60"],["511042","45X75"],["511043","60X90"],["511044","90X120"],["511045","90X150"],["511046","90X180"]]
+    .forEach(([code,s])=>add(code,`MAT DOOR NYLON LAWN STEP, ${s}CM`,`Коврик дверной нейлоновый ${s.replace("X","×")} см`,"SET","51","Каюты",["door mat","nylon"],matVisual));
+
+  // Section 53 — lavatory / accommodation
+  const bathVisual=visual("530501","санузел и ванная","https://impa-catalogue.shipserv.com/53-lavatory-equipment/bathroom-items/bathroom-equipment");
+  [
+    ["530501","WASH BASIN PLASTIC 270MM DIAM, 3.0 LTR","Таз пластиковый Ø270 мм, 3,0 л"],
+    ["530502","WASH BASIN PLASTIC 320MM DIAM, 4.3 LTR","Таз пластиковый Ø320 мм, 4,3 л"],
+    ["530503","BASIN WITH HANDLE PLASTIC, 140MM DIAM 1.8LTR","Ковш-таз пластиковый с ручкой Ø140 мм, 1,8 л"],
+    ["530504","SOAP CASE PLASTIC","Мыльница пластиковая"],
+    ["530506","STOOL BATHROOM PLASTIC H:150MM","Табурет для ванной пластиковый H150 мм"],
+    ["530508","STIRRING BAR PLASTIC L:560MM","Пластиковая мешалка 560 мм"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","53","Каюты",["bathroom","lavatory"],bathVisual));
+  const lavVisual=visual("531811","оборудование санузла","https://impa-catalogue.shipserv.com/53-lavatory-equipment");
+  [
+    ["531901","MIRROR W40CM X L50CM, WATERLINE SA020749","Зеркало 40×50 см"],["531902","MIRROR W40CM X L57CM, WATERLINE SA020750","Зеркало 40×57 см"],
+    ["531811",'HAND SHOWER WATERLINE CHROMED, 1/2" SA17030',"Лейка душевая хромированная 1/2"],["531812",'HAND SHOWER WATERLINE CHROMED, ADJUSTABLE 1/2" SA17050',"Лейка душевая регулируемая 1/2"],
+    ["530355","FLUSH VALVE MODEL TV550R &, TSF75LR","Клапан смыва TV550R / TSF75LR"],["530356","FLUSH VALVE MODEL TV550R &, TSR100AR","Клапан смыва TV550R / TSR100AR"],["530359","FLUSH VALVE MODEL TV550R","Клапан смыва TV550R"],
+    ["530425","TOWEL BAR ROUND SINGLE 457MM","Держатель полотенца одинарный 457 мм"],["530426","TOWEL BAR ROUND DOUBLE 610MM","Держатель полотенца двойной 610 мм"],
+    ["530427","TOWEL BAR ROUND SINGLE 450MM","Держатель полотенца одинарный 450 мм"],["530428","TOWEL BAR HEXAGON SINGLE 450MM","Держатель полотенца шестигранный 450 мм"],
+    ["530333","TOILET SEAT OPEN FRONT NO COVER MODEL TC1R","Сиденье унитаза открытое без крышки TC1R"],["530334","TOILET SEAT CLOSED FRONT WITH COVER MODEL TC290","Сиденье унитаза с крышкой TC290"],
+    ["530306","WATER CLOSET SIPHON-JET MODEL C480N","Унитаз сифонно-струйный C480N"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","53","Каюты",["lavatory","bathroom","санузел"],lavVisual));
+
+  // Section 55 — domestic/galley cleaning chemistry
+  const chemVisual=visual("550168","бытовая и камбузная химия","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals");
+  [
+    ["550168","CLEANER LIQUID GENERAL PURPORE, CONCENTRATED 500ML","Универсальный концентрированный очиститель 500 мл","BTL"],
+    ["550169","CLEANER LIQUID GENERAL PURPOSE, CONCENTRATED 2000ML","Универсальный концентрированный очиститель 2 л","BTL"],
+    ["550175","CLEANER LIQUID GENERAL PURPORE, CONCENTRATED SPRAY 400ML","Универсальный очиститель-спрей 400 мл","BTL"],
+    ["550176","REFILL 350ML FOR GENERAL, PURPOSE LIQUID CLEANER SPRAY","Запасной блок универсального очистителя 350 мл","BTL"],
+    ["550103","SOAP POWDER LAUNDRY 1KGS","Стиральный порошок 1 кг","PKT"],
+    ["550104","SOAP POWDER LAUNDRY 20KGS","Стиральный порошок 20 кг","BAG"],
+    ["550107","SOAP POWDER LAUNDRY 500GRM","Стиральный порошок 500 г","PKT"],
+    ["550108","SOAP POWDER LAUNDRY 10KGS","Стиральный порошок 10 кг","CTN"],
+    ["550335","DISINFECTING DEODORANT","Дезинфицирующий дезодорант","PCS"],
+    ["550627","INSECTICIDE POWDER","Инсектицидный порошок","PCS"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"55","Химия",["cleaner","detergent","уборка"],chemVisual));
+
+  // Patch known current entries with better metadata / real representative photos.
+  const byCode=new Map(data.items.map(x=>[x.code,x]));
+  const patch=(code,meta)=>{const item=byCode.get(code);if(item)Object.assign(item,meta)};
+  patch("174564",{uom:"SET"});
+  patch("175181",{
+    image:"https://www.technotrading.nl/web/image/product.template/44507/image_1920?unique=669f335",
+    image_kind:"supplier-photo",
+    image_label:"Реальное фото · Electrolux ELI3G6M · IMPA 175181",
+    image_source:"Techno Trading / Electrolux Professional",
+    image_source_url:"https://www.technotrading.nl/shop/9204-electrolux-eli3g6m-professional-dishwasher-frontloader-440v-60-hz-impa-175181-44507",
+    visual_note:"Пример профессиональной фронтальной undercounter-машины по IMPA 175181; конкретные электрические параметры модели на фото могут отличаться от заявки."
+  });
+  patch("174529",{
+    image_kind:"impa-series-illustration",
+    image_label:"Иллюстрация IMPA · Thermo Pot 3.8 L / 220 V",
+    image_source_url:"https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/electric-cooking-appliances/thermos-pots-electric/thermo-pot-electric-38ltr-220v"
+  });
+
+  data.items.sort((a,b)=>a.code.localeCompare(b.code));
+  data.version="0.3.0";
+  data.image_version="0.3.0";
+  data.catalog_note="Curated galley, accommodation, housekeeping and linen subset";
+})();
