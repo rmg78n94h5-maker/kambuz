@@ -1034,3 +1034,100 @@ window.KAMBUZ_IMPA_DATA={
   data.image_version="0.3.0";
   data.catalog_note="Curated galley, accommodation, housekeeping and linen subset";
 })();
+
+
+/* Curated IMPA catalogue expansion v0.3.1 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const seen=new Set(data.items.map(x=>x.code));
+  const shipservImg=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  const visual=(imageCode,label,url)=>({image:shipservImg(imageCode),image_kind:"impa-series-illustration",image_label:"Иллюстрация IMPA · "+label,image_source:"ShipServ / IMPA",image_source_url:url});
+  const add=(code,name,ru,uom="PCS",section="17",category="Камбуз",aliases=[],v=null)=>{
+    if(seen.has(code))return;
+    const item={code,name,ru,uom,section,category,aliases:[...new Set([ru,...aliases])]};
+    if(v)Object.assign(item,v);
+    data.items.push(item);seen.add(code);
+  };
+
+  const ladleV=visual("172551","половники из нержавеющей стали","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/kitchen-utensils/ladle-soup-stainless-steel");
+  [
+    ["172551",36,52],["172552",90,74],["172553",144,85],["172554",180,95],["172555",270,105],
+    ["172556",360,115],["172557",540,135],["172558",1000,160],["172559",1800,205]
+  ].forEach(([code,cc,d])=>add(code,`SOUP LADLE STAINLESS STEEL, ${cc}CC DIAM ${d}MM`,`Половник нержавеющий ${cc} мл, Ø${d} мм`,"PCS","17","Камбуз",["ladle","половник"],ladleV));
+
+  const spoonV=visual("172561","кухонные ложки из нержавеющей стали","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/kitchen-utensils/spoons-stainless-steel");
+  [
+    ["172561","SPOON BASTING STAINLESS STEEL, 70CC","Ложка для поливки нержавеющая 70 мл"],
+    ["172562","SPOON PERFORATED, STAINLESS STEEL 70CC","Ложка перфорированная нержавеющая 70 мл"],
+    ["172563","SPOON COOKING STAINLESS STEEL, 70CC","Ложка кухонная нержавеющая 70 мл"],
+    ["172581","SPOON COOKING STAINLESS STEEL, 90CC","Ложка кухонная нержавеющая 90 мл"],
+    ["172582","SPOON COOKING STAINLESS STEEL, 144CC","Ложка кухонная нержавеющая 144 мл"],
+    ["172583","SPOON COOKING STAINLESS STEEL, 180CC","Ложка кухонная нержавеющая 180 мл"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","17","Камбуз",["cooking spoon","ложка"],spoonV));
+
+  const spatV=visual("172531","кухонные лопатки","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/kitchen-utensils/turners-spatula");
+  [["172531","STRAIGHT",150],["172532","STRAIGHT",180],["172533","STRAIGHT",200],["172534","STRAIGHT",250],["172535","STRAIGHT",280],["172536","STRAIGHT",300],["172537","OFFSET",360]]
+    .forEach(([code,type,d])=>add(code,`SPATULA TURNER ${type}, STAINLESS STEEL BLADE ${d}MM`,`Лопатка кухонная ${type==="OFFSET"?"изогнутая":"прямая"}, лезвие ${d} мм`,"PCS","17","Камбуз",["spatula","turner","лопатка"],spatV));
+
+  const pastryV=visual("172778","кондитерские доски","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/baker-pastry-utensils/pastry-boards");
+  [["172778","600X450X30"],["172779","600X600X30"],["172780","750X750X30"]]
+    .forEach(([code,s])=>add(code,`PASTRY BOARD HARD WOOD, ${s}MM`,`Доска кондитерская из твёрдой древесины ${s.replaceAll("X","×")} мм`,"PCS","17","Камбуз",["pastry board","доска"],pastryV));
+
+  const jiggerV=visual("171316","барные мерные стаканчики","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/bar-utensils/jigger-cups-stainless-steel");
+  [["171316","JIGGER CUP STAINLESS STEEL, 28X56CC","Джиггер нержавеющий 28/56 мл"],["171317","JIGGER CUP STAINLESS STEEL, 14X28CC","Джиггер нержавеющий 14/28 мл"]]
+    .forEach(x=>add(x[0],x[1],x[2],"PCS","17","Сервировка",["jigger","мерный стакан"],jiggerV));
+
+  const boilerV=visual("175071","бойлеры горячей воды","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/cooking-machines/electric-water-boilers");
+  [
+    ["175071","BOILER HOT WATER SQUARE BODY, AC110/220V 1KW 10LTR","Бойлер горячей воды квадратный 110/220 В, 1 кВт, 10 л"],
+    ["175072","BOILER HOT WATER SQUARE BODY, AC110/220V 2KW 20LTR","Бойлер горячей воды квадратный 110/220 В, 2 кВт, 20 л"],
+    ["175073","BOILER HOT WATER ROUND BODY, AC110/220V 1KW 10LTR","Бойлер горячей воды круглый 110/220 В, 1 кВт, 10 л"],
+    ["175074","BOILER HOT WATER ROUND BODY, AC110/220V 2KW 20LTR","Бойлер горячей воды круглый 110/220 В, 2 кВт, 20 л"]
+  ].forEach(x=>add(x[0],x[1],x[2],"SET","17","Техника",["water boiler","бойлер"],boilerV));
+
+  const ironV=visual("174721","электрические утюги","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/home-electrical-appliances/pressing-irons-electric");
+  [
+    ["174721","PRESS IRON DRY 110V","Утюг сухой 110 В"],["174722","PRESS IRON STEAM/DRY 120V","Утюг паровой/сухой 120 В"],
+    ["174723","PRESS IRON DRY 220V","Утюг сухой 220 В"],["174724","PRESS IRON STEAM/DRY 220V","Утюг паровой/сухой 220 В"],
+    ["174725","IRON PRESSING CORDLESS TYPE, AC110V","Утюг беспроводной 110 В"],["174726","IRON PRESSING CORDLESS TYPE, AC220V","Утюг беспроводной 220 В"],
+    ["174728","IRONING TABLE, ADJUSTABLE HEIGHT 1310X410MM","Гладильная доска регулируемая 1310×410 мм"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","17","Каюты",["iron","ironing","утюг"],ironV));
+
+  const vacuumV=visual("174671","электрические пылесосы","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/home-electrical-appliances/vacuum-cleaners-electric");
+  [["174671","VACUUM CLEANER 110V","Пылесос электрический 110 В"],["174672","VACUUM CLEANER 220V","Пылесос электрический 220 В"]]
+    .forEach(x=>add(x[0],x[1],x[2],"SET","17","Каюты",["vacuum cleaner","пылесос"],vacuumV));
+
+  const washV=visual("174701","стиральные машины","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/home-electrical-appliances/washing-machines-electric");
+  [
+    ["174701","WASHING MACHINE TWIN TUB 110V","Стиральная машина двухбаковая 110 В"],
+    ["174702","WASHING MACHINE TWIN TUB 220V","Стиральная машина двухбаковая 220 В"],
+    ["174706","WASHING MACHINE FULL AUTOMATIC, 110V","Стиральная машина автоматическая 110 В"],
+    ["174707","WASHING MACHINE FULL AUTOMATIC, 220V","Стиральная машина автоматическая 220 В"]
+  ].forEach(x=>add(x[0],x[1],x[2],"SET","17","Техника",["washing machine","стиральная машина"],washV));
+
+  // Manual/electric meat grinders and common spares — relevant galley machinery.
+  const grinderV=visual("175001","мясорубки и принадлежности","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/cooking-machines");
+  [
+    ["175001","MEAT GRINDER MANUAL CLAMP TYPE NO.5-A","Мясорубка ручная зажимная №5-A"],
+    ["175002","MEAT GRINDER MANUAL CLAMP TYPE NO.10-A","Мясорубка ручная зажимная №10-A"],
+    ["175003","MEAT GRINDER MANUAL SCREW DOWN NO.12-A","Мясорубка ручная винтовая №12-A"],
+    ["175004","MEAT GRINDER MANUAL SCREW DOWN NO.22","Мясорубка ручная винтовая №22"],
+    ["175005","MEAT GRINDER MANUAL SCREW DOWN NO.32","Мясорубка ручная винтовая №32"],
+    ["175006","MEAT GRINDER KNIFE ACROSS FLAT 46MM FOR MODEL 5-A","Нож мясорубки 46 мм для №5-A"],
+    ["175007","MEAT GRINDER KNIFE ACROSS FLAT 61MM FOR MODEL 10-A","Нож мясорубки 61 мм для №10-A"],
+    ["175008","MEAT GRINDER KNIFE ACROSS FLAT 61MM FOR MODEL 12-A","Нож мясорубки 61 мм для №12-A"],
+    ["175009","MEAT GRINDER KNIFE ACROSS FLAT 72MM FOR MODEL 22","Нож мясорубки 72 мм для №22"],
+    ["175010","MEAT GRINDER KNIFE ACROSS FLAT 91MM FOR MODEL 32","Нож мясорубки 91 мм для №32"],
+    ["175011","MEAT GRINDER PLATE 53MM DIAM FOR MODEL 5-A","Решётка мясорубки Ø53 мм для №5-A"],
+    ["175012","MEAT GRINDER PLATE 69MM DIAM FOR MODEL 10-A","Решётка мясорубки Ø69 мм для №10-A"],
+    ["175013","MEAT GRINDER PLATE 69MM DIAM FOR MODEL 12-A","Решётка мясорубки Ø69 мм для №12-A"],
+    ["175014","MEAT GRINDER PLATE 80MM DIAM FOR MODEL 22","Решётка мясорубки Ø80 мм для №22"],
+    ["175015","MEAT GRINDER PLATE 100MM DIAM FOR MODEL 32","Решётка мясорубки Ø100 мм для №32"],
+    ["175024","MEAT GRINDER ELECTRIC AC110V MINCE CAPACITY 12KGS/10MIN.","Мясорубка электрическая 110 В, 12 кг/10 мин"],
+    ["175025","MEAT GRINDER ELECTRIC AC220V MINCE CAPACITY 12KGS/10MIN.","Мясорубка электрическая 220 В, 12 кг/10 мин"],
+    ["175026","MEAT GRINDER ELECTRIC AC220V MINCE CAPACITY 25KGS/10MIN.","Мясорубка электрическая 220 В, 25 кг/10 мин"]
+  ].forEach((x,i)=>add(x[0],x[1],x[2],i<15?"PCS":"SET","17",i<15?"Камбуз":"Техника",["meat grinder","мясорубка"],grinderV));
+
+  data.items.sort((a,b)=>a.code.localeCompare(b.code));
+  data.version="0.3.1";
+})();
