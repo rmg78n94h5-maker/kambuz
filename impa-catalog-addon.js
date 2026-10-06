@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION="0.3.0";
+  const VERSION="0.3.5";
   const DATA=window.KAMBUZ_IMPA_DATA||{items:[],sections:{}};
   const KEY_DRAFT="kambuz_impa_draft_v1";
   const KEY_FAV="kambuz_impa_favorites_v1";
@@ -50,7 +50,7 @@
   }
   function thumb(i,cls="impa-thumb"){return imageHtml(i,cls)}
   function bindImages(scope=root){
-    $("[data-impa-img]",scope).forEach(img=>{
+    $$("[data-impa-img]",scope).forEach(img=>{
       img.onerror=()=>{
         const fallback=img.dataset.impaFallback;
         if(fallback&&img.src!==fallback){img.dataset.impaFallback="";img.src=fallback;return}
@@ -156,21 +156,21 @@
   function bind(){
     const search=$("#impa-search",root);
     if(search)search.oninput=e=>{state.query=e.target.value;state.catalogScroll=0;const b=$("[data-impa-clear]",root);if(b)b.hidden=!state.query;state.view="catalog";$("#impa-body",root).innerHTML=catalogHtml();bindBody()};
-    $("[data-impa-navback]",root).forEach(b=>b.onclick=headerBack);
-    $("[data-impa-draft]",root).forEach(b=>b.onclick=()=>{rememberCatalogScroll();state.view="draft";state.selected=null;render()});
-    $("[data-impa-cat]",root).forEach(b=>b.onclick=()=>{state.category=b.dataset.impaCat;state.catalogScroll=0;state.view="catalog";state.selected=null;render()});
+    $$("[data-impa-navback]",root).forEach(b=>b.onclick=headerBack);
+    $$("[data-impa-draft]",root).forEach(b=>b.onclick=()=>{rememberCatalogScroll();state.view="draft";state.selected=null;render()});
+    $$("[data-impa-cat]",root).forEach(b=>b.onclick=()=>{state.category=b.dataset.impaCat;state.catalogScroll=0;state.view="catalog";state.selected=null;render()});
     const clear=$("[data-impa-clear]",root);if(clear)clear.onclick=()=>{state.query="";state.catalogScroll=0;state.view="catalog";render();setTimeout(()=>$("#impa-search",root)?.focus(),0)};
     bindBody();
   }
   function bindBody(){
     $$("[data-impa-item]",root).forEach(el=>el.onclick=e=>{if(e.target.closest("[data-impa-add]"))return;const i=DATA.items.find(x=>x.code===el.dataset.impaItem);if(i){rememberCatalogScroll();state.selected=i;state.view="product";render()}});
     $$("[data-impa-add]",root).forEach(b=>b.onclick=e=>{e.stopPropagation();const i=DATA.items.find(x=>x.code===b.dataset.impaAdd);if(i)editLine(i)});
-    $("[data-impa-back]",root).forEach(b=>b.onclick=()=>goCatalog());
+    $$("[data-impa-back]",root).forEach(b=>b.onclick=()=>goCatalog());
     $$("[data-impa-fav]",root).forEach(b=>b.onclick=()=>{const f=favs(),code=b.dataset.impaFav;f.has(code)?f.delete(code):f.add(code);saveFavs(f)});
     $$("[data-impa-edit]",root).forEach(b=>b.onclick=()=>{const line=draft().find(x=>x.code===b.dataset.impaEdit),i=DATA.items.find(x=>x.code===b.dataset.impaEdit)||line;if(i)editLine(i,line)});
     $$("[data-impa-remove]",root).forEach(b=>b.onclick=()=>saveDraft(draft().filter(x=>x.code!==b.dataset.impaRemove)));
     $$("[data-impa-clear-draft]",root).forEach(b=>b.onclick=()=>{if(confirm("Очистить весь черновик заявки?"))saveDraft([])});
-    $("[data-impa-export]",root).forEach(b=>b.onclick=exportSheet);
+    $$("[data-impa-export]",root).forEach(b=>b.onclick=exportSheet);
     bindImages(root);
   }
   function editLine(i,existing=null){
