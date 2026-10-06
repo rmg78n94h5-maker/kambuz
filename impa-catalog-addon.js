@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION="0.3.5";
+  const VERSION="0.5.0";
   const DATA=window.KAMBUZ_IMPA_DATA||{items:[],sections:{}};
   const KEY_DRAFT="kambuz_impa_draft_v1";
   const KEY_FAV="kambuz_impa_favorites_v1";
@@ -12,10 +12,11 @@
   const norm=s=>String(s||"").toLowerCase().replace(/ё/g,"е").replace(/×/g,"x").replace(/[^a-zа-я0-9]+/gi," ").trim();
   const today=()=>new Date().toISOString().slice(0,10);
   const fileDate=()=>today();
-  const iconOf=i=>({"Техника":"⚙","Камбуз":"🍳","Сервировка":"🍽","Уборка":"🧽","Химия":"🧴","Бельё":"🛏","Каюты":"🛋","Расходники":"▦"})[i.category]||"⚓";
+  const iconOf=i=>({"Продукты":"🍎","Техника":"⚙","Камбуз":"🍳","Сервировка":"🍽","Уборка":"🧽","Химия":"🧴","Бельё":"🛏","Каюты":"🛋","Расходники":"▦"})[i.category]||"⚓";
   const labelSection=s=>DATA.sections?.[s]||("Section "+s);
   let root=null;
-  const state={view:"catalog",query:"",category:"Все",selected:null,catalogScroll:0};
+  const PAGE_SIZE=120;
+  const state={view:"catalog",query:"",category:"Все",selected:null,catalogScroll:0,limit:PAGE_SIZE};
 
   function draft(){return read(KEY_DRAFT,[])}
   function favs(){return new Set(read(KEY_FAV,[]))}
@@ -23,7 +24,14 @@
   function saveFavs(set){write(KEY_FAV,[...set]);render()}
   function lineCount(){return draft().length}
   function totalQty(){return draft().reduce((s,x)=>s+Number(x.qty||0),0)}
-  function itemSearchBlob(i){return norm([i.code,i.name,i.ru,i.category,i.section,...(i.aliases||[])].join(" "))}
+  const SEARCH_CACHE=new WeakMap();
+  function itemSearchBlob(i){
+    let v=SEARCH_CACHE.get(i);
+    if(v!==undefined)return v;
+    v=norm([i.code,i.name,i.ru,i.category,i.section,...(i.aliases||[])].join(" "));
+    SEARCH_CACHE.set(i,v);
+    return v;
+  }
   function filteredItems(){
     const q=norm(state.query);
     const f=favs();
@@ -73,7 +81,7 @@
           <button type="button" data-impa-clear ${state.query?"":"hidden"}>✕</button>
         </div>
         <div class="impa-chips">
-          ${["Все","Камбуз","Сервировка","Техника","Каюты","Бельё","Уборка","Химия","Расходники","Избранное"].map(c=>`<button class="impa-chip ${state.category===c?"active":""}" type="button" data-impa-cat="${esc(c)}">${esc(c)}</button>`).join("")}
+          ${["Все","Продукты","Камбуз","Сервировка","Техника","Каюты","Бельё","Уборка","Химия","Расходники","Избранное"].map(c=>`<button class="impa-chip ${state.category===c?"active":""}" type="button" data-impa-cat="${esc(c)}">${esc(c)}</button>`).join("")}
         </div>
       </div>
       <div class="impa-body" id="impa-body"></div>
@@ -81,22 +89,25 @@
     </div>`;
   }
   function catalogHtml(){
-    const items=filteredItems();
+    const all=filteredItems();
+    const items=all.slice(0,state.limit);
+    const left=Math.max(0,all.length-items.length);
     return `
       <div class="impa-intro"><small>Судовой справочник</small><b>Без PDF-талмуда</b><p>Поиск по IMPA-коду, английскому названию и русским словам. Каталог и черновик заявки работают на телефоне.</p></div>
-      <div class="impa-section-head"><div><b>${state.category==="Все"?"Каталог":esc(state.category)}</b><small>${items.length} найдено</small></div><small>IMPA</small></div>
+      <div class="impa-section-head"><div><b>${state.category==="Все"?"Каталог":esc(state.category)}</b><small>${all.length} найдено · показано ${items.length}</small></div><small>IMPA</small></div>
       <div class="impa-grid">
       ${items.length?items.map(i=>`<article class="impa-item" data-impa-item="${esc(i.code)}">
         ${thumb(i)}
         <div class="impa-meta">
           <div class="impa-code">IMPA ${esc(i.code)} <i>${esc(i.uom)}</i></div>
           <b>${esc(i.name)}</b>
-          <p>${esc(i.ru)}</p>
+          ${i.ru?'<p>'+esc(i.ru)+'</p>':""}
           <small>${esc(i.category)} · ${esc(labelSection(i.section))}</small>
         </div>
         <button class="impa-add" type="button" data-impa-add="${esc(i.code)}" aria-label="Добавить">＋</button>
       </article>`).join(""):'<div class="impa-empty"><b>Ничего не нашёл</b>Попробуй другой код или русское название.</div>'}
-      </div>`;
+      </div>
+      ${left?'<button class="impa-secondary impa-load-more" type="button" data-impa-more>Показать ещё · осталось '+left+'</button>':""}`;
   }
   function productHtml(i){
     const f=favs(),inFav=f.has(i.code);
@@ -155,11 +166,11 @@
   }
   function bind(){
     const search=$("#impa-search",root);
-    if(search)search.oninput=e=>{state.query=e.target.value;state.catalogScroll=0;const b=$("[data-impa-clear]",root);if(b)b.hidden=!state.query;state.view="catalog";$("#impa-body",root).innerHTML=catalogHtml();bindBody()};
+    if(search)search.oninput=e=>{state.query=e.target.value;state.catalogScroll=0;state.limit=PAGE_SIZE;const b=$("[data-impa-clear]",root);if(b)b.hidden=!state.query;state.view="catalog";$("#impa-body",root).innerHTML=catalogHtml();bindBody()};
     $$("[data-impa-navback]",root).forEach(b=>b.onclick=headerBack);
     $$("[data-impa-draft]",root).forEach(b=>b.onclick=()=>{rememberCatalogScroll();state.view="draft";state.selected=null;render()});
-    $$("[data-impa-cat]",root).forEach(b=>b.onclick=()=>{state.category=b.dataset.impaCat;state.catalogScroll=0;state.view="catalog";state.selected=null;render()});
-    const clear=$("[data-impa-clear]",root);if(clear)clear.onclick=()=>{state.query="";state.catalogScroll=0;state.view="catalog";render();setTimeout(()=>$("#impa-search",root)?.focus(),0)};
+    $("[data-impa-cat]",root).forEach(b=>b.onclick=()=>{state.category=b.dataset.impaCat;state.catalogScroll=0;state.limit=PAGE_SIZE;state.view="catalog";state.selected=null;render()});
+    const clear=$("[data-impa-clear]",root);if(clear)clear.onclick=()=>{state.query="";state.catalogScroll=0;state.limit=PAGE_SIZE;state.view="catalog";render();setTimeout(()=>$("#impa-search",root)?.focus(),0)};
     bindBody();
   }
   function bindBody(){
@@ -170,7 +181,13 @@
     $$("[data-impa-edit]",root).forEach(b=>b.onclick=()=>{const line=draft().find(x=>x.code===b.dataset.impaEdit),i=DATA.items.find(x=>x.code===b.dataset.impaEdit)||line;if(i)editLine(i,line)});
     $$("[data-impa-remove]",root).forEach(b=>b.onclick=()=>saveDraft(draft().filter(x=>x.code!==b.dataset.impaRemove)));
     $$("[data-impa-clear-draft]",root).forEach(b=>b.onclick=()=>{if(confirm("Очистить весь черновик заявки?"))saveDraft([])});
-    $$("[data-impa-export]",root).forEach(b=>b.onclick=exportSheet);
+    $("[data-impa-export]",root).forEach(b=>b.onclick=exportSheet);
+    const more=$("[data-impa-more]",root);
+    if(more)more.onclick=()=>{
+      const body=$("#impa-body",root),y=body?.scrollTop||0;
+      state.limit+=PAGE_SIZE;
+      if(body){body.innerHTML=catalogHtml();bindBody();requestAnimationFrame(()=>{body.scrollTop=y})}
+    };
     bindImages(root);
   }
   function editLine(i,existing=null){
@@ -301,7 +318,7 @@
   function open(){
     if(root)return;
     root=document.createElement("div");root.className="impa-overlay";document.body.appendChild(root);
-    state.view="catalog";state.selected=null;state.catalogScroll=0;render();
+    state.view="catalog";state.selected=null;state.catalogScroll=0;state.limit=PAGE_SIZE;render();
   }
   function close(){root?.remove();root=null}
   window.KAMBUZ_IMPA={version:VERSION,open,close,getDraft:draft};
