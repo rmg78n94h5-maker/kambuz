@@ -39,7 +39,8 @@
   function imageHtml(i,cls="impa-thumb"){
     if(!i.image)return '<div class="'+cls+'"><span>'+esc(iconOf(i))+'</span></div>';
     const fallback=i.image_fallback?(' data-impa-fallback="'+esc(i.image_fallback)+'"'):"";
-    return '<div class="'+cls+'"><img data-impa-img src="'+esc(i.image)+'"'+fallback+' alt="'+esc(i.name||("IMPA "+i.code))+'"></div>';
+    const priority=cls==="impa-product-image"?' loading="eager" fetchpriority="high"':' loading="lazy"';
+    return '<div class="'+cls+'"><img data-impa-img'+priority+' decoding="async" src="'+esc(i.image)+'"'+fallback+' alt="'+esc(i.name||("IMPA "+i.code))+'"></div>';
   }
   function imageLabel(i){
     if(!i.image_label)return "";
