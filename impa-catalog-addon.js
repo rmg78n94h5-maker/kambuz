@@ -136,7 +136,7 @@
     if(state.view==="catalog"&&body)state.catalogScroll=body.scrollTop||0;
   }
   function goCatalog({restore=true}={}){
-    state.view="catalog";state.selected=null;state.catalogScroll=0;render();
+    state.view="catalog";state.selected=null;render();
     if(restore)requestAnimationFrame(()=>{const body=$("#impa-body",root);if(body)body.scrollTop=state.catalogScroll||0});
   }
   function headerBack(){
@@ -298,7 +298,7 @@
   function open(){
     if(root)return;
     root=document.createElement("div");root.className="impa-overlay";document.body.appendChild(root);
-    state.view="catalog";state.selected=null;render();
+    state.view="catalog";state.selected=null;state.catalogScroll=0;render();
   }
   function close(){root?.remove();root=null}
   window.KAMBUZ_IMPA={version:VERSION,open,close,getDraft:draft};
