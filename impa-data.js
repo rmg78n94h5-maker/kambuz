@@ -1131,3 +1131,108 @@ window.KAMBUZ_IMPA_DATA={
   data.items.sort((a,b)=>a.code.localeCompare(b.code));
   data.version="0.3.1";
 })();
+
+
+/* Curated IMPA catalogue expansion v0.3.2 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const seen=new Set(data.items.map(x=>x.code));
+  const shipservImg=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  const visual=(imageCode,label,url)=>({image:shipservImg(imageCode),image_kind:"impa-series-illustration",image_label:"Иллюстрация IMPA · "+label,image_source:"ShipServ / IMPA",image_source_url:url});
+  const add=(code,name,ru,uom="PCS",section="55",category="Химия",aliases=[],v=null)=>{
+    if(seen.has(code))return;
+    const item={code,name,ru,uom,section,category,aliases:[...new Set([ru,...aliases])]};
+    if(v)Object.assign(item,v);
+    data.items.push(item);seen.add(code);
+  };
+
+  const bleachV=visual("550148","отбеливатель для кухни","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/bleaching-water");
+  [["550148","BLEACHING WATER FOR KITCHEN, 600ML","Отбеливатель для кухни 600 мл"],["550149","BLEACHING WATER FOR KITCHEN, 1500ML","Отбеливатель для кухни 1,5 л"]]
+    .forEach(x=>add(x[0],x[1],x[2],"BTL","55","Химия",["bleach","kitchen bleach","отбеливатель"],bleachV));
+
+  const bathV=visual("550171","очистители ванной","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/cleaning-liquid-bathroom");
+  [
+    ["550171","CLEANER BATHROOM CONCENTRATED, 500ML","Концентрированный очиститель ванной 500 мл","BTL"],
+    ["550172","CLEANER BATHROOM CONCENTRATED, 4.5LTR","Концентрированный очиститель ванной 4,5 л","TIN"],
+    ["550177","CLEANER BATHROOM SPRAY TYPE, 400ML","Очиститель ванной спрей 400 мл","BTL"],
+    ["550178","REFILL 350ML FOR BATHROOM CLEANING LIQUID SPRAY","Запасной блок очистителя ванной 350 мл","BTL"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"55","Химия",["bathroom cleaner","ванная"],bathV));
+
+  const dishDetV=visual("550180","моющие средства для посудомоечных машин","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/detergent-dish-washing-machine");
+  [
+    ["550180","DISHWASHING DETERGENT (POWDER), 15KGS/CASE","Порошок для посудомоечной машины 15 кг","CTN"],
+    ["550181","DISHWASHING DETERGENT (POWDER), 20KGS/CASE","Порошок для посудомоечной машины 20 кг","CTN"],
+    ["550182","DISHWASHING DETERGENT (LIQUID), 25KGS","Жидкое средство для посудомоечной машины 25 кг","BTL"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"55","Химия",["dishwasher detergent","посудомойка"],dishDetV));
+
+  const wareV=visual("550201","профессиональная машинная мойка посуды","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/detergent-machine-warewashing");
+  [
+    ["550201","MACHINE WAREWASHING DETERGENT, IMPACT 25KGS","Средство для машинной мойки посуды IMPACT 25 кг","CTN"],
+    ["550203","MACHINE WAREWASHING DETERGENT, SOILITE 25KGS","Средство для машинной мойки посуды SOILITE 25 кг","CTN"],
+    ["550205","MACHINE WAREWASHING DETERGENT, ACCLAIM 25KGS","Средство для машинной мойки посуды ACCLAIM 25 кг","CTN"],
+    ["550211","MACHINE WAREWASHING DETERGENT, ASSURE 10KGS","Средство для машинной мойки посуды ASSURE 10 кг","CTN"],
+    ["550213","MACHINE WAREWASHING DETERGENT, NEW RINSEDRY 4LTR","Ополаскиватель NEW RINSEDRY 4 л","BTL"],
+    ["550215","MACHINE WAREWASHING DETERGENT, TETROX 20KGS","Средство TETROX для машинной мойки 20 кг","DRUM"],
+    ["550218","MACHINE WAREWASHING DETERGENT, LIME-A-WAY 10KGS","Средство LIME-A-WAY 10 кг","DRUM"],
+    ["550219","MACHINE WAREWASHING DETERGENT, DIP-IT 20KGS","Средство DIP-IT 20 кг","DRUM"],
+    ["550220","MACHINE WAREWASHING DETERGENT, GREASE CUTTER 4LTR","Средство GREASE CUTTER 4 л","BTL"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"55","Химия",["warewashing","dishwasher","моющее"],wareV));
+
+  const disSoapV=visual("550145","дезинфицирующее жидкое мыло","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/disinfectant-liquid-soap");
+  [["550145","SOAP LIQUID DISINFECTANT, 2KGS","Жидкое дезинфицирующее мыло 2 кг"],["550146","SOAP LIQUID DISINFECTANT, 10KGS","Жидкое дезинфицирующее мыло 10 кг"],["550147","SOAP LIQUID DISINFECTANT, 20KGS","Жидкое дезинфицирующее мыло 20 кг"]]
+    .forEach(x=>add(x[0],x[1],x[2],"BTL","55","Химия",["disinfectant soap","мыло"],disSoapV));
+
+  const ajaxV=visual("550160","универсальные жидкие очистители","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/liquid-cleaner-all-purpose");
+  [
+    ["550160","AJAX ALL PURPOSE LIQUID","Универсальный жидкий очиститель AJAX","CTN"],
+    ["550161","AJAX ALL PURPOSE LIQUID CLEANER W/AMMONIA, 28OZ X 12BTL","AJAX с аммиаком, 28 oz × 12","CTN"],
+    ["550163","AJAX ALL PURPOSE LIQUID CLEANER W/AMMONIA, 750ML X 16BTL","AJAX с аммиаком, 750 мл × 16","CTN"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"55","Химия",["ajax","all purpose cleaner"],ajaxV));
+
+  const heavyV=visual("550165","усиленные кухонные очистители","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/liquid-cleaner-all-purpose-heavy-duty");
+  [
+    ["550165","CLEANER LIQUID KITCHEN H. DUTY, CONCENTRATED 500ML","Сильный концентрированный кухонный очиститель 500 мл"],
+    ["550170","CLEANER LIQUID KITCHEN H. DUTY, CONCENTRATED 800ML","Сильный концентрированный кухонный очиститель 800 мл"],
+    ["550173","CLEANER LIQUID KITCHEN H. DUTY, SPRAY 400ML","Сильный кухонный очиститель-спрей 400 мл"],
+    ["550174","REFILL 400ML FOR KITCHEN CLEANER LIQUID SPRAY","Запасной блок кухонного очистителя 400 мл"]
+  ].forEach(x=>add(x[0],x[1],x[2],"BTL","55","Химия",["heavy duty cleaner","kitchen cleaner"],heavyV));
+
+  const multiV=visual("550186","биоразлагаемые универсальные очистители","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/liquid-cleaner-biodegradable-multi-purpose");
+  [
+    ["550186","LIQUID CLEANER BIODEGRADABLE MULTI-PURPOSE, 710ML X 6","Биоразлагаемый универсальный очиститель 710 мл × 6","CASE"],
+    ["550187","LIQUID CLEANER BIODEGRADABLE MULTI-PURPOSE, 3.8LTR X 4","Биоразлагаемый универсальный очиститель 3,8 л × 4","CASE"],
+    ["550188","LIQUID CLEANER BIODEGRADABLE MULTI-PURPOSE, 18LTR","Биоразлагаемый универсальный очиститель 18 л","DRUM"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"55","Химия",["biodegradable cleaner","multi purpose"],multiV));
+
+  const soapV=visual("550141","жидкое мыло для камбуза","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/liquid-soap");
+  [["550141","SOAP LIQUID 800CC FOR GALLEY","Жидкое мыло для камбуза 800 мл","BTL"],["550142","SOAP LIQUID FOR GALLEY 18KGS","Жидкое мыло для камбуза 18 кг","CAN"],["550143","SOAP LIQUID TEEPOL 18KGS","Жидкое мыло TEEPOL 18 кг","CAN"]]
+    .forEach(x=>add(x[0],x[1],x[2],x[3],"55","Химия",["liquid soap","galley soap"],soapV));
+
+  const moldV=visual("550231","средства от плесени","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/mold-cleaner");
+  [
+    ["550231","CLEANER MOLD IN SPRAYER, 400GRM","Средство от плесени в распылителе 400 г"],
+    ["550232","REFILL FOR MOLD CLEANER 400GRM","Запасной блок средства от плесени 400 г"],
+    ["550233","CLEANER MOLD IN SPRAYER, 1000GRM","Средство от плесени в распылителе 1000 г"],
+    ["550234","REFILL FOR MOLD CLEANER, 1000GRM","Запасной блок средства от плесени 1000 г"]
+  ].forEach(x=>add(x[0],x[1],x[2],"BTL","55","Химия",["mold cleaner","плесень"],moldV));
+
+  const scourV=visual("550156","чистящий крем","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/scouring-cream");
+  [["550156","SCOURING CREAM 400GRM","Чистящий крем 400 г"],["550157","SCOURING CREAM 2.8KG","Чистящий крем 2,8 кг"],["550158","SCOURING CREAM 5.6KG","Чистящий крем 5,6 кг"]]
+    .forEach(x=>add(x[0],x[1],x[2],"BTL","55","Химия",["scouring cream","cleanser","чистящий крем"],scourV));
+
+  const toiletV=visual("550235","нейтральные средства для унитаза","https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/galley-cleaning-detergent/toilet-cleanser");
+  [["550235","CLEANSER TOILET NEUTRAL, INGREDIENT 500ML","Нейтральное средство для унитаза 500 мл"],["550236","CLEANSER TOILET NEUTRAL, INGREDIENT 800ML","Нейтральное средство для унитаза 800 мл"]]
+    .forEach(x=>add(x[0],x[1],x[2],"BTL","55","Химия",["toilet cleaner","унитаз"],toiletV));
+
+  // Section 11 — only accommodation/welfare items useful onboard.
+  const scaleV=visual("110270","напольные весы","https://impa-catalogue.shipserv.com/11-welfare-items/bathroom-scales/bathroom-scales");
+  [
+    ["110270","BATHROOM SCALE 0-100KGS ANALOG","Весы напольные аналоговые до 100 кг"],
+    ["110271","BATHROOM SCALE 0-130KG ANALOG","Весы напольные аналоговые до 130 кг"],
+    ["110275","BATHROOM SCALE 0-100KG DIGITAL","Весы напольные цифровые до 100 кг"],
+    ["110276","BATHROOM SCALE 0-130KG DIGITAL","Весы напольные цифровые до 130 кг"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","11","Каюты",["bathroom scale","весы"],scaleV));
+
+  data.items.sort((a,b)=>a.code.localeCompare(b.code));
+  data.version="0.3.2";
+})();
