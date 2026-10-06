@@ -11,6 +11,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="styles.css?v=1.2.6" />
   <link rel="stylesheet" href="maritime-theme.css?v=0.7.1" />
+  <link rel="stylesheet" href="impa-catalog.css?v=0.1.0" />
   <title>Камбуз</title>
 </head>
 <body>
@@ -23,7 +24,9 @@
   <script src="local-ops-sanitizer.js?v=1.9.1"></script>
   <script src="classification-addon.js?v=1.8.0"></script>
   <script src="sync-resilience-addon.js?v=1.2.2"></script>
-  <script src="app.js?v=1.4.2"></script>
+  <script src="impa-data.js?v=0.1.0"></script>
+  <script src="impa-catalog-addon.js?v=0.1.0"></script>
+  <script src="app.js?v=1.4.3"></script>
   <script>
   (()=>{
     const read=(k,f=[])=>{try{return JSON.parse(localStorage.getItem(k)||'null')??f}catch{return f}};
