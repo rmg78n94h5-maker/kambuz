@@ -1,4 +1,4 @@
-const VERSION = '2.5.0-impa-bulk-0.5.1';
+const VERSION = '2.5.0-impa-bulk-0.5.2';
 const CACHE = `kambuz-shell-${VERSION}`;
 const SCOPE = self.registration.scope;
 const url = path => new URL(path, SCOPE).href;
@@ -6,7 +6,7 @@ const url = path => new URL(path, SCOPE).href;
 const CORE = [
   './','./index.html','./styles.css?v=1.2.6','./maritime-theme.css?v=0.7.1','./impa-catalog.css?v=0.5.0','./app.js?v=1.5.0','./config.js?v=1.2.4',
   './auth-addon.js?v=2.1.2','./merge-tombstone-addon.js?v=2.0.2','./local-ops-sanitizer.js?v=1.9.1',
-  './classification-addon.js?v=1.8.0','./sync-resilience-addon.js?v=1.2.2','./impa-data.js?v=0.5.1','./impa-bulk-data.js?v=1.0.0','./impa-bulk-addon.js?v=0.5.1','./impa-catalog-addon.js?v=0.5.0',
+  './classification-addon.js?v=1.8.0','./sync-resilience-addon.js?v=1.2.2','./impa-data.js?v=0.5.2','./impa-bulk-data.js?v=1.0.0','./impa-bulk-addon.js?v=0.5.2','./impa-catalog-addon.js?v=0.5.0',
   './offline-receipt-addon.js?v=1.3.2','./inventory-addon.js?v=1.4.0',
   './duplicate-cleanup-addon.js?v=1.5.0','./bulk-writeoff-addon.js?v=1.6.0',
   './imo-report-addon.js?v=1.8.2','./item-card-addon.js?v=1.9.8',
