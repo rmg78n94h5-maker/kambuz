@@ -112,6 +112,7 @@
     if(!Array.isArray(row)||row.length<4)continue;
     const [code,name,uom,category]=row;
     const c=String(code);
+    if(c.startsWith("19"))continue; // technical/PPE clothing stays out of the galley/accommodation bulk import.
     const old=existing.get(c);
     if(old){
       if(!old.uom&&uom)old.uom=uom;
@@ -139,8 +140,8 @@
     added++;
   }
   DATA.items.sort((a,b)=>String(a.code).localeCompare(String(b.code)));
-  DATA.scope=[...new Set([...(DATA.scope||[]),...(META.sections||[])])].sort();
-  DATA.version="0.5.1";
-  DATA.image_version="0.5.1";
+  DATA.scope=[...new Set([...(DATA.scope||[]),...(META.sections||[]).filter(s=>s!=="19")])].sort();
+  DATA.version="0.5.2";
+  DATA.image_version="0.5.2";
   DATA.bulk_meta=Object.assign({},META,{added,total:DATA.items.length});
 })();
