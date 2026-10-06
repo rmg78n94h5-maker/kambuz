@@ -40,3 +40,14 @@
 .impa-export-options{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.impa-export-options button{min-height:70px;border:1px solid #dfe8ee;border-radius:16px;background:#fff;color:#18384e;font-weight:900}.impa-export-options button span{display:block;font-size:22px;margin-bottom:5px}
 .impa-note{padding:11px 12px;border-radius:14px;background:#eef8ff;color:#3a617a;font-size:11px;line-height:1.4}
 @media(max-width:370px){.impa-body{padding-left:12px;padding-right:12px}.impa-top{padding-left:12px;padding-right:12px}.impa-item{grid-template-columns:58px minmax(0,1fr) 36px}.impa-thumb{width:58px;height:58px}.impa-qty{grid-template-columns:44px 1fr 44px 76px}}
+
+/* v0.2 — verified IMPA imagery */
+.impa-product-image{width:100%;height:100%;display:grid;place-items:center;background:#fff}
+.impa-product-image img{width:100%;height:100%;object-fit:contain}
+.impa-image-source{display:flex;align-items:center;gap:7px;margin:8px 2px 0;padding:7px 9px;border-radius:12px;font-size:10px;line-height:1.2}
+.impa-image-source span{flex:none;padding:3px 6px;border-radius:999px;font-weight:900}
+.impa-image-source b{font-weight:700}
+.impa-image-source.photo{background:#e8f8f6;color:#087d82}
+.impa-image-source.photo span{background:#c9f2ee;color:#06777b}
+.impa-image-source.illustration{background:#f0f4f7;color:#5f7484}
+.impa-image-source.illustration span{background:#e1e9ee;color:#506675}
