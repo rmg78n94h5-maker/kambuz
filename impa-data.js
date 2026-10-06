@@ -1697,3 +1697,318 @@ window.KAMBUZ_IMPA_DATA={
   data.version="0.3.6";
   data.image_version="0.3.6";
 })();
+
+
+/* Curated IMPA catalogue expansion v0.4.0 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const seen=new Set(data.items.map(x=>x.code));
+  const img=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  const exactVisual=(code,label,url)=>({
+    image:img(code),
+    image_kind:"impa-illustration",
+    image_label:"Иллюстрация IMPA · "+label,
+    image_source:"ShipServ / IMPA",
+    image_source_url:url
+  });
+  const add=(code,name,ru,uom,section,category,aliases=[],visual=null)=>{
+    if(seen.has(code))return;
+    const item={code,name,ru,uom,section,category,aliases:[...new Set([ru,...aliases])]};
+    if(visual)Object.assign(item,visual);
+    data.items.push(item);seen.add(code);
+  };
+
+  // 11 — Welfare / personal hygiene / cabin grooming.
+  const cosmeticsUrl="https://impa-catalogue.shipserv.com/11-welfare-items/cosmetics/cosmetics";
+  [
+    ["110601","HAIR SHAMPOO 220ML","Шампунь для волос 220 мл","BTL"],
+    ["110602","HAIR SHAMPOO 350ML","Шампунь для волос 350 мл","BTL"],
+    ["110603","SHAMPOO FOR HAIR & SHOULDER, 200ML","Шампунь для волос и кожи головы 200 мл","BTL"],
+    ["110604","SHAMPOO FOR HAIR & SHOULDER, 300ML","Шампунь для волос и кожи головы 300 мл","BTL"],
+    ["110605","SHAMPOO FOR HAIR & SHOULDER, 400ML","Шампунь для волос и кожи головы 400 мл","BTL"],
+    ["110606","SHOWER GEL 250ML","Гель для душа 250 мл","BTL"],
+    ["110610","HAIR TONIC OLD-SPICE 150ML","Тоник для волос 150 мл","BTL"],
+    ["110620","HAIR CREAM OLD-SPICE 75GRM","Крем для волос 75 г","PCS"],
+    ["110630","HAIR LIQUID OLD-SPICE 150ML","Лосьон для волос 150 мл","BTL"],
+    ["110635","POMADE BRILLIANTINE BRAVAS, 85GRM","Бриолин / помада для волос 85 г","BTL"],
+    ["110640","HAIR SPRAY BRAVAS 150ML","Спрей для волос 150 мл","BTL"],
+    ["110650","SHAVING CREAM 4-3/4 OZ","Крем для бритья 4-3/4 oz","PCS"],
+    ["110651","SHAVING CREAM 90GRM","Крем для бритья 90 г","PCS"],
+    ["110660","SHAVING FOAM 177GRM","Пена для бритья 177 г","TIN"],
+    ["110661","SHAVING FOAM 300GRM","Пена для бритья 300 г","TIN"],
+    ["110670","AFTER SHAVE LOTION, 125ML","Лосьон после бритья 125 мл","BTL"],
+    ["110671","AFTER SHAVE LOTION, 50ML","Лосьон после бритья 50 мл","BTL"],
+    ["110672","AFTER SHAVE LOTION 100ML","Лосьон после бритья 100 мл","BTL"],
+    ["110680","DEODORANT ROLL-ON 30ML","Дезодорант роликовый 30 мл","BTL"],
+    ["110681","DEODORANT SPRAY 70ML","Дезодорант-спрей 70 мл","TIN"],
+    ["110682","DEODORANT ROLL-ON 50ML","Дезодорант роликовый 50 мл","BTL"],
+    ["110683","DEODORANT SPRAY 150ML","Дезодорант-спрей 150 мл","TIN"],
+    ["110684","DEODORANT SPRAY 200ML","Дезодорант-спрей 200 мл","TIN"],
+    ["110685","BODY LOTION 250ML","Лосьон для тела 250 мл","BTL"],
+    ["110686","BODY LOTION 400ML","Лосьон для тела 400 мл","BTL"],
+    ["110687","DEODORANT ROLL-ON 40ML","Дезодорант роликовый 40 мл","BTL"],
+    ["110688","DEODORANT SPRAY 100ML","Дезодорант-спрей 100 мл","TIN"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"11","Каюты",["personal hygiene","toiletries"],exactVisual(x[0],x[0],cosmeticsUrl)));
+
+  const barberUrl="https://impa-catalogue.shipserv.com/11-welfare-items/sanitary-items";
+  [
+    ["110901","BARBER HAIR CLIPPER SET","Набор машинки для стрижки","SET"],
+    ["110902","BARBER HAIR SCISSORS SET","Набор парикмахерских ножниц","SET"],
+    ["110903","HAIR CLIPPER ELECTRIC AC110V","Машинка для стрижки электрическая 110 В","SET"],
+    ["110904","HAIR CLIPPER ELECTRIC AC220V","Машинка для стрижки электрическая 220 В","SET"],
+    ["110905","HAIR COMB POCKETABLE WITH SACK","Расчёска карманная с футляром","PCS"],
+    ["110910","HAIR BRUSH PLASTIC","Щётка для волос пластиковая","PCS"],
+    ["110911","HAIR BRUSH BRISTLE","Щётка для волос со щетиной","PCS"],
+    ["110917","TOOTH PASTE COLGATE 75GRM","Зубная паста 75 г","PCS"],
+    ["110920","TOOTH PASTE COLGATE 140GRM","Зубная паста 140 г","PCS"],
+    ["110921","TOOTH PASTE 200GRM","Зубная паста 200 г","PCS"],
+    ["110922","TOOTH PASTE 100GRM","Зубная паста 100 г","PCS"],
+    ["110925","TOOTH BRUSH HARD","Зубная щётка жёсткая","PCS"],
+    ["110926","TOOTH BRUSH NYLON","Зубная щётка нейлоновая","PCS"],
+    ["110927","TOOTH BRUSH NYLON HARD","Зубная щётка нейлоновая жёсткая","PCS"],
+    ["110928","ELECTRIC TOOTH BRUSH","Электрическая зубная щётка","SET"],
+    ["110935","SHAVER HAND DISPOSABLE 5'S","Бритвы одноразовые, 5 шт","PKT"],
+    ["110936","SHAVER HAND INJECTOR TYPE, GILLETTE G-II","Бритвенный станок кассетный","PCS"],
+    ["110937","SHAVER ELECTRIC AC110V","Электробритва 110 В","SET"],
+    ["110938","SHAVER ELECTRIC AC220V","Электробритва 220 В","SET"],
+    ["110939","TRIMMER MOUSTACHE & BEARD, 110V","Триммер для усов и бороды 110 В","PCS"],
+    ["110940","SHAVING BLADE INJECTOR TYPE, GILLETTE G-II 5'S","Сменные лезвия для бритвы, 5 шт","PKT"],
+    ["110941","TRIMMER MOUSTACHE & BEARD, 220V","Триммер для усов и бороды 220 В","PCS"],
+    ["110945","SHAVING BRUSH","Помазок для бритья","PCS"],
+    ["110950","NAIL CLIPPER REGULAR","Кусачки для ногтей","PCS"],
+    ["110951","NAIL CLIPPER WITH PARED NAIL, POCKET","Карманные кусачки для ногтей","PCS"],
+    ["110955","NAIL BRUSH NYLON","Щётка для ногтей нейлоновая","PCS"],
+    ["110961","COTTON BUD 100 STICKS","Ватные палочки, 100 шт","PKT"],
+    ["110970","SHOE POLISH LIQUID 75ML","Жидкий крем для обуви 75 мл","BTL"],
+    ["110971","SHOE POLISH SOLID 45GRM","Крем для обуви твёрдый 45 г","TIN"],
+    ["110975","SHOE LACES","Шнурки для обуви","PRS"],
+    ["110977","BRUSH SHOE POLISHING","Щётка для чистки обуви","PCS"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"11","Каюты",["sanitary","grooming","personal care"],exactVisual(x[0],x[0],barberUrl)));
+
+  // 15 — linen & cabin textiles.
+  const bedUrl="https://impa-catalogue.shipserv.com/15-cloth-linen-products/bed-accessories";
+  [
+    ["150181","SHEET POLYESTER/COTTON WHITE, NON-IRONING 1370X2300MM","Простыня несминаемая полиэстер/хлопок 1370×2300 мм","SHT"],
+    ["150182","SHEET POLYESTER/COTTON WHITE, NON-IRONING 1828X2500MM","Простыня несминаемая полиэстер/хлопок 1828×2500 мм","SHT"],
+    ["150201","MATTRESS FOAM RUBBER, 900X2000X150MM","Матрас поролоновый 900×2000×150 мм","PCS"],
+    ["150202","MATTRESS FOAM RUBBER, 1350X2000X150MM","Матрас поролоновый 1350×2000×150 мм","PCS"],
+    ["150206","MATTRESS SPRING TYPE, 900X2000X150MM","Матрас пружинный 900×2000×150 мм","PCS"],
+    ["150207","MATTRESS SPRING TYPE, 1350X2000X150MM","Матрас пружинный 1350×2000×150 мм","PCS"],
+    ["150231","MATTRESS INDIVIDUAL SPRING, SINGLE 970X1980X170MM","Матрас с независимыми пружинами single 970×1980×170 мм","PCS"],
+    ["150232","MATTRESS INDIVIDUAL SPRING, SEMI DOUBLE 1200X1980X170MM","Матрас с независимыми пружинами semi-double 1200×1980×170 мм","PCS"],
+    ["150233","MATTRESS INDIVIDUAL SPRING, DOUBLE 1370X1980X170MM","Матрас с независимыми пружинами double 1370×1980×170 мм","PCS"],
+    ["150234","MATTRESS INDIVIDUAL SPRING, QUEEN 1520X1980X170MM","Матрас с независимыми пружинами queen 1520×1980×170 мм","PCS"],
+    ["150251","COVER MATTRESS WITH FURTHER, DETAIL","Чехол для матраса — размер уточняется","PCS"],
+    ["150283","PILLOW FEATHER 690X460MM","Подушка перьевая 690×460 мм","PCS"],
+    ["150301","BLANKET WOOL 100% 1400X2000MM, WHITE","Одеяло 100% шерсть 1400×2000 мм, белое","SHT"],
+    ["150302","BLANKET WOOL 100% 1400X2000MM, CAMEL","Одеяло 100% шерсть 1400×2000 мм, camel","SHT"],
+    ["150303","BLANKET WOOL 100% 1400X2000MM, BLUE","Одеяло 100% шерсть 1400×2000 мм, синее","SHT"],
+    ["150306","BLANKET WOOL 100% 1500X2000MM, BLUE","Одеяло 100% шерсть 1500×2000 мм, синее","SHT"],
+    ["150311","BLANKET WOOL 100% 1800X2300MM, WHITE","Одеяло 100% шерсть 1800×2300 мм, белое","SHT"],
+    ["150312","BLANKET WOOL 100% 1800X2300MM, CAMEL","Одеяло 100% шерсть 1800×2300 мм, camel","SHT"],
+    ["150313","BLANKET WOOL 100% 1800X2300MM, BLUE","Одеяло 100% шерсть 1800×2300 мм, синее","SHT"],
+    ["150316","BLANKET WOOL 100% 1800X2400MM, CAMEL","Одеяло 100% шерсть 1800×2400 мм, camel","SHT"],
+    ["150326","BLANKET RAYON&ACRYL, 1400X2000MM CAMEL","Одеяло rayon/acryl 1400×2000 мм, camel","SHT"],
+    ["150327","BLANKET RAYON&ACRYL, 1400X2000MM BLUE","Одеяло rayon/acryl 1400×2000 мм, синее","SHT"],
+    ["150328","BLANKET RAYON&ACRYL, 1800X2300MM CAMEL","Одеяло rayon/acryl 1800×2300 мм, camel","SHT"],
+    ["150329","BLANKET RAYON&ACRYL, 1800X2300MM BLUE","Одеяло rayon/acryl 1800×2300 мм, синее","SHT"],
+    ["150346","BLANKET ACRYL 100%, 1500X2000MM CAMEL","Одеяло 100% акрил 1500×2000 мм, camel","SHT"],
+    ["150347","BLANKET ACRYL 100%, 1500X2000MM BLUE","Одеяло 100% акрил 1500×2000 мм, синее","SHT"],
+    ["150351","BLANKET ACRYL 100%, 1800X2300MM CAMEL","Одеяло 100% акрил 1800×2300 мм, camel","SHT"],
+    ["150352","BLANKET ACRYL 100%, 1800X2300MM BLUE","Одеяло 100% акрил 1800×2300 мм, синее","SHT"],
+    ["150371","BED SPREAD COTTON CHECK, 1500X2400MM","Покрывало хлопковое клетчатое 1500×2400 мм","SHT"],
+    ["150372","BED SPREAD COTTON TARTAN CHECK, 1500X2400MM","Покрывало хлопковое тартан 1500×2400 мм","SHT"],
+    ["150373","BED SPREAD COTTON CHECK, 1800X2600MM","Покрывало хлопковое клетчатое 1800×2600 мм","SHT"],
+    ["150374","BED SPREAD COTTON TARTAN CHECK, 1800X2600MM","Покрывало хлопковое тартан 1800×2600 мм","SHT"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"15","Бельё",["bedding","linen"],exactVisual(x[0],x[0],bedUrl)));
+
+  const linenUrl="https://impa-catalogue.shipserv.com/15-cloth-linen-products/towel-table-linen";
+  [
+    ["150604","BATH TOWEL COTTON BLUE, 670 X 1270MM","Полотенце банное синее 670×1270 мм","SHT"],
+    ["150606","FACE TOWEL COTTON WHITE, 390 X 1000MM","Полотенце для лица белое 390×1000 мм","SHT"],
+    ["150607","FACE TOWEL COTTON BLUE, 390 X 1000MM","Полотенце для лица синее 390×1000 мм","SHT"],
+    ["150608","FACE TOWEL COTTON WHITE, 400 X 800MM","Полотенце для лица белое 400×800 мм","SHT"],
+    ["150609","FACE TOWEL COTTON BLUE, 400 X 800MM","Полотенце для лица синее 400×800 мм","SHT"],
+    ["150611","SWEAT TOWEL COTTON 300X760MM, WHITE","Полотенце хлопковое 300×760 мм, белое","SHT"],
+    ["150616","SPONGE CLOTH ALL COTTON, 350X450MM","Салфетка губчатая хлопковая 350×450 мм","SHT"],
+    ["150617","PANTRY TOWEL COTTON 400X690MM","Полотенце для pantry/камбуза 400×690 мм","SHT"],
+    ["150618","GLASS TOWEL COTTON 410X700MM","Полотенце для стекла 410×700 мм","SHT"],
+    ["150621","DUSTER CLOTH","Салфетка для пыли","SHT"],
+    ["150681","FOAM RUBBER SHEET MOLTPLAIN, 5MM 1X2MTR","Лист поролона 5 мм, 1×2 м","SHT"],
+    ["150682","FOAM RUBBER SHEET MOLTPLAIN, 10MM 1X2MTR","Лист поролона 10 мм, 1×2 м","SHT"],
+    ["150683","FOAM RUBBER SHEET MOLTPLAIN, 15MM 1X2MTR","Лист поролона 15 мм, 1×2 м","SHT"],
+    ["150684","FOAM RUBBER SHEET MOLTPLAIN, 20MM 1X2MTR","Лист поролона 20 мм, 1×2 м","SHT"],
+    ["150685","FOAM RUBBER SHEET MOLTPLAIN, 25MM 1X2MTR","Лист поролона 25 мм, 1×2 м","SHT"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"15",x[0]>="150616"&&x[0]<="150621"?"Уборка":"Бельё",["linen","cloth"],exactVisual(x[0],x[0],linenUrl)));
+
+  // 53 — lavatory and cabin bathroom equipment.
+  const lavUrl="https://impa-catalogue.shipserv.com/53-lavatory-equipment";
+  [
+    ["530375","SHOWER HEAD HAND HELD PF1/2, PLASTIC W/1.2MTR RUBBER HOSE","Душевая лейка ручная PF1/2 с шлангом 1,2 м","PCS"],
+    ["530378","SHOWER HEAD WALL MOUNTED PF1/2, WITH FLOW CONTROL VALVE","Душевая головка настенная PF1/2 с регулятором потока","PCS"],
+    ["530379","SHOWER HEAD WALL MOUNTED PF1/2, WITH WIDE FACE","Душевая головка настенная PF1/2 широкая","PCS"],
+    ["530411","SOAP TRAY WALL MOUNT PORCELAIN","Мыльница настенная фарфоровая","PCS"],
+    ["530412","SOAP TRAY WALL MOUNT, CHROME PLATED","Мыльница настенная хромированная","PCS"],
+    ["530413","SOAP TRAY WALL MOUNT, STAINLESS STEEL","Мыльница настенная нержавеющая","PCS"],
+    ["530416","SHELF BATHROOM PORCELAIN, W140XL454XD65MM","Полка ванная фарфоровая 140×454×65 мм","PCS"],
+    ["530417","SHELF BATHROOM PORCELAIN, W120XL300XD50MM","Полка ванная фарфоровая 120×300×50 мм","PCS"],
+    ["530418","SHELF RECESSED BATHROOM, PORCELAIN W97XL389XD16MM","Полка ванная встраиваемая фарфоровая 97×389×16 мм","PCS"],
+    ["530419","SHELF BATHROOM WITH GUARD BAR, W/GLASS PLATE W100XL410XD80MM","Полка ванная с ограничителем и стеклом 100×410×80 мм","PCS"],
+    ["530420","SHELF BATHROOM WITH GUARD BAR, PLASTIC PLATE W125XL456XD94MM","Полка ванная с ограничителем и пластиком 125×456×94 мм","PCS"],
+    ["530451","MIRROR 303X363MM","Зеркало 303×363 мм","PCS"],
+    ["530452","MIRROR 303X455MM","Зеркало 303×455 мм","PCS"],
+    ["530453","MIRROR 363X455MM","Зеркало 363×455 мм","PCS"],
+    ["530454","MIRROR 363X608MM","Зеркало 363×608 мм","PCS"],
+    ["530455","MIRROR 455X608MM","Зеркало 455×608 мм","PCS"],
+    ["530456","MIRROR 201X760MM","Зеркало 201×760 мм","PCS"],
+    ["530457","MIRROR 303X760MM","Зеркало 303×760 мм","PCS"],
+    ["530458","MIRROR 506X760MM","Зеркало 506×760 мм","PCS"],
+    ["530459","MIRROR 608X760MM","Зеркало 608×760 мм","PCS"],
+    ["530460","MIRROR 608X811MM","Зеркало 608×811 мм","PCS"],
+    ["530461","MIRROR 201X912MM","Зеркало 201×912 мм","PCS"],
+    ["530462","MIRROR 303X912MM","Зеркало 303×912 мм","PCS"],
+    ["530466","MEDICINE CABINET, SIZE W265XH485XD135MM","Шкафчик аптечный 265×485×135 мм","SET"],
+    ["530467","MEDICINE CABINET, SIZE W305XH510XD145MM","Шкафчик аптечный 305×510×145 мм","SET"],
+    ["530468","MEDICINE CABINET, SIZE W415XH715XD160MM","Шкафчик аптечный 415×715×160 мм","SET"],
+    ["531911","CABINET MEDICINE PVC, 35X45X15CM WATERLINE SA020756","Шкафчик аптечный PVC 35×45×15 см","PCS"],
+    ["531912","CABINET MEDICINE PVC SA020754, 65X49X11CM W/220V PLUG & LAMP","Шкафчик аптечный PVC 65×49×11 см, 220 В, с лампой","PCS"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"53","Каюты",["bathroom","lavatory","санузел"],exactVisual(x[0],x[0],lavUrl)));
+
+  // 55 — cabin/galley housekeeping chemistry only.
+  const cleanUrl="https://impa-catalogue.shipserv.com/55-cleaning-material-chemicals/misc-cleaner-and-polish-goods";
+  [
+    ["550301","CLEANER OVEN 300GRM","Очиститель духовки 300 г","TIN"],
+    ["550307","CLEANSER TOILET BOWL, HARPIC 500GRM","Средство для унитаза 500 г","BTL"],
+    ["550310","TOILET BOWL CLEANER, DUCK NECK BOTTLE 700ML","Средство для унитаза 700 мл, флакон с изогнутым носиком","BTL"],
+    ["550311","CLEANER GLASS AEROSOL, GLASTER SOL 310ML","Очиститель стекла аэрозоль 310 мл","TIN"],
+    ["550312","CLEANER GLASS AEROSOL, JOHNSON KULU 280ML","Очиститель стекла аэрозоль 280 мл","TIN"],
+    ["550313","CLEANER GLASS AEROSOL, JOHNSON KULU 480ML","Очиститель стекла аэрозоль 480 мл","TIN"],
+    ["550314","CLEANER WINDOW \"SPARKLING\", 300ML","Очиститель окон 300 мл","TIN"],
+    ["550321","DEODORIZER KIMCO 60GRM","Поглотитель запаха 60 г","PCS"],
+    ["550322","DEODORIZER KIMCO 120GRM","Поглотитель запаха 120 г","PCS"],
+    ["550331","AIR FRESHENER 300ML","Освежитель воздуха 300 мл","TIN"],
+    ["550332","AIR FRESHENER 420ML","Освежитель воздуха 420 мл","TIN"],
+    ["550333","AIR FRESHENER 5LTR","Освежитель воздуха концентрат 5 л","BTL"],
+    ["550334","DEODORIZING COAGULANT POWDER, 10KGS","Дезодорирующий абсорбирующий порошок 10 кг","PKT"],
+    ["550336","TOILET ODOR BALL","Дезодорирующий шарик для туалета","PCS"],
+    ["550337","AIR FRESHENER LIQUID, FOR LINEN & CLOTHS 400ML","Освежитель жидкий для белья и тканей 400 мл","BTL"],
+    ["550338","AIR FRESHENER LIQUID, FOR SHOES 400ML","Освежитель жидкий для обуви 400 мл","BTL"],
+    ["550339","AIR FRESHENER LIQUID, FOR TOILET 400ML","Освежитель жидкий для туалета 400 мл","BTL"],
+    ["550351","METAL POLISH LIQUID 300GRM","Полироль для металла жидкая 300 г","TIN"],
+    ["550352","METAL POLISH LIQUID 360GRM","Полироль для металла жидкая 360 г","TIN"],
+    ["550355","CLEANER & POLISH SPRAY, STAINLESS STEEL 420ML","Очиститель-полироль для нержавейки 420 мл","TIN"],
+    ["550368","POLISH FURNITURE SPRAY 220GRM","Полироль для мебели спрей 220 г","TIN"],
+    ["550369","POLISH FURNITURE SPRAY 420GRM","Полироль для мебели спрей 420 г","TIN"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"55","Химия",["cleaner","housekeeping","уборка"],exactVisual(x[0],x[0],cleanUrl)));
+
+  data.items.sort((a,b)=>a.code.localeCompare(b.code));
+  data.version="0.4.0";
+  data.image_version="0.4.0";
+})();
+
+
+/* Galley workwear expansion v0.4.1 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const seen=new Set(data.items.map(x=>x.code));
+  const img=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  const add=(code,name,ru,uom="PCS",aliases=[])=>{
+    if(seen.has(code))return;
+    data.items.push({
+      code,name,ru,uom,section:"15",category:"Камбуз",
+      aliases:[...new Set([ru,"cook steward wear","galley uniform",...aliases])],
+      image:img(code),
+      image_kind:"impa-illustration",
+      image_label:"Иллюстрация IMPA · код "+code,
+      image_source:"ShipServ / IMPA",
+      image_source_url:"https://impa-catalogue.shipserv.com/15-cloth-linen-products/cook-steward-wear"
+    });
+    seen.add(code);
+  };
+
+  [
+    ["150401","COAT CLOSED COLLAR WHITE, SANFORIZED M","Китель закрытый ворот, белый, M"],
+    ["150402","COAT CLOSED COLLAR WHITE, SANFORIZED L","Китель закрытый ворот, белый, L"],
+    ["150403","COAT CLOSED COLLAR WHITE, SANFORIZED LL","Китель закрытый ворот, белый, LL"],
+    ["150404","COAT CLOSED COLLAR WHITE, SANFORIZED S","Китель закрытый ворот, белый, S"],
+    ["150406","COAT REGULAR FINISH WHITE, SANFORIZED M","Китель обычный белый, M"],
+    ["150407","COAT REGULAR FINISH WHITE, SANFORIZED L","Китель обычный белый, L"],
+    ["150408","COAT REGULAR FINISH WHITE, SANFORIZED LL","Китель обычный белый, LL"],
+    ["150409","COAT REGULAR FINISH WHITE, SANFORIZED S","Китель обычный белый, S"],
+    ["150411","COAT COOKS DOUBLE BREASTED, WHITE SANFORIZED M","Китель поварской двубортный белый, M"],
+    ["150412","COAT COOKS DOUBLE BREASTED, WHITE SANFORIZED L","Китель поварской двубортный белый, L"],
+    ["150413","COAT COOKS DOUBLE BREASTED, WHITE SANFORIZED LL","Китель поварской двубортный белый, LL"],
+    ["150414","COAT COOKS DOUBLE BREASTED, WHITE SANFORIZED S","Китель поварской двубортный белый, S"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS",["chef coat","китель"]));
+
+  [
+    ["150421","TROUSERS COTTON WHITE, SANFORIZED M","Брюки поварские хлопковые белые, M"],
+    ["150422","TROUSERS COTTON WHITE, SANFORIZED L","Брюки поварские хлопковые белые, L"],
+    ["150423","TROUSERS COTTON WHITE, SANFORIZED LL","Брюки поварские хлопковые белые, LL"],
+    ["150424","TROUSERS COTTON WHITE, SANFORIZED S","Брюки поварские хлопковые белые, S"],
+    ["150426","TROUSERS POLYESTER BLACK, M","Брюки поварские полиэстер чёрные, M"],
+    ["150427","TROUSERS POLYESTER BLACK, L","Брюки поварские полиэстер чёрные, L"],
+    ["150428","TROUSERS POLYESTER BLACK, LL","Брюки поварские полиэстер чёрные, LL"],
+    ["150429","TROUSERS POLYESTER BLACK, S","Брюки поварские полиэстер чёрные, S"],
+    ["150431","TROUSERS COTTON&POLYESTER, STRIPED M","Брюки поварские хлопок/полиэстер полосатые, M"],
+    ["150432","TROUSERS COTTON&POLYESTER, STRIPED L","Брюки поварские хлопок/полиэстер полосатые, L"],
+    ["150433","TROUSERS COTTON&POLYESTER, STRIPED LL","Брюки поварские хлопок/полиэстер полосатые, LL"],
+    ["150434","TROUSERS COTTON&POLYESTER, STRIPED S","Брюки поварские хлопок/полиэстер полосатые, S"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PRS",["chef trousers","брюки"]));
+
+  [
+    ["150441","SHIRT LONG SLEEVES, COTTON WHITE M","Рубашка белая хлопковая, длинный рукав, M"],
+    ["150442","SHIRT LONG SLEEVES, COTTON WHITE L","Рубашка белая хлопковая, длинный рукав, L"],
+    ["150443","SHIRT LONG SLEEVES, COTTON WHITE LL","Рубашка белая хлопковая, длинный рукав, LL"],
+    ["150444","SHIRT LONG SLEEVES, COTTON WHITE 3L","Рубашка белая хлопковая, длинный рукав, 3L"],
+    ["150446","SHIRT SHORT SLEEVES, COTTON WHITE M","Рубашка белая хлопковая, короткий рукав, M"],
+    ["150447","SHIRT SHORT SLEEVES, COTTON WHITE L","Рубашка белая хлопковая, короткий рукав, L"],
+    ["150448","SHIRT SHORT SLEEVES, COTTON WHITE LL","Рубашка белая хлопковая, короткий рукав, LL"],
+    ["150449","SHIRT SHORT SLEEVES, COTTON WHITE 3L","Рубашка белая хлопковая, короткий рукав, 3L"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS",["shirt","рубашка"]));
+
+  [
+    ["150451","COOK'S CAP PAPER SKULL WHITE","Колпак поварской бумажный низкий, белый"],
+    ["150452","COOK'S CAP PAPER CROWN WHITE","Колпак поварской бумажный высокий, белый"],
+    ["150453","COOK'S CAP COTTON SKULL WHITE","Колпак поварской хлопковый низкий, белый"],
+    ["150454","COOK'S CAP COTTON CROWN WHITE","Колпак поварской хлопковый высокий, белый"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS",["cook cap","колпак"]));
+
+  [
+    ["150461","APRON COTTON WHITE WAIST TYPE","Фартук хлопковый белый поясной"],
+    ["150462","APRON COTTON WHITE BIB TYPE","Фартук хлопковый белый нагрудный"],
+    ["150463","APRON VINYL COLOR WAIST TYPE","Фартук виниловый цветной поясной"],
+    ["150464","APRON VINYL COLOR BIB TYPE","Фартук виниловый цветной нагрудный"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS",["apron","фартук"]));
+
+  add("150471","BOW TIE BLACK","Галстук-бабочка чёрный","PRS",["bow tie","бабочка"]);
+
+  data.items.sort((a,b)=>a.code.localeCompare(b.code));
+  data.version="0.4.1";
+  data.image_version="0.4.1";
+})();
+
+
+/* Prefer exact-code IMPA illustrations v0.4.2 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const exact=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  for(const item of data.items){
+    if(item.image_kind!=="impa-series-illustration")continue;
+    if(!/^https:\/\/www\.shipserv\.com\/Shipserv\/pages\/profiles\/231092\/images\/\d+\.JPG$/i.test(item.image||""))continue;
+    const wanted=exact(item.code);
+    if(item.image===wanted){
+      item.image_kind="impa-illustration";
+      item.image_label="Иллюстрация IMPA · код "+item.code;
+      continue;
+    }
+    const old=item.image;
+    item.image=wanted;
+    item.image_fallback=item.image_fallback||old;
+    item.image_kind="impa-illustration";
+    item.image_label="Иллюстрация IMPA · код "+item.code;
+    item.visual_note=item.visual_note||"Если для конкретного кода у ShipServ нет отдельного скана, приложение автоматически покажет иллюстрацию серии.";
+  }
+  data.version="0.4.2";
+  data.image_version="0.4.2";
+})();
