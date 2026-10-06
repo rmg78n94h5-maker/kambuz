@@ -467,7 +467,11 @@
   }
 
   function more(){
-    return `<div class="page-head maritime-page-head"><div><div class="eyebrow">Сервис</div><h2>Ещё</h2><p>Отчёты, данные и настройки Камбуза</p></div></div>
+    return `<div class="page-head maritime-page-head"><div><div class="eyebrow">Сервис</div><h2>Ещё</h2><p>Отчёты, снабжение, данные и настройки Камбуза</p></div></div>
+      <div class="more-section-title"><span>Снабжение</span></div>
+      <div class="menu-list maritime-menu">
+        <button data-action="impa-catalog"><span class="menu-icon">▦</span><div><b>Каталог IMPA</b><small>Камбуз, каюты и быт · заявки</small></div><i>›</i></button>
+      </div>
       <div class="more-section-title"><span>Отчёты</span></div>
       <div class="menu-list maritime-menu">
         <button data-action="summary-report"><span class="menu-icon">≣</span><div><b>IMO / FAL отчёт</b><small>Provision Stores · текущие остатки</small></div><i>›</i></button>
@@ -515,6 +519,7 @@
     else if(a==="analytics") analytics();
     else if(a==="summary-report") summaryReport();
     else if(a==="period-reports") periodReports();
+    else if(a==="impa-catalog"){if(window.KAMBUZ_IMPA?.open)window.KAMBUZ_IMPA.open();else toast("Каталог IMPA ещё загружается")}
     else if(a==="force-update") forceUpdateApp();
     else if(a==="stock-filter") stockFilterModal();
     else if(a==="stock-sort") stockSortModal();
