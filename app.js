@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "2.3.2";
+  const APP_VERSION = "2.3.3";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -467,7 +467,11 @@
   }
 
   function more(){
-    return `<div class="page-head maritime-page-head"><div><div class="eyebrow">Сервис</div><h2>Ещё</h2><p>Отчёты, данные и настройки Камбуза</p></div></div>
+    return `<div class="page-head maritime-page-head"><div><div class="eyebrow">Сервис</div><h2>Ещё</h2><p>Отчёты, снабжение, данные и настройки Камбуза</p></div></div>
+      <div class="more-section-title"><span>Снабжение</span></div>
+      <div class="menu-list maritime-menu">
+        <button data-action="impa-catalog"><span class="menu-icon">▦</span><div><b>Каталог IMPA</b><small>Камбуз, каюты и быт · заявки</small></div><i>›</i></button>
+      </div>
       <div class="more-section-title"><span>Отчёты</span></div>
       <div class="menu-list maritime-menu">
         <button data-action="summary-report"><span class="menu-icon">≣</span><div><b>IMO / FAL отчёт</b><small>Provision Stores · текущие остатки</small></div><i>›</i></button>
@@ -515,6 +519,7 @@
     else if(a==="analytics") analytics();
     else if(a==="summary-report") summaryReport();
     else if(a==="period-reports") periodReports();
+    else if(a==="impa-catalog"){if(window.KAMBUZ_IMPA?.open)window.KAMBUZ_IMPA.open();else toast("Каталог IMPA ещё загружается")}
     else if(a==="force-update") forceUpdateApp();
     else if(a==="stock-filter") stockFilterModal();
     else if(a==="stock-sort") stockSortModal();
@@ -1029,7 +1034,7 @@
   window.KAMBUZ_OPERATIONS={deleteOperation};
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=2.3.2", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=2.3.3", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();
