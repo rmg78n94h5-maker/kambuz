@@ -16,7 +16,7 @@
   const labelSection=s=>DATA.sections?.[s]||("Section "+s);
   let root=null;
   const PAGE_SIZE=120;
-  const state={view:"catalog",query:"",category:"Часто нужно",selected:null,catalogScroll:0,limit:PAGE_SIZE};
+  const state={view:"catalog",query:"",category:"Все",selected:null,catalogScroll:0,limit:PAGE_SIZE};
 
   function draft(){return read(KEY_DRAFT,[])}
   function favs(){return new Set(read(KEY_FAV,[]))}
@@ -43,7 +43,6 @@
         return words.every(w=>blob.includes(w));
       }
       if(state.category==="Избранное")return f.has(i.code);
-      if(state.category==="Часто нужно")return Boolean(i.curated);
       if(state.category!=="Все"&&i.category!==state.category)return false;
       return true;
     });
@@ -85,7 +84,7 @@
           <button type="button" data-impa-clear ${state.query?"":"hidden"}>✕</button>
         </div>
         <div class="impa-chips">
-          ${["Часто нужно","Все","Кухня","Посуда","Оборудование","Расходники","Уборка","Химия","Бельё","Санузлы","Избранное"].map(c=>`<button class="impa-chip ${state.category===c?"active":""}" type="button" data-impa-cat="${esc(c)}">${esc(c)}</button>`).join("")}
+          ${["Все","Кухня","Посуда","Оборудование","Расходники","Уборка","Химия","Бельё","Санузлы","Избранное"].map(c=>`<button class="impa-chip ${state.category===c?"active":""}" type="button" data-impa-cat="${esc(c)}">${esc(c)}</button>`).join("")}
         </div>
       </div>
       <div class="impa-body" id="impa-body"></div>
