@@ -1,7 +1,7 @@
 /* Seed catalog for IMPA module.
    Source: confirmed Kamбuz requisitions. Core expansion will cover 11/15/17/51/53/55. */
 window.KAMBUZ_IMPA_DATA={
-  version:"0.1.0",
+  version:"0.2.0",
   scope:["11","15","17","51","53","55"],
   sections:{
   "11": "Welfare Items",
