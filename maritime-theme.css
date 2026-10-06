@@ -1616,3 +1616,43 @@ body .ic-delete{
     grid-template-columns:1fr 1fr;
   }
 }
+
+
+/* v2.3.2 — compact header: account lives in profile button, never floats over actions */
+.topbar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+}
+.brand,
+.brand>div:last-child{
+  min-width:0;
+}
+.brand-title-row{
+  flex-wrap:nowrap;
+  min-width:0;
+}
+.brand-title-row h1{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.subtitle{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.top-actions{
+  flex:none;
+  min-width:max-content;
+}
+@media(max-width:390px){
+  .topbar{gap:7px}
+  .brand{gap:7px}
+  .brand-title-row{gap:5px}
+  .brand-title-row h1{font-size:21px}
+  .app-version{font-size:9px;padding:3px 5px}
+  .top-actions{gap:6px}
+}

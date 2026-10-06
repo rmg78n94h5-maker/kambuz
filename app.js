@@ -1,5 +1,5 @@
 (() => {
-  const APP_VERSION = "2.3.1";
+  const APP_VERSION = "2.3.2";
   const CATEGORIES = ["Химия","Хозтовары","Посуда","Инвентарь","Продукты"];
   const UNITS = ["шт.","бут.","упак.","рулон","пачка","кг","г","л","мл","компл."];
   const WRITE_OFF_REASONS = ["Брак","Повреждение","Протечка","Разбилось","Просрочено","Потеряно","Выброшено","Ошибка поставки","Другое"];
@@ -762,7 +762,11 @@
     el.querySelector("#save-inventory").onclick=async()=>{const changes=[...el.querySelectorAll("[data-inv]")].map(inp=>({i:state.items.find(x=>x.id===inp.dataset.inv),next:Number(inp.value)})).filter(x=>x.next!==Number(x.i.qty));try{for(const x of changes)await persistOperation(x.i,"adjustment",Math.abs(x.next-Number(x.i.qty)),Number(x.i.qty),x.next,null,"Инвентаризация");el.remove();await reload();toast(`Сохранено изменений: ${changes.length}`)}catch(e){console.error(e);toast("Ошибка инвентаризации")}};
   }
 
-  function profile(){const el=modal("Пользователь",`<form class="form"><div class="field"><label>Имя в истории</label><input name="user" value="${esc(state.user)}"></div><button class="primary">Сохранить</button></form>`);el.querySelector("form").onsubmit=e=>{e.preventDefault();state.user=new FormData(e.target).get("user").trim()||"Пользователь";localStorage.setItem("kambuz_user",state.user);el.remove();render();toast("Пользователь изменён")}}
+  function profile(){
+    if(window.KAMBUZ_AUTH?.openAccount){window.KAMBUZ_AUTH.openAccount();return}
+    const el=modal("Пользователь",`<form class="form"><div class="field"><label>Имя в истории</label><input name="user" value="${esc(state.user)}"></div><button class="primary">Сохранить</button></form>`);
+    el.querySelector("form").onsubmit=e=>{e.preventDefault();state.user=new FormData(e.target).get("user").trim()||"Пользователь";localStorage.setItem("kambuz_user",state.user);el.remove();render();toast("Пользователь изменён")};
+  }
 
   function importJson(){
     const el=modal("Импорт каталога",`<div class="import-box"><div class="drop-zone"><div class="drop-icon">📥</div><b>Выбери JSON-файл</b><small>Поддерживаются файлы каталога «Камбуз» и обычные массивы товаров. Совпадения по штрихкоду обновятся, новые позиции добавятся с нулевым остатком.</small><input id="json-file" type="file" accept="application/json,.json"></div><div id="import-preview"></div></div>`);
@@ -1025,7 +1029,7 @@
   window.KAMBUZ_OPERATIONS={deleteOperation};
   window.addEventListener("online",async()=>{state.syncError=null;state.sync="🟡 Синхронизация…";render();try{await connectCloudAndSync();toast(getQueue().length?"Связь есть, операции ещё ожидают отправки":"Связь появилась — данные синхронизированы")}catch(e){console.error(e);updateSyncLabel();toast("Данные ждут отправки — повторю при следующем подключении")}});
   window.addEventListener("offline",()=>{state.syncError=null;updateSyncLabel();toast("Нет интернета — работаем офлайн")});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=2.3.1", {scope:"./"})
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("service-worker.js?v=2.3.2", {scope:"./"})
     .then(reg=>reg.update().catch(()=>{}))
     .catch(console.error);
   load();
