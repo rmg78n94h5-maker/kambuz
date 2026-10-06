@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION="0.1.0";
+  const VERSION="0.2.0";
   const DATA=window.KAMBUZ_IMPA_DATA||{items:[],sections:{}};
   const KEY_DRAFT="kambuz_impa_draft_v1";
   const KEY_FAV="kambuz_impa_favorites_v1";
@@ -36,10 +36,26 @@
       return words.every(w=>blob.includes(w));
     });
   }
-  function thumb(i,cls="impa-thumb"){
-    return i.image
-      ? '<div class="'+cls+'"><img src="'+esc(i.image)+'" alt=""></div>'
-      : '<div class="'+cls+'"><span>'+esc(iconOf(i))+'</span></div>';
+  function imageHtml(i,cls="impa-thumb"){
+    if(!i.image)return '<div class="'+cls+'"><span>'+esc(iconOf(i))+'</span></div>';
+    const fallback=i.image_fallback?(' data-impa-fallback="'+esc(i.image_fallback)+'"'):"";
+    return '<div class="'+cls+'"><img data-impa-img src="'+esc(i.image)+'"'+fallback+' alt="'+esc(i.name||("IMPA "+i.code))+'"></div>';
+  }
+  function imageLabel(i){
+    if(!i.image_label)return "";
+    const kind=i.image_kind==="supplier-photo"?"Фото":"Иллюстрация";
+    return '<div class="impa-image-source '+(i.image_kind==="supplier-photo"?"photo":"illustration")+'"><span>'+kind+'</span><b>'+esc(i.image_label)+'</b></div>';
+  }
+  function thumb(i,cls="impa-thumb"){return imageHtml(i,cls)}
+  function bindImages(scope=root){
+    $("[data-impa-img]",scope).forEach(img=>{
+      img.onerror=()=>{
+        const fallback=img.dataset.impaFallback;
+        if(fallback&&img.src!==fallback){img.dataset.impaFallback="";img.src=fallback;return}
+        const wrap=img.parentElement;
+        if(wrap)wrap.innerHTML='<span>⚓</span>';
+      };
+    });
   }
   function shell(){
     return `<div class="impa-screen">
@@ -84,7 +100,8 @@
     const f=favs(),inFav=f.has(i.code);
     return `
       <button class="impa-secondary" style="width:auto;padding:0 14px;margin-bottom:10px" type="button" data-impa-back>← Каталог</button>
-      <div class="impa-product-media">${i.image?'<img src="'+esc(i.image)+'" alt="">':'<span>'+esc(iconOf(i))+'</span>'}</div>
+      <div class="impa-product-media">${i.image?imageHtml(i,"impa-product-image"):'<span>'+esc(iconOf(i))+'</span>'}</div>
+      ${imageLabel(i)}
       <div class="impa-product-code">IMPA ${esc(i.code)}</div>
       <h2 class="impa-product-title">${esc(i.name)}</h2>
       <p class="impa-product-ru">${esc(i.ru)}</p>
@@ -138,7 +155,8 @@
     $$("[data-impa-edit]",root).forEach(b=>b.onclick=()=>{const line=draft().find(x=>x.code===b.dataset.impaEdit),i=DATA.items.find(x=>x.code===b.dataset.impaEdit)||line;if(i)editLine(i,line)});
     $$("[data-impa-remove]",root).forEach(b=>b.onclick=()=>saveDraft(draft().filter(x=>x.code!==b.dataset.impaRemove)));
     $$("[data-impa-clear-draft]",root).forEach(b=>b.onclick=()=>{if(confirm("Очистить весь черновик заявки?"))saveDraft([])});
-    $$("[data-impa-export]",root).forEach(b=>b.onclick=exportSheet);
+    $("[data-impa-export]",root).forEach(b=>b.onclick=exportSheet);
+    bindImages(root);
   }
   function editLine(i,existing=null){
     const old=existing||draft().find(x=>x.code===i.code);
