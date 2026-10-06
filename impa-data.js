@@ -2014,22 +2014,30 @@ window.KAMBUZ_IMPA_DATA={
 })();
 
 
-/* Scotch-Brite / sponge expansion v0.4.3 */
+/* Scotch-Brite / sponge expansion v0.5.3 */
 (()=>{
   const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
-  const seen=new Set(data.items.map(x=>x.code));
+  const byCode=new Map(data.items.map(x=>[x.code,x]));
   const src="https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/galley-cleaning-equipment/cleaners-3m-scotch-brite";
-  const add=(code,name,ru,uom="PCS",aliases=[])=>{
-    if(seen.has(code))return;
-    data.items.push({
-      code,name,ru,uom,section:"17",category:"Уборка",
-      aliases:[...new Set([ru,"губка","губки","пад","абразивная губка","scotch brite","sponge","scouring pad","scrubbing sponge","cleaning pad",...aliases])],
+  const upsert=(code,name,ru,uom="PCS")=>{
+    const accessory=/HOLDER|PAD BLOCK/.test(name);
+    const aliases=accessory
+      ? ["пад","держатель пада","scotch brite","pad holder"]
+      : ["губка","губки","пад","абразивная губка","scotch brite","sponge","scouring pad","scrubbing sponge","cleaning pad"];
+    let item=byCode.get(code);
+    if(!item){
+      item={code,section:"17",category:"Уборка"};
+      data.items.push(item);byCode.set(code,item);
+    }
+    Object.assign(item,{
+      name,ru,uom,section:"17",category:"Уборка",
+      aliases:[...new Set([...(item.aliases||[]),ru,...aliases])],
       image:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG",
       image_kind:"impa-illustration",
       image_label:"Иллюстрация IMPA · код "+code,
       image_source:"ShipServ / IMPA",
       image_source_url:src
-    });seen.add(code);
+    });
   };
   [
     ["174070","SCOTCH BRITE CLEANING PAD, LIGHT DUTY 3M NO.98 152X229MM","Чистящий пад 3M Scotch-Brite №98, мягкий, 152×229 мм"],
@@ -2050,8 +2058,8 @@ window.KAMBUZ_IMPA_DATA={
     ["174085","SCOTCH BRITE GRIDDLE POLISHING, PAD 3M NO.46","Полировочный пад 3M №46 для жарочной поверхности"],
     ["174086","SCOTCH BRITE GRIDDLE POLISHING, PAD HOLDER 3M NO.461","Держатель полировочного пада 3M №461"],
     ["174087","SCOTCH BRITE GRIDDLE SCREEN, 3M NO.200 20'S","Сетка 3M №200 для тяжёлой очистки жарочной поверхности, 20 шт","PKT"]
-  ].forEach(x=>add(...x));
+  ].forEach(x=>upsert(...x));
   data.items.sort((a,b)=>a.code.localeCompare(b.code));
-  data.version="0.4.3";
-  data.image_version="0.4.3";
+  data.version="0.5.3";
+  data.image_version="0.5.3";
 })();
