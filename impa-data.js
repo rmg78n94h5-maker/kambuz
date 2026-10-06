@@ -2012,3 +2012,54 @@ window.KAMBUZ_IMPA_DATA={
   data.version="0.4.2";
   data.image_version="0.4.2";
 })();
+
+
+/* Scotch-Brite / sponge expansion v0.5.3 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const byCode=new Map(data.items.map(x=>[x.code,x]));
+  const src="https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/galley-cleaning-equipment/cleaners-3m-scotch-brite";
+  const upsert=(code,name,ru,uom="PCS")=>{
+    const accessory=/HOLDER|PAD BLOCK/.test(name);
+    const aliases=accessory
+      ? ["пад","держатель пада","scotch brite","pad holder"]
+      : ["губка","губки","пад","абразивная губка","scotch brite","sponge","scouring pad","scrubbing sponge","cleaning pad"];
+    let item=byCode.get(code);
+    if(!item){
+      item={code,section:"17",category:"Уборка"};
+      data.items.push(item);byCode.set(code,item);
+    }
+    Object.assign(item,{
+      name,ru,uom,section:"17",category:"Уборка",
+      aliases:[...new Set([...(item.aliases||[]),ru,...aliases])],
+      image:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG",
+      image_kind:"impa-illustration",
+      image_label:"Иллюстрация IMPA · код "+code,
+      image_source:"ShipServ / IMPA",
+      image_source_url:src
+    });
+  };
+  [
+    ["174070","SCOTCH BRITE CLEANING PAD, LIGHT DUTY 3M NO.98 152X229MM","Чистящий пад 3M Scotch-Brite №98, мягкий, 152×229 мм"],
+    ["174071","SCOTCH BRITE SCOURING PAD, 3M NO.96 230X150MM","Абразивный пад 3M Scotch-Brite №96, 230×150 мм"],
+    ["174072","SCOTCH BRITE 3M SCRUBBING, SPONGE SMALL SPONGE ACE S","Губка 3M Scotch-Brite Sponge Ace S, малая"],
+    ["174073","SCOTCH BRITE 3M SCRUBBING, SPONGE LARGE SPONGE ACE L","Губка 3M Scotch-Brite Sponge Ace L, большая"],
+    ["174074","SCOTCH BRITE CLEANING PAD, LIGHT DUTY 3M NO.98 114X52MM","Чистящая губка / пад 3M №98, мягкий, 114×52 мм"],
+    ["174075","SCOTCH BRITE SCOURING PAD, HEAVY DUTY 3M NO.86 158X224MM","Абразивный пад 3M Scotch-Brite №86, усиленный 158×224 мм"],
+    ["174076","SCOTCH BRITE STROPPING PAD, 3M NO.94","Пад 3M Scotch-Brite №94 для очистки нагревательных трубок"],
+    ["174077","SCOTCH BRITE PAD HOLDER, 3M NO.6472","Держатель пада 3M №6472"],
+    ["174078","SCOTCH BRITE PAD BLOCK, 3M NO.6473","Блок-держатель пада 3M №6473"],
+    ["174079","SCOTCH BRITE CLEANING PAD, FINE 3M NO.8440","Чистящий пад 3M №8440, тонкий / fine"],
+    ["174080","SCOTCH BRITE CLEANING PAD, MEDIUM 3M NO.8343","Чистящий пад 3M №8343, средний"],
+    ["174081","SCOTCH BRITE CLEANING PAD, COARSE 3M NO.8242","Чистящий пад 3M №8242, грубый"],
+    ["174082","SCOTCH BRITE CLEANING PAD, EXTRA COARSE 3M NO.8541","Чистящий пад 3M №8541, особо грубый"],
+    ["174083","SCOTCH BRITE GRIDDLE PAD, HEAVY DUTY 3M NO.82","Пад 3M №82 для тяжёлой очистки жарочной поверхности"],
+    ["174084","SCOTCH BRITE GRIDDLE HOLDER, HEAVY DUTY 3M NO.482","Держатель тяжёлого griddle-пада 3M №482"],
+    ["174085","SCOTCH BRITE GRIDDLE POLISHING, PAD 3M NO.46","Полировочный пад 3M №46 для жарочной поверхности"],
+    ["174086","SCOTCH BRITE GRIDDLE POLISHING, PAD HOLDER 3M NO.461","Держатель полировочного пада 3M №461"],
+    ["174087","SCOTCH BRITE GRIDDLE SCREEN, 3M NO.200 20'S","Сетка 3M №200 для тяжёлой очистки жарочной поверхности, 20 шт","PKT"]
+  ].forEach(x=>upsert(...x));
+  data.items.sort((a,b)=>a.code.localeCompare(b.code));
+  data.version="0.5.3";
+  data.image_version="0.5.3";
+})();
