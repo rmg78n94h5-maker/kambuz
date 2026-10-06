@@ -1444,3 +1444,78 @@ window.KAMBUZ_IMPA_DATA={
   data.items.sort((a,b)=>a.code.localeCompare(b.code));
   data.version="0.3.4";
 })();
+
+
+/* Curated IMPA catalogue expansion v0.3.5 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const seen=new Set(data.items.map(x=>x.code));
+  const shipservImg=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  const visual=(imageCode,label,url)=>({image:shipservImg(imageCode),image_kind:"impa-series-illustration",image_label:"Иллюстрация IMPA · "+label,image_source:"ShipServ / IMPA",image_source_url:url});
+  const add=(code,name,ru,uom="PCS",category="Камбуз",aliases=[],v=null)=>{
+    if(seen.has(code))return;
+    const item={code,name,ru,uom,section:"17",category,aliases:[...new Set([ru,...aliases])]};
+    if(v)Object.assign(item,v);
+    data.items.push(item);seen.add(code);
+  };
+
+  const heavyGlassV=visual("170651","усиленная стеклянная посуда для судов","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/plates-cups/glassware-heavy-duty");
+  [
+    ["170651","WINE GLASS LONG HIGH-QUALITY, 185CC","Бокал винный высокий усиленный 185 мл"],
+    ["170652","WINE GLASS SHORT HIGH-QUALITY, 185CC","Бокал винный низкий усиленный 185 мл"],
+    ["170653","SHERRY GLASS HIGH-QUALITY, 85CC","Бокал для шерри усиленный 85 мл"],
+    ["170654","WHISKY SOUR GLASS HIGH-QUALITY, 130CC","Бокал whisky sour усиленный 130 мл"],
+    ["170655","BRANDY GLASS HIGH-QUALITY, 340CC","Бокал для бренди усиленный 340 мл"],
+    ["170656","GOBLET GLASS HIGH-QUALITY, 325CC","Бокал усиленный 325 мл"],
+    ["170657","COCKTAIL GLASS HIGH-QUALITY, 100CC","Бокал коктейльный усиленный 100 мл"],
+    ["170658","CHAMPAGNE GLASS HIGH QUALITY, 155CC","Бокал для шампанского усиленный 155 мл"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","Сервировка",["heavy duty glassware","стекло"],heavyGlassV));
+
+  const colV=visual("172195","дуршлаги","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/roast-pans-mixing-bowls-strainers-etc/colanders");
+  [["172195","STAINLESS STEEL",270],["172196","STAINLESS STEEL",320],["172197","STAINLESS STEEL",370],["172198","STAINLESS STEEL",450],["172201","ALUMINIUM",300],["172202","ALUMINIUM",360],["172203","ALUMINIUM",400],["172204","ALUMINIUM",450]]
+    .forEach(([code,mat,d])=>add(code,`COLANDER ${mat}, ${d}MM DIAM`,`Дуршлаг ${mat==="STAINLESS STEEL"?"нержавеющий":"алюминиевый"} Ø${d} мм`,"PCS","Камбуз",["colander","дуршлаг"],colV));
+
+  const strV=visual("172211","сита с деревянной ручкой","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/roast-pans-mixing-bowls-strainers-etc/strainers-bowl-stainless-steel");
+  [["172211",153],["172212",203],["172213",254]]
+    .forEach(([code,d])=>add(code,`BOWL STRAINER STAINLESS STEEL, W/WOOD HANDLE DIAM ${d}MM`,`Сито нержавеющее с деревянной ручкой Ø${d} мм`,"PCS","Камбуз",["strainer","сито"],strV));
+  const oilV=visual("172215","сита для масла","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/roast-pans-mixing-bowls-strainers-etc/strainers-oil");
+  add("172215","OIL STRAINER TIN DIAM 218MM","Сито для масла Ø218 мм","PCS","Камбуз",["oil strainer","сито"],oilV);
+
+  const sheetV=visual("172135","алюминиевые листовые противни","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/roast-pans-mixing-bowls-strainers-etc/pans-sheet-aluminium");
+  [
+    ["172135","SHEET PAN ALUMINIUM, 455X330X25MM","Противень листовой алюминиевый 455×330×25 мм"],
+    ["172136","SHEET PAN ALUMINIUM, 660X455X25MM","Противень листовой алюминиевый 660×455×25 мм"],
+    ["172137","RACK FOR SHEET PAN S. STEEL, 425X300X15MM (FOR 172135)","Решётка нержавеющая для противня 172135"],
+    ["172138","RACK FOR SHEET PAN S. STEEL, 625X410X15MM (FOR 172136)","Решётка нержавеющая для противня 172136"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","Камбуз",["sheet pan","противень"],sheetV));
+
+  const openerV=visual("172615","ручные консервные ножи","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/kitchen-utensils/can-openers-hand");
+  [
+    ["172615","CAN OPENER HAND WAITER KNIFE, 105MM OVERALL","Консервный нож ручной waiter knife 105 мм"],
+    ["172616","CAN OPENER HAND ECONOMY, 80MM OVERALL","Консервный нож ручной Economy 80 мм"],
+    ["172617","CAN OPENER HAND 3 WAY, 130MM OVERALL","Консервный нож ручной 3-way 130 мм"],
+    ["172618","CAN OPENER HAND MIRACLE, 185MM OVERALL","Консервный нож ручной Miracle 185 мм"],
+    ["172619","CAN OPENER HAND PLIER, 185MM OVERALL","Консервный нож-щипцы 185 мм"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","Камбуз",["can opener","консервный нож"],openerV));
+
+  const edlundV=visual("172621","настольные консервные ножи Edlund","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/kitchen-utensils/can-openers-edmund-table");
+  [
+    ["172621","CAN OPENER TABLE TYPE, EDLUND NO.2","Консервный нож настольный Edlund №2","SET"],
+    ["172622","SPARE KNIFE FOR EDLUND NO.2, CAN OPENER","Запасной нож для Edlund №2","PCS"],
+    ["172623","SPARE GEAR FOR EDLUND NO.2, CAN OPENER","Запасная шестерня для Edlund №2","PCS"],
+    ["172624","CAN OPENER TABLE TYPE, EDLUND NO.3","Консервный нож настольный Edlund №3","SET"],
+    ["172625","SPARE KNIFE FOR EDLUND NO.3, CAN OPENER","Запасной нож для Edlund №3","PCS"],
+    ["172626","SPARE GEAR FOR EDLUND NO.3, CAN OPENER","Запасная шестерня для Edlund №3","PCS"]
+  ].forEach(x=>add(x[0],x[1],x[2],x[3],"Камбуз",["Edlund","can opener"],edlundV));
+
+  const bottleV=visual("172600","открывалки для бутылок","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/kitchen-utensils/openers-bottle");
+  [
+    ["172600","BOTTLE OPENER STAINLESS STEEL, 100MM","Открывалка для бутылок нержавеющая 100 мм"],
+    ["172601","BOTTLE OPENER STAINLESS STEEL, 137MM","Открывалка для бутылок нержавеющая 137 мм"],
+    ["172602","BOTTLE OPENER NICKEL PLATED, WITH WOODEN HANDLE 175MM","Открывалка никелированная с деревянной ручкой 175 мм"],
+    ["172603","BOTTLE OPENER STAINLESS STEEL, 180MM","Открывалка для бутылок нержавеющая 180 мм"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","Камбуз",["bottle opener","открывалка"],bottleV));
+
+  data.items.sort((a,b)=>a.code.localeCompare(b.code));
+  data.version="0.3.5";
+})();
