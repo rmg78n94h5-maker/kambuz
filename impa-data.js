@@ -1534,3 +1534,166 @@ window.KAMBUZ_IMPA_DATA={
   }
   data.image_version="0.3.5";
 })();
+
+
+/* Visual family corrections v0.3.6 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const byCode=new Map(data.items.map(x=>[x.code,x]));
+  const patch=(codes,meta)=>{
+    for(const code of codes){const item=byCode.get(code);if(item)Object.assign(item,meta)}
+  };
+  const range=(prefixes)=>data.items.filter(x=>prefixes.some(p=>x.code.startsWith(p))).map(x=>x.code);
+
+  const rep=(image,label,source,url,note)=>({
+    image,image_kind:"representative-photo",image_label:label,image_source:source,image_source_url:url,visual_note:note
+  });
+
+  // Bed sheets: distinct visual from pillows, pillow cases, mattress pads and blankets.
+  const whiteSheets=data.items.filter(x=>x.section==="15"&&/^BED SHEET WHITE/.test(x.name)).map(x=>x.code);
+  patch(whiteSheets,{
+    ...rep(
+      "https://bellastoria.pl/userdata/public/gfx/41570.jpg",
+      "Пример · белая хлопковая простыня",
+      "Bella Storia",
+      "https://bellastoria.pl/przescieradlo-bawelna-200x220-bez-gumki-biale-semplice",
+      "Визуальный пример обычной белой плоской хлопковой простыни; размер на фото может отличаться от IMPA-позиции."
+    ),
+    uom:"SHT"
+  });
+  const blueSheets=data.items.filter(x=>x.section==="15"&&/^BED SHEET BLUE/.test(x.name)).map(x=>x.code);
+  patch(blueSheets,{
+    ...rep(
+      "https://www.ikea.com/us/en/images/products/dvala-flat-sheet-blue__1279667_pe931467_s5.jpg?f=s",
+      "Пример · синяя хлопковая простыня",
+      "IKEA DVALA",
+      "https://www.ikea.com/us/en/p/dvala-flat-sheet-blue-10580838/",
+      "Визуальный пример синей плоской хлопковой простыни; размер на фото может отличаться от IMPA-позиции."
+    ),
+    uom:"SHT"
+  });
+
+  // Pillows.
+  patch(["150281","150282"],rep(
+    "https://www.westside.com/cdn/shop/files/301047673001_2_copy.jpg?v=1771911688&width=1445",
+    "Пример · подушка 40×60 см",
+    "Westside Home",
+    "https://www.westside.com/products/westside-home-white-memory-foam-pillow-301047673001",
+    "Визуальный пример подушки размера 40×60 см. Наполнитель конкретной модели на фото отличается от IMPA-варианта."
+  ));
+
+  // Pillow cases — separate from pillows.
+  patch(["150286"],rep(
+    "https://assets.kmart.com.au/transform/ae8518d7-e7e3-44cb-a48d-e5501ab26a91/40064734-2?io=transform%3Aextend%2Cwidth%3A1100%2Cheight%3A1375&quality=90",
+    "Пример · белая наволочка",
+    "Kmart",
+    "https://www.kmart.co.nz/product/2-pack-180-thread-count-standard-pillowcases-white-40064734/",
+    "Визуальный пример белой хлопковой наволочки; размер может отличаться от IMPA 150286."
+  ));
+  patch(["150287"],rep(
+    "https://i5.walmartimages.com/seo/BHG-400TC-SS-SP-BS_0a7e5757-9292-4d22-8188-d5294f26fd08.478e98dffb64aed7e07242b2be227362.jpeg",
+    "Пример · синяя хлопковая наволочка",
+    "Walmart",
+    "https://www.walmart.com/ip/15419802054",
+    "Визуальный пример синей хлопковой наволочки; размер может отличаться от IMPA 150287."
+  ));
+
+  // Flame-retardant mattress pads: visually a thin mattress/topper, not a bed sheet.
+  patch(["150245","150246"],rep(
+    "https://image.ceneostatic.pl/data/products/189798916/i-optimum-materac-nawierzchniowy-100x200-3-cm-pianka-komfortowa.jpg",
+    "Пример · тонкий матрасный пад / topper",
+    "Ceneo / Optimum",
+    "https://www.ceneo.pl/189798916",
+    "Визуальный пример белого пенного mattress pad. Для IMPA 150245 размер совпадает по площади 100×200 см и толщине 3 см; огнезащитный состав определяется описанием IMPA, а не фото."
+  ));
+
+  // Acrylic blankets — colour-matched visual examples.
+  patch(["150341"],{
+    ...rep(
+      "https://pinkantstore.com/cdn/shop/files/Manta_Lisa_Acr_lico_Beige_1.png?format=webp&v=1778240158&width=1080",
+      "Пример · 100% акриловое одеяло, camel/beige",
+      "Pink Ant Store",
+      "https://pinkantstore.com/fr/products/manta-lisa-acrilico-beige",
+      "Визуальный пример однотонного 100% акрилового одеяла."
+    ),uom:"SHT"
+  });
+  patch(["150342"],{
+    ...rep(
+      "https://www.webstaurantstore.com/images/products/large/100925/118655.jpg",
+      "Пример · синее hotel blanket",
+      "WebstaurantStore",
+      "https://www.webstaurantstore.com/fleece-hotel-blanket-case/171OP8090LCS.html",
+      "Визуальный пример синего гостиничного одеяла; материал конкретного фото отличается, IMPA-позиция — 100% acrylic."
+    ),uom:"SHT"
+  });
+  patch(["150343"],{
+    ...rep(
+      "https://cdn.myshoptet.com/usr/www.dekalarisa.cz/user/shop/big/423_deka-larisa-tmave-seda-akryl-bavlna-jednobarevna.jpg?ff=1&q=85&sg=161563f2&ts=6766e253&x=1024&y=768",
+      "Пример · серое акриловое одеяло",
+      "Deka Larisa",
+      "https://www.dekalarisa.cz/",
+      "Визуальный пример серого одеяла с акрилом; точный состав IMPA-позиции — 100% acrylic."
+    ),uom:"SHT"
+  });
+
+  // Towels.
+  patch(["150601","150603"],{
+    ...rep(
+      "https://www.muji.com/public/media/img/item/4550583429607_1260.jpg",
+      "Пример · белое банное полотенце",
+      "MUJI",
+      "https://www.muji.com/jp/ja/store/cmdty/detail/4550583429607",
+      "Визуальный пример белого хлопкового банного полотенца; размер может отличаться."
+    ),uom:"SHT"
+  });
+  patch(["150602"],{
+    ...rep(
+      "https://www.ikea.com/sg/en/images/products/vagsjoen-bath-towel-bright-blue__1436600_pe984407_s5.jpg",
+      "Пример · синее банное полотенце",
+      "IKEA VÅGSJÖN",
+      "https://www.ikea.com/sg/en/p/vagsjoen-bath-towel-bright-blue-10609139/",
+      "Визуальный пример синего хлопкового банного полотенца; размер может отличаться."
+    ),uom:"SHT"
+  });
+
+  // Laundry accessories: no more one generic picture for bag / pinches / line / hangers.
+  patch(["150501"],rep(
+    "https://cb.scene7.com/is/image/Crate/WhiteCanvasHamperLinerSSF21",
+    "Пример · белый canvas laundry bag",
+    "Crate & Barrel",
+    "https://www.crateandbarrel.com/white-canvas-laundry-bag/s309319",
+    "Визуальный пример белого тканевого мешка для белья с затяжкой."
+  ));
+  patch(["150511","150512"],{
+    image:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/150511.JPG",
+    image_fallback:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/150501.JPG",
+    image_kind:"impa-illustration",
+    image_label:"Иллюстрация IMPA · laundry pinches",
+    image_source:"ShipServ / IMPA",
+    image_source_url:"https://impa-catalogue.shipserv.com/15-cloth-linen-products/laundry-accessories/laundry-pinches"
+  });
+  patch(["150521","150522"],{
+    image:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/150521.JPG",
+    image_kind:"impa-illustration",
+    image_label:"Иллюстрация IMPA · laundry line",
+    image_source:"ShipServ / IMPA",
+    image_source_url:"https://impa-catalogue.shipserv.com/15-cloth-linen-products/laundry-accessories/laundry-lines"
+  });
+  patch(["150526"],rep(
+    "https://mobileimages.lowes.com/productimages/ffed76e4-b8d0-47be-9d5e-8b514fd8205c/66999101.jpeg?size=pdhism",
+    "Пример · деревянная вешалка",
+    "Lowe's",
+    "https://www.lowes.com/pd/Style-Selections-8-Pack-Wood-Clothing-Hanger-Natural/5014834423",
+    "Визуальный пример деревянной вешалки с перекладиной."
+  ));
+  patch(["150527"],{
+    image:"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/150527.JPG",
+    image_kind:"impa-illustration",
+    image_label:"Иллюстрация IMPA · plastic hanger",
+    image_source:"ShipServ / IMPA",
+    image_source_url:"https://impa-catalogue.shipserv.com/15-cloth-linen-products/laundry-accessories/hangers"
+  });
+
+  data.version="0.3.6";
+  data.image_version="0.3.6";
+})();
