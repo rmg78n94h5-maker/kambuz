@@ -1330,3 +1330,117 @@ window.KAMBUZ_IMPA_DATA={
   data.items.sort((a,b)=>a.code.localeCompare(b.code));
   data.version="0.3.3";
 })();
+
+
+/* Curated IMPA catalogue expansion v0.3.4 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const seen=new Set(data.items.map(x=>x.code));
+  const shipservImg=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  const visual=(imageCode,label,url)=>({image:shipservImg(imageCode),image_kind:"impa-series-illustration",image_label:"Иллюстрация IMPA · "+label,image_source:"ShipServ / IMPA",image_source_url:url});
+  const add=(code,name,ru,uom="PCS",category="Камбуз",aliases=[],v=null)=>{
+    if(seen.has(code))return;
+    const item={code,name,ru,uom,section:"17",category,aliases:[...new Set([ru,...aliases])]};
+    if(v)Object.assign(item,v);
+    data.items.push(item);seen.add(code);
+  };
+
+  const glassV=visual("170601","стандартная стеклянная посуда","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/plates-cups/glassware-standard-plain");
+  [
+    ["170601","TUMBLER HI-BALL STANDARD PLAIN, 245CC","Стакан хайбол 245 мл"],
+    ["170602","OLD FASHIONED GLASS STANDARD, PLAIN 200CC","Стакан old fashioned 200 мл"],
+    ["170603","TUMBLER BEER STANDARD PLAIN, 480CC","Стакан пивной 480 мл"],
+    ["170604","TUMBLER STRAIGHT STANDARD, PLAIN 225CC","Стакан прямой 225 мл"],
+    ["170605","TUMBLER STRAIGHT STANDARD, PLAIN 295CC","Стакан прямой 295 мл"],
+    ["170606","TUMBLER STRAIGHT STANDARD, PLAIN 360CC","Стакан прямой 360 мл"],
+    ["170607","TUMBLER STRAIGHT STANDARD, PLAIN 420CC","Стакан прямой 420 мл"],
+    ["170608","TUMBLER BARREL STANDARD, PLAIN 270CC","Стакан barrel 270 мл"],
+    ["170609","WHISKY GLASS STANDARD PLAIN, 40CC","Рюмка для виски 40 мл"],
+    ["170610","WHISKY GLASS STANDARD PLAIN, 60CC","Рюмка для виски 60 мл"],
+    ["170611","GOBLET GLASS STANDARD, PLAIN 300CC","Бокал 300 мл"],
+    ["170612","CHAMPAGNE GLASS STANDARD, PLAIN 130CC","Бокал для шампанского 130 мл"],
+    ["170613","COCKTAIL GLASS STANDARD, PLAIN 70CC","Бокал коктейльный 70 мл"],
+    ["170614","WINE GLASS STANDARD, PLAIN 50CC","Бокал винный 50 мл"],
+    ["170615","WINE GLASS STANDARD, PLAIN 90CC","Бокал винный 90 мл"],
+    ["170616","LIQUOR GLASS STANDARD, PLAIN 30CC","Рюмка для ликёра 30 мл"],
+    ["170617","BRANDY GLASS STANDARD, PLAIN 210CC","Бокал для бренди 210 мл"],
+    ["170618","BRANDY GLASS STANDARD, PLAIN 330CC","Бокал для бренди 330 мл"],
+    ["170619","WHISKY SOUR GLASS STANDARD, PLAIN 135CC","Бокал whisky sour 135 мл"],
+    ["170620","SHERRY GLASS STANDARD PLAIN, 70CC","Бокал для шерри 70 мл"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","Сервировка",["glassware","стекло"],glassV));
+
+  const trayV=visual("171421","сервировочные подносы","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/serving-utensils/trays-service-stainless-steel");
+  [
+    ["171421","SERVICE TRAY ROUND, STAINLESS STEEL 300MM","Поднос круглый нержавеющий 300 мм"],
+    ["171422","SERVICE TRAY ROUND, STAINLESS STEEL 350MM","Поднос круглый нержавеющий 350 мм"],
+    ["171423","SERVICE TRAY ROUND, STAINLESS STEEL 400MM","Поднос круглый нержавеющий 400 мм"],
+    ["171424","SERVICE TRAY CAFETERIA, STAINLESS STEEL 250X350MM","Поднос столовый нержавеющий 250×350 мм"],
+    ["171425","SERVICE TRAY CAFETERIA, STAINLESS STEEL 305X415MM","Поднос столовый нержавеющий 305×415 мм"],
+    ["171426","SERVICE TRAY CAFETERIA, STAINLESS STEEL 320X435MM","Поднос столовый нержавеющий 320×435 мм"],
+    ["171427","SERVICE TRAY RECTANGULAR, HANDLED STAINLESS 455X340MM","Поднос прямоугольный с ручками 455×340 мм"],
+    ["171428","SERVICE TRAY RECTANGULAR, HANDLED STAINLESS 505X370MM","Поднос прямоугольный с ручками 505×370 мм"],
+    ["171429","SERVICE TRAY RECTANGULAR, HANDLED STAINLESS 560X405MM","Поднос прямоугольный с ручками 560×405 мм"],
+    ["171430","SERVICE TRAY RECTANGULAR, HANDLED STAINLESS 600X435MM","Поднос прямоугольный с ручками 600×435 мм"],
+    ["171431","SERVICE TRAY COMPARTED, STAINLESS STEEL 400X300MM","Поднос секционный нержавеющий 400×300 мм"],
+    ["171432","SERVICE TRAY COMPARTED, MELAMINE 394X294MM 6 POCKETS","Поднос секционный меламиновый, 6 секций 394×294 мм"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","Сервировка",["service tray","поднос"],trayV));
+
+  const measureV=visual("174026","мерные ёмкости","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/measuring-scales/measuring-cups");
+  [["174026","PLASTIC",0.3],["174027","PLASTIC",0.6],["174028","PLASTIC",1.0],["174029","PLASTIC",2.0],["174031","STAINLESS STEEL",0.2],["174032","STAINLESS STEEL",0.5],["174033","STAINLESS STEEL",1.0],["174034","STAINLESS STEEL",2.0]]
+    .forEach(([code,mat,l])=>add(code,`MEASURING CUP ${mat}, ${l.toFixed(1)}LTR`,`Мерная кружка ${mat==="PLASTIC"?"пластиковая":"нержавеющая"} ${String(l).replace(".",",")} л`,"PCS","Камбуз",["measuring cup","мерная кружка"],measureV));
+
+  const timerV=visual("174021","кухонные таймеры","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/measuring-scales/timers-alarm");
+  add("174021","ALARM TIMER DIAL, MAX.PRESET TIME 60 MIN.","Таймер механический до 60 минут","PCS","Камбуз",["timer","таймер"],timerV);
+  add("174022","ALARM TIMER DIGITAL, MAX.PRESET TIME 99MIN.","Таймер цифровой до 99 минут","PCS","Камбуз",["timer","таймер"],timerV);
+
+  const ssBoxV=visual("172901","нержавеющие контейнеры для хранения","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/storage-containers/food-containers-storage-stainless-steel");
+  [[172901,1.8],[172902,2.1],[172903,3.2],[172904,4.5],[172905,6.2],[172906,8.3],[172907,11],[172908,14],[172909,21],[172910,36]]
+    .forEach(([code,l])=>add(String(code),`FOOD STORAGE CONTAINER, STAINLESS STEEL ${l}LTR`,`Контейнер пищевой нержавеющий ${String(l).replace(".",",")} л`,"PCS","Камбуз",["food storage","container"],ssBoxV));
+
+  const plasticBoxV=visual("172932","пластиковые пищевые контейнеры","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/storage-containers/food-containers-plastic");
+  add("172932","FOOD CONTAINER PLASTIC W/COVER, DIAM 120MM","Контейнер пищевой пластиковый с крышкой Ø120 мм","PCS","Камбуз",["food container"],plasticBoxV);
+  add("172933","FOOD CONTAINER PLASTIC W/COVER, DIAM 135MM","Контейнер пищевой пластиковый с крышкой Ø135 мм","PCS","Камбуз",["food container"],plasticBoxV);
+  [
+    ["172941","FOOD STORAGE BOX PLASTIC, W/COVER 685X425X100MM 21.4LTR","Ящик пищевой пластиковый с крышкой 21,4 л"],
+    ["172942","FOOD STORAGE BOX PLASTIC, W/COVER 643X417X160MM 32.7LTR","Ящик пищевой пластиковый с крышкой 32,7 л"],
+    ["172943","FOOD STORAGE BOX PLASTIC, W/COVER 685X425X160MM 36.2LTR","Ящик пищевой пластиковый с крышкой 36,2 л"],
+    ["172946","FOOD STORAGE CONTAINER PLASTIC, SPACE SAVE 380X275X545MM 33LTR","Контейнер пищевой Space Saver 33 л"],
+    ["172947","FOOD STORAGE CONTAINER PLASTIC, SPACE SAVE 415X310X590MM 45LTR","Контейнер пищевой Space Saver 45 л"],
+    ["172948","FOOD STORAGE CONTAINER PLASTIC, SPACE SAVE 465X355X655MM 65LTR","Контейнер пищевой Space Saver 65 л"]
+  ].forEach(x=>add(x[0],x[1],x[2],"PCS","Камбуз",["food storage","plastic container"],plasticBoxV));
+
+  const metalStorageV=visual("172956","ящики и баки для сухих продуктов","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/storage-containers/storage-boxes-food");
+  add("172956","FOOD STORAGE BOX 410X330X305MM, STAINLESS STEEL","Ящик для продуктов нержавеющий 410×330×305 мм","PCS","Камбуз",["food storage"],metalStorageV);
+  add("172957","CAN FOOD STORAGE GALV STEEL, W/LID 55LTR","Бак для сухих продуктов оцинкованный с крышкой 55 л","PCS","Камбуз",["food can","бак"],metalStorageV);
+  add("172958","CAN FOOD STORAGE GALV STEEL, W/LID 85LTR","Бак для сухих продуктов оцинкованный с крышкой 85 л","PCS","Камбуз",["food can","бак"],metalStorageV);
+
+  const spiceV=visual("172965","контейнеры для специй","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/storage-containers/containers-spice-stainless-steel");
+  [
+    ["172965","SPICE CONTAINER STAINLESS, 3-DRAWER TYPE W320XH150XD100MM","Контейнер для специй нержавеющий, 3 ящика"],
+    ["172966","SPICE CONTAINER STAINLESS, 4-DRAWER TYPE W420XH150XD100MM","Контейнер для специй нержавеющий, 4 ящика"],
+    ["172967","SPICE CONTAINER STAINLESS, 6-DRAWER TYPE W330XH220XD150MM","Контейнер для специй нержавеющий, 6 ящиков"],
+    ["172968","SPICE CONTAINER STAINLESS, 8-DRAWER TYPE W430XH220XD150MM","Контейнер для специй нержавеющий, 8 ящиков"]
+  ].forEach(x=>add(x[0],x[1],x[2],"SET","Камбуз",["spice container","специи"],spiceV));
+
+  const soupV=visual("172921","термоконтейнеры для супа","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/storage-containers/soup-containers-stainless-steel");
+  [[172921,4],[172922,7],[172923,10],[172924,13],[172925,16],[172926,20],[172927,26]]
+    .forEach(([code,l])=>add(String(code),`SOUP CONTAINER STAINLESS STEEL, ${l}LTR`,`Контейнер для супа нержавеющий ${l} л`,"PCS","Камбуз",["soup container","термоконтейнер"],soupV));
+
+  const roastAlV=visual("172101","алюминиевые противни для жарки","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/roast-pans-mixing-bowls-strainers-etc/pans-roast-aluminium");
+  [["172101","400X280X65"],["172102","490X325X80"],["172103","640X425X120"]]
+    .forEach(([code,s])=>add(code,`ROAST PAN ALUM ${s}MM`,`Противень алюминиевый ${s.replaceAll("X","×")} мм`,"PCS","Камбуз",["roast pan","противень"],roastAlV));
+  const roastSteelV=visual("172106","стальные противни для жарки","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/roast-pans-mixing-bowls-strainers-etc/pans-roast-steel");
+  [["172106","350X270X45"],["172107","380X320X45"],["172108","500X350X50"],["172109","545X395X40"]]
+    .forEach(([code,s])=>add(code,`ROAST PAN STEEL ${s}MM`,`Противень стальной ${s.replaceAll("X","×")} мм`,"PCS","Камбуз",["roast pan","противень"],roastSteelV));
+
+  const deepV=visual("172081","глубокие алюминиевые противни","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/roast-pans-mixing-bowls-strainers-etc/pans-roast-deep-aluminium-with-lid");
+  const dims=[["172081","350X250X150",true],["172082","400X300X150",true],["172083","500X400X150",true],["172084","600X450X150",true],["172085","650X500X150",true],["172086","700X550X150",true],["172091","350X250X150",false],["172092","400X300X150",false],["172093","500X400X150",false],["172094","600X450X150",false],["172095","650X500X150",false],["172096","700X550X150",false]];
+  dims.forEach(([code,s,lid])=>add(code,`${lid?"ROASTING PAN ALUMINIUM DEEP, W/LID":"ROASTING PAN ONLY ALUMINIUM, DEEP"} ${s}MM`,`Противень глубокий алюминиевый ${s.replaceAll("X","×")} мм${lid?", с крышкой":", без крышки"}`,"PCS","Камбуз",["roasting pan","противень"],deepV));
+
+  const rectV=visual("172121","прямоугольные нержавеющие гастро-поддоны","https://impa-catalogue.shipserv.com/17-tableware-galley-utensils/roast-pans-mixing-bowls-strainers-etc/pans-rectangular-stainless-steel");
+  [["172121","300X230X45"],["172122","320X260X50"],["172123","350X270X63"],["172124","400X290X67"],["172125","480X335X80"],["172126","570X367X90"]]
+    .forEach(([code,s])=>add(code,`PAN RECTANGULAR STAINLESS, ${s}MM`,`Поддон прямоугольный нержавеющий ${s.replaceAll("X","×")} мм`,"PCS","Камбуз",["stainless pan","поддон"],rectV));
+
+  data.items.sort((a,b)=>a.code.localeCompare(b.code));
+  data.version="0.3.4";
+})();
