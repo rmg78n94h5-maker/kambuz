@@ -1519,3 +1519,18 @@ window.KAMBUZ_IMPA_DATA={
   data.items.sort((a,b)=>a.code.localeCompare(b.code));
   data.version="0.3.5";
 })();
+
+
+/* Fill remaining IMPA visual slots v0.3.5 */
+(()=>{
+  const data=window.KAMBUZ_IMPA_DATA;if(!data?.items)return;
+  const shipservImg=code=>"https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
+  for(const item of data.items){
+    if(item.image)continue;
+    item.image=shipservImg(item.code);
+    item.image_kind="impa-illustration";
+    item.image_label="Каталожное изображение · IMPA "+item.code;
+    item.image_source="ShipServ / IMPA";
+  }
+  data.image_version="0.3.5";
+})();
