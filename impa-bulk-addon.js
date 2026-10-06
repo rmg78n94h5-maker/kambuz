@@ -184,8 +184,8 @@
   }
   DATA.items.sort((a,b)=>String(a.code).localeCompare(String(b.code)));
   DATA.scope=["15","17","51","53","55"];
-  DATA.version="0.6.0";
-  DATA.image_version="0.6.0";
+  DATA.version="0.6.1";
+  DATA.image_version="0.6.1";
   DATA.bulk_meta=Object.assign({},META,{
     added,
     source_count:BULK.length,
