@@ -54,11 +54,11 @@ jobs:
               'PKT','PACK','BOX','BAG','TIN','CAN','JAR','BTL','BOT','BAR','PCE','PCS','PC',
               'DOZ','KGS','KG','GRM','LTR','L','ML','MTR','M','BCH','LOV','VOL','PA','EA','PAIR'
           ]
-          uom_re = re.compile(r'\\s+(' + '|'.join(re.escape(x) for x in sorted(uoms,key=len,reverse=True)) + r')\\s*$', re.I)
+          uom_re = re.compile(r'\s+(' + '|'.join(re.escape(x) for x in sorted(uoms,key=len,reverse=True)) + r')\s*$', re.I)
 
           rows = {}
           for raw in text.splitlines():
-              matches = list(re.finditer(r'(?<!\\d)(\\d{6})\\s+', raw))
+              matches = list(re.finditer(r'(?<!\d)(\d{6})\s+', raw))
               if not matches:
                   continue
               for idx,m in enumerate(matches):
@@ -82,7 +82,7 @@ jobs:
                       # Keep a source-backed row even when the PDF text layer lost the unit.
                       uom = 'PCS'
                       name = segment.strip()
-                  name = re.sub(r'\\s+', ' ', name).strip(' -.;,:')
+                  name = re.sub(r'\s+', ' ', name).strip(' -.;,:')
                   if len(name) < 3 or not re.search(r'[A-Za-z]', name):
                       continue
                   # Reject obvious page/header garbage.
@@ -116,7 +116,7 @@ jobs:
               'count':len(data)
           },ensure_ascii=False,separators=(',',':'))+';')
           out.append('window.KAMBUZ_IMPA_BULK='+json.dumps(data,ensure_ascii=False,separators=(',',':'))+';')
-          Path('impa-bulk-data.js').write_text('\\n'.join(out)+'\\n',encoding='utf-8')
+          Path('impa-bulk-data.js').write_text('\n'.join(out)+'\n',encoding='utf-8')
           print('generated rows:',len(data))
           bysec={}
           for code,*_ in data: bysec[code[:2]]=bysec.get(code[:2],0)+1
