@@ -16,6 +16,10 @@
   },DATA.sections||{});
 
   const existing=new Map(DATA.items.map(x=>[String(x.code),x]));
+  // Everything already present in impa-data.js came from confirmed requisitions.
+  // Keep these items as the practical "frequently needed" core, even when they
+  // sit outside the reduced bulk scope (for example legacy section 19/39 items).
+  for(const item of DATA.items)item.curated=true;
   const phraseAliases=[
     ["SPONGE",["губка","губки","губчатая"]],
     ["SCOUR",["губка","абразивная губка","пад","абразив"]],
@@ -107,27 +111,66 @@
     return "https://www.shipserv.com/Shipserv/pages/profiles/231092/images/"+code+".JPG";
   }
 
-  let added=0;
+  const allowed15=new Set(["1501","1502","1503","1505","1506"]);
+  const allowed51=new Set(["5106","5108","5110","5111"]);
+  const allowed55=new Set(["5501","5502","5503","5505","5506","5515"]);
+  const denied17=new Set(["1713","1743"]);
+
+  function keepBulkItem(code){
+    const c=String(code||"");
+    const sec=c.slice(0,2),sub=c.slice(0,4);
+    if(sec==="15")return allowed15.has(sub);
+    if(sec==="17")return !denied17.has(sub);
+    if(sec==="51")return allowed51.has(sub);
+    if(sec==="53")return true;
+    if(sec==="55")return allowed55.has(sub);
+    return false;
+  }
+
+  function categoryFor(code,fallback){
+    const c=String(code||"");
+    const sec=c.slice(0,2),sub=c.slice(0,4);
+    if(sec==="15")return "Бельё";
+    if(sec==="51")return "Уборка";
+    if(sec==="53")return "Санузлы";
+    if(sec==="55")return "Химия";
+    if(sec==="17"){
+      if(["1745","1746","1747","1750","1751","1755"].includes(sub))return "Оборудование";
+      if(sub==="1741")return "Уборка";
+      if(["1715","1742"].includes(sub))return "Расходники";
+      if(["1701","1702","1703","1704","1706","1707","1708","1709","1710","1711","1712","1714","1731","1734","1736","1737"].includes(sub))return "Посуда";
+      return "Кухня";
+    }
+    return fallback||"Кухня";
+  }
+
+  // Normalize the small hand-picked seed before adding the bulk catalogue.
+  for(const item of DATA.items)item.category=categoryFor(item.code,item.category);
+
+  let added=0,bulkVisible=0;
   for(const row of BULK){
     if(!Array.isArray(row)||row.length<4)continue;
     const [code,name,uom,category]=row;
     const c=String(code);
-    if(c.startsWith("19"))continue; // technical/PPE clothing stays out of the galley/accommodation bulk import.
+    if(!keepBulkItem(c))continue;
+    bulkVisible++;
+    const normalizedCategory=categoryFor(c,category);
     const old=existing.get(c);
     if(old){
       if(!old.uom&&uom)old.uom=uom;
-      const extra=aliasesFor(name,category);
+      const extra=aliasesFor(name,normalizedCategory);
       old.aliases=[...new Set([...(old.aliases||[]),...extra])];
+      old.category=categoryFor(c,old.category);
       continue;
     }
-    const aliases=aliasesFor(name,category);
+    const aliases=aliasesFor(name,normalizedCategory);
     const item={
       code:c,
       name:String(name||"").trim(),
       ru:aliases[0]||"",
       uom:String(uom||"PCS"),
       section:c.slice(0,2),
-      category:String(category||"Камбуз"),
+      category:normalizedCategory,
       aliases,
       image:imageFor(c),
       image_kind:"impa-illustration",
@@ -139,9 +182,19 @@
     existing.set(c,item);
     added++;
   }
-  DATA.items.sort((a,b)=>String(a.code).localeCompare(String(b.code)));
-  DATA.scope=[...new Set([...(DATA.scope||[]),...(META.sections||[]).filter(s=>s!=="19")])].sort();
-  DATA.version="0.5.3";
-  DATA.image_version="0.5.3";
-  DATA.bulk_meta=Object.assign({},META,{added,total:DATA.items.length});
+  DATA.items.sort((a,b)=>{
+    const priority=Number(Boolean(b.curated))-Number(Boolean(a.curated));
+    return priority||String(a.code).localeCompare(String(b.code));
+  });
+  DATA.scope=["15","17","51","53","55"];
+  DATA.version="0.6.0";
+  DATA.image_version="0.6.0";
+  DATA.bulk_meta=Object.assign({},META,{
+    added,
+    source_count:BULK.length,
+    bulk_visible:bulkVisible,
+    bulk_removed:BULK.length-bulkVisible,
+    total:DATA.items.length,
+    policy:"galley-accommodation-curated"
+  });
 })();
