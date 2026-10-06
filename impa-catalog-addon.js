@@ -43,8 +43,9 @@
   }
   function imageLabel(i){
     if(!i.image_label)return "";
-    const kind=i.image_kind==="supplier-photo"?"Фото":"Иллюстрация";
-    return '<div class="impa-image-source '+(i.image_kind==="supplier-photo"?"photo":"illustration")+'"><span>'+kind+'</span><b>'+esc(i.image_label)+'</b></div>';
+    const isPhoto=i.image_kind==="supplier-photo"||i.image_kind==="representative-photo";
+    const kind=i.image_kind==="representative-photo"?"Пример":isPhoto?"Фото":"Иллюстрация";
+    return '<div class="impa-image-source '+(isPhoto?"photo":"illustration")+'"><span>'+kind+'</span><b>'+esc(i.image_label)+'</b></div>';
   }
   function thumb(i,cls="impa-thumb"){return imageHtml(i,cls)}
   function bindImages(scope=root){
@@ -102,6 +103,7 @@
       <button class="impa-secondary" style="width:auto;padding:0 14px;margin-bottom:10px" type="button" data-impa-back>← Каталог</button>
       <div class="impa-product-media">${i.image?imageHtml(i,"impa-product-image"):'<span>'+esc(iconOf(i))+'</span>'}</div>
       ${imageLabel(i)}
+      ${i.visual_note?'<div class="impa-visual-note">'+esc(i.visual_note)+'</div>':""}
       <div class="impa-product-code">IMPA ${esc(i.code)}</div>
       <h2 class="impa-product-title">${esc(i.name)}</h2>
       <p class="impa-product-ru">${esc(i.ru)}</p>
