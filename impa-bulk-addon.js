@@ -92,10 +92,15 @@
     ["JUICE",["сок"]],
     ["EGG",["яйцо","яйца"]]
   ];
-  function aliasesFor(name){
+  function aliasesFor(name,category){
     const n=" "+String(name||"").toUpperCase()+" ";
     const out=[];
-    for(const [key,vals] of phraseAliases)if(n.includes(key))out.push(...vals);
+    for(const [key,vals] of phraseAliases){
+      const cleaningWord=["SPONGE","SCOUR","SCRUB","CLEANING PAD"].includes(key);
+      if(cleaningWord&&category!=="Уборка")continue;
+      if(key==="SCRUB"&&!n.includes("SPONGE")&&!n.includes("PAD"))continue;
+      if(n.includes(key))out.push(...vals);
+    }
     return [...new Set(out)];
   }
   function imageFor(code){
@@ -110,11 +115,11 @@
     const old=existing.get(c);
     if(old){
       if(!old.uom&&uom)old.uom=uom;
-      const extra=aliasesFor(name);
+      const extra=aliasesFor(name,category);
       old.aliases=[...new Set([...(old.aliases||[]),...extra])];
       continue;
     }
-    const aliases=aliasesFor(name);
+    const aliases=aliasesFor(name,category);
     const item={
       code:c,
       name:String(name||"").trim(),
@@ -135,7 +140,7 @@
   }
   DATA.items.sort((a,b)=>String(a.code).localeCompare(String(b.code)));
   DATA.scope=[...new Set([...(DATA.scope||[]),...(META.sections||[])])].sort();
-  DATA.version="0.5.0";
-  DATA.image_version="0.5.0";
+  DATA.version="0.5.1";
+  DATA.image_version="0.5.1";
   DATA.bulk_meta=Object.assign({},META,{added,total:DATA.items.length});
 })();
