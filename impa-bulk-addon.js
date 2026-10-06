@@ -15,11 +15,7 @@
     "55":"Cleaning Material & Chemicals"
   },DATA.sections||{});
 
-  const existing=new Map(DATA.items.map(x=>[String(x.code),x]));
-  // Everything already present in impa-data.js came from confirmed requisitions.
-  // Keep these items as the practical "frequently needed" core, even when they
-  // sit outside the reduced bulk scope (for example legacy section 19/39 items).
-  for(const item of DATA.items)item.curated=true;
+  let existing=null;
   const phraseAliases=[
     ["SPONGE",["губка","губки","губчатая"]],
     ["SCOUR",["губка","абразивная губка","пад","абразив"]],
@@ -144,8 +140,12 @@
     return fallback||"Кухня";
   }
 
-  // Normalize the small hand-picked seed before adding the bulk catalogue.
+  // Apply the same scope to the older seed catalogue, otherwise old section 11,
+  // paint tools and technical chemicals leak back into the visible list.
+  const legacyKeep=new Set(["190136","391946"]);
+  DATA.items=DATA.items.filter(item=>keepBulkItem(item.code)||legacyKeep.has(String(item.code)));
   for(const item of DATA.items)item.category=categoryFor(item.code,item.category);
+  existing=new Map(DATA.items.map(x=>[String(x.code),x]));
 
   let added=0,bulkVisible=0;
   for(const row of BULK){
@@ -182,10 +182,7 @@
     existing.set(c,item);
     added++;
   }
-  DATA.items.sort((a,b)=>{
-    const priority=Number(Boolean(b.curated))-Number(Boolean(a.curated));
-    return priority||String(a.code).localeCompare(String(b.code));
-  });
+  DATA.items.sort((a,b)=>String(a.code).localeCompare(String(b.code)));
   DATA.scope=["15","17","51","53","55"];
   DATA.version="0.6.0";
   DATA.image_version="0.6.0";
