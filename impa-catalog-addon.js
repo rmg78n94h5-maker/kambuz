@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION="0.6.2";
+  const VERSION="0.6.3";
   const DATA=window.KAMBUZ_IMPA_DATA||{items:[],sections:{}};
   const KEY_DRAFT="kambuz_impa_draft_v1";
   const KEY_FAV="kambuz_impa_favorites_v1";
@@ -51,7 +51,7 @@
     if(!i.image)return '<div class="'+cls+'"><span>'+esc(iconOf(i))+'</span></div>';
     const fallback=i.image_fallback?(' data-impa-fallback="'+esc(i.image_fallback)+'"'):"";
     const priority=cls==="impa-product-image"?' loading="eager" fetchpriority="high"':' loading="lazy"';
-    return '<div class="'+cls+'"><img data-impa-img'+priority+' decoding="async" src="'+esc(i.image)+'"'+fallback+' alt="'+esc(i.name||("IMPA "+i.code))+'"></div>';
+    return '<div class="'+cls+'"><img data-impa-img data-impa-icon="'+esc(iconOf(i))+'"'+priority+' decoding="async" src="'+esc(i.image)+'"'+fallback+' alt="'+esc(i.name||("IMPA "+i.code))+'"></div>';
   }
   function imageLabel(i){
     if(!i.image_label)return "";
@@ -62,6 +62,10 @@
   function thumb(i,cls="impa-thumb"){return imageHtml(i,cls)}
   function bindImages(scope=root){
     $("[data-impa-img]",scope).forEach(img=>{
+      const paintPlaceholder=()=>{
+        const wrap=img.parentElement;
+        if(wrap)wrap.innerHTML='<span class="impa-local-placeholder">'+esc(img.dataset.impaIcon||"⚓")+'</span>';
+      };
       const fail=()=>{
         const fallback=img.dataset.impaFallback;
         if(fallback&&img.src!==fallback){
@@ -69,13 +73,19 @@
           img.src=fallback;
           return;
         }
-        const wrap=img.parentElement;
-        if(wrap)wrap.innerHTML='<span>⚓</span>';
+        paintPlaceholder();
       };
       img.onerror=fail;
-      // Safari can finish a cached failed request before JS binds onerror.
-      // Catch that state immediately so the broken-image glyph never remains.
-      if(img.complete&&img.naturalWidth===0)fail();
+      img.onload=()=>{
+        // Some ShipServ URLs return a tiny generic question-mark bitmap with HTTP 200.
+        // Do not treat that as a valid catalogue image.
+        if(img.naturalWidth>0&&img.naturalHeight>0&&img.naturalWidth<=80&&img.naturalHeight<=80)fail();
+      };
+      // Safari may complete a cached request before handlers are attached.
+      if(img.complete){
+        if(img.naturalWidth===0)fail();
+        else if(img.naturalWidth<=80&&img.naturalHeight<=80)fail();
+      }
     });
   }
   function shell(){
