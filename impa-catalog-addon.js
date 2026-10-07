@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION="0.6.1";
+  const VERSION="0.6.2";
   const DATA=window.KAMBUZ_IMPA_DATA||{items:[],sections:{}};
   const KEY_DRAFT="kambuz_impa_draft_v1";
   const KEY_FAV="kambuz_impa_favorites_v1";
@@ -61,13 +61,21 @@
   }
   function thumb(i,cls="impa-thumb"){return imageHtml(i,cls)}
   function bindImages(scope=root){
-    $$("[data-impa-img]",scope).forEach(img=>{
-      img.onerror=()=>{
+    $("[data-impa-img]",scope).forEach(img=>{
+      const fail=()=>{
         const fallback=img.dataset.impaFallback;
-        if(fallback&&img.src!==fallback){img.dataset.impaFallback="";img.src=fallback;return}
+        if(fallback&&img.src!==fallback){
+          img.dataset.impaFallback="";
+          img.src=fallback;
+          return;
+        }
         const wrap=img.parentElement;
         if(wrap)wrap.innerHTML='<span>⚓</span>';
       };
+      img.onerror=fail;
+      // Safari can finish a cached failed request before JS binds onerror.
+      // Catch that state immediately so the broken-image glyph never remains.
+      if(img.complete&&img.naturalWidth===0)fail();
     });
   }
   function shell(){
