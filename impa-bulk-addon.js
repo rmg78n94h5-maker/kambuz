@@ -144,7 +144,15 @@
   // paint tools and technical chemicals leak back into the visible list.
   const legacyKeep=new Set(["190136","391946"]);
   DATA.items=DATA.items.filter(item=>keepBulkItem(item.code)||legacyKeep.has(String(item.code)));
-  for(const item of DATA.items)item.category=categoryFor(item.code,item.category);
+  for(const item of DATA.items){
+    item.category=categoryFor(item.code,item.category);
+    // Older hand-picked cards sometimes use third-party representative photos.
+    // Keep those photos, but always provide the exact IMPA/ShipServ illustration
+    // as a local catalogue fallback so a dead hotlink never leaves a broken image.
+    if(item.image && item.image_source!=="ShipServ / IMPA" && !item.image_fallback){
+      item.image_fallback=imageFor(item.code);
+    }
+  }
   existing=new Map(DATA.items.map(x=>[String(x.code),x]));
 
   let added=0,bulkVisible=0;
@@ -184,8 +192,8 @@
   }
   DATA.items.sort((a,b)=>String(a.code).localeCompare(String(b.code)));
   DATA.scope=["15","17","51","53","55"];
-  DATA.version="0.6.1";
-  DATA.image_version="0.6.1";
+  DATA.version="0.6.2";
+  DATA.image_version="0.6.2";
   DATA.bulk_meta=Object.assign({},META,{
     added,
     source_count:BULK.length,
