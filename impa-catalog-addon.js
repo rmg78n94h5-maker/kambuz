@@ -61,7 +61,7 @@
   }
   function thumb(i,cls="impa-thumb"){return imageHtml(i,cls)}
   function bindImages(scope=root){
-    $("[data-impa-img]",scope).forEach(img=>{
+    $$("[data-impa-img]",scope).forEach(img=>{
       const paintPlaceholder=()=>{
         const wrap=img.parentElement;
         if(wrap)wrap.innerHTML='<span class="impa-local-placeholder">'+esc(img.dataset.impaIcon||"⚓")+'</span>';
@@ -190,7 +190,7 @@
     if(search)search.oninput=e=>{state.query=e.target.value;state.catalogScroll=0;state.limit=PAGE_SIZE;const b=$("[data-impa-clear]",root);if(b)b.hidden=!state.query;state.view="catalog";$("#impa-body",root).innerHTML=catalogHtml();bindBody()};
     $$("[data-impa-navback]",root).forEach(b=>b.onclick=headerBack);
     $$("[data-impa-draft]",root).forEach(b=>b.onclick=()=>{rememberCatalogScroll();state.view="draft";state.selected=null;render()});
-    $("[data-impa-cat]",root).forEach(b=>b.onclick=()=>{state.category=b.dataset.impaCat;state.catalogScroll=0;state.limit=PAGE_SIZE;state.view="catalog";state.selected=null;render()});
+    $$("[data-impa-cat]",root).forEach(b=>b.onclick=()=>{state.category=b.dataset.impaCat;state.catalogScroll=0;state.limit=PAGE_SIZE;state.view="catalog";state.selected=null;render()});
     const clear=$("[data-impa-clear]",root);if(clear)clear.onclick=()=>{state.query="";state.catalogScroll=0;state.limit=PAGE_SIZE;state.view="catalog";render();setTimeout(()=>$("#impa-search",root)?.focus(),0)};
     bindBody();
   }
@@ -202,7 +202,7 @@
     $$("[data-impa-edit]",root).forEach(b=>b.onclick=()=>{const line=draft().find(x=>x.code===b.dataset.impaEdit),i=DATA.items.find(x=>x.code===b.dataset.impaEdit)||line;if(i)editLine(i,line)});
     $$("[data-impa-remove]",root).forEach(b=>b.onclick=()=>saveDraft(draft().filter(x=>x.code!==b.dataset.impaRemove)));
     $$("[data-impa-clear-draft]",root).forEach(b=>b.onclick=()=>{if(confirm("Очистить весь черновик заявки?"))saveDraft([])});
-    $("[data-impa-export]",root).forEach(b=>b.onclick=exportSheet);
+    $$("[data-impa-export]",root).forEach(b=>b.onclick=exportSheet);
     const more=$("[data-impa-more]",root);
     if(more)more.onclick=()=>{
       const body=$("#impa-body",root),y=body?.scrollTop||0;
