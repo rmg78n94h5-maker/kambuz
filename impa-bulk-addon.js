@@ -146,11 +146,12 @@
   DATA.items=DATA.items.filter(item=>keepBulkItem(item.code)||legacyKeep.has(String(item.code)));
   for(const item of DATA.items){
     item.category=categoryFor(item.code,item.category);
-    // Older hand-picked cards sometimes use third-party representative photos.
-    // Keep those photos, but always provide the exact IMPA/ShipServ illustration
-    // as a local catalogue fallback so a dead hotlink never leaves a broken image.
-    if(item.image && item.image_source!=="ShipServ / IMPA" && !item.image_fallback){
-      item.image_fallback=imageFor(item.code);
+    // Third-party representative photos are kept when they load, but we do NOT
+    // fall back to the ShipServ exact-code URL: ShipServ can return a tiny "?"
+    // placeholder with HTTP 200, which Safari treats as a valid image.
+    if(item.image_source!=="ShipServ / IMPA"){
+      delete item.image_fallback;
+      item.image_unstable=true;
     }
   }
   existing=new Map(DATA.items.map(x=>[String(x.code),x]));
@@ -192,8 +193,8 @@
   }
   DATA.items.sort((a,b)=>String(a.code).localeCompare(String(b.code)));
   DATA.scope=["15","17","51","53","55"];
-  DATA.version="0.6.2";
-  DATA.image_version="0.6.2";
+  DATA.version="0.6.3";
+  DATA.image_version="0.6.3";
   DATA.bulk_meta=Object.assign({},META,{
     added,
     source_count:BULK.length,
